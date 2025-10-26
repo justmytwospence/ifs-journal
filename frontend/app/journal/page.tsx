@@ -187,6 +187,9 @@ export default function JournalPage() {
         throw new Error('Failed to save')
       }
 
+      const data = await response.json()
+      const entryId = data.entry.id
+
       setToast({ message: 'Entry saved successfully!', type: 'success' })
       setContent('')
       localStorage.removeItem('journal-draft')
@@ -194,10 +197,27 @@ export default function JournalPage() {
       // Analysis is triggered automatically in the background by the API
       setAnalyzing(true, 'incremental')
 
-      // Clear the analyzing indicator after a delay (analysis happens in background)
+      // Poll for analysis completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/journal/entries/${entryId}`)
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json()
+            if (statusData.entry.analysisStatus === 'completed' || statusData.entry.analysisStatus === 'failed') {
+              setAnalyzing(false)
+              clearInterval(pollInterval)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check analysis status:', error)
+        }
+      }, 2000)
+
+      // Fallback: clear after 30 seconds max
       setTimeout(() => {
         setAnalyzing(false)
-      }, 3000)
+        clearInterval(pollInterval)
+      }, 30000)
     } catch (error) {
       setToast({ message: 'Failed to save entry', type: 'error' })
     } finally {
