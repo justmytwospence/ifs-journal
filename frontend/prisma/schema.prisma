@@ -1,0 +1,133 @@
+// IFS Journal App - Prisma Schema
+// Based on the design document ERD
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  journalEntries   JournalEntry[]
+  parts            Part[]
+  partConversations PartConversation[]
+  partsOperations  PartsOperation[]
+
+  @@map("users")
+}
+
+// Journaling
+model JournalEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  prompt         String   @db.Text
+  content        String   @db.Text
+  wordCount      Int      @default(0)
+  analysisStatus String   @default("pending") // pending, processing, completed, failed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partAnalyses  PartAnalysis[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("journal_entries")
+}
+
+// Parts System
+model Part {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String   @db.Text
+  role        String   // Protector, Manager, Firefighter, Exile
+  color       String   // Hex color for UI consistency
+  quotes      String[] // Array of complete sentences expressing this part's voice
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partAnalyses     PartAnalysis[]
+  partConversations PartConversation[]
+
+  @@index([userId])
+  @@map("parts")
+}
+
+model PartAnalysis {
+  id         String   @id @default(cuid())
+  entryId    String
+  partId     String
+  highlights String[] // Array of complete sentences or meaningful phrases to highlight
+  confidence Float    // AI confidence score
+  createdAt  DateTime @default(now())
+
+  // Relations
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  part  Part         @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([partId])
+  @@map("part_analyses")
+}
+
+// Conversations
+model PartConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  partId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  part     Part                  @relation(fields: [partId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@map("part_conversations")
+}
+
+model ConversationMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // user, part
+  content        String   @db.Text
+  timestamp      DateTime @default(now())
+
+  // Relations
+  conversation PartConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, timestamp])
+  @@map("conversation_messages")
+}
+
+// Parts Operations (for delete undo functionality)
+model PartsOperation {
+  id              String   @id @default(cuid())
+  userId          String
+  operationType   String   // delete
+  snapshotBefore  Json     // Deleted part with all data
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime // Undo expires after 24 hours
+  undone          Boolean  @default(false)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("parts_operations")
+}
