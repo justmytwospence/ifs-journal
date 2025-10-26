@@ -20,16 +20,16 @@ export function extractPartIdFromSlug(slug: string): string | null {
 }
 
 export function createEntrySlug(createdAt: string | Date): string {
-  // Create a slug from the date: "2024-01-15-monday-3-45pm"
+  // Create a slug from the date using UTC to ensure consistency: "2024-01-15-monday-3-45pm"
   const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
   
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase()
   
-  let hours = date.getHours()
-  const minutes = String(date.getMinutes()).padStart(2, '0')
+  let hours = date.getUTCHours()
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
   const ampm = hours >= 12 ? 'pm' : 'am'
   hours = hours % 12 || 12
   
