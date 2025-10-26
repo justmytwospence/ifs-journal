@@ -30,7 +30,11 @@ export async function POST(request: Request) {
     })
 
     // Trigger incremental analysis asynchronously (fire and forget)
-    fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/journal/entries/${entry.id}/incremental-analysis`, {
+    const baseUrl = request.headers.get('host') 
+      ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
+      : process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    
+    fetch(`${baseUrl}/api/journal/entries/${entry.id}/incremental-analysis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

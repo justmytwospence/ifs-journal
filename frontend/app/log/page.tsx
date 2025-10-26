@@ -272,9 +272,6 @@ export default function LogPage() {
                     <p className="text-sm text-gray-500">{entry.prompt}</p>
                   </div>
                   <div className="flex items-center gap-3 ml-4">
-                    <span className="text-sm text-gray-500 whitespace-nowrap">
-                      {entry.wordCount} words
-                    </span>
                     {entry.partAnalyses && entry.partAnalyses.length > 0 && (
                       <div className="flex -space-x-2">
                         {entry.partAnalyses.slice(0, 3).map((analysis) => (
@@ -292,6 +289,9 @@ export default function LogPage() {
                         )}
                       </div>
                     )}
+                    <span className="text-sm text-gray-500 whitespace-nowrap">
+                      {entry.wordCount} words
+                    </span>
                   </div>
                 </div>
                 <p className="text-gray-700 line-clamp-3">{entry.content}</p>
