@@ -31,16 +31,6 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 2. Backend Data Layer
 
-### ⚠️ MANUAL SETUP REQUIRED: Neon Database
-
-**Before starting this section, you need to:**
-1. Go to https://neon.tech and create a free account
-2. Create a new project called "IFS Journal App"
-3. Neon automatically creates a `main` branch - you can rename it to `production` if desired
-4. Create a `development` branch for local development
-5. Copy the connection string for the `development` branch
-6. Keep the Neon dashboard open - you'll need it
-
 - [x] 2.1 Set up Neon PostgreSQL database with branching
 
   - Add DATABASE_URL to .env.local (paste the connection string from Neon)
@@ -83,14 +73,7 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 3. Authentication System
 
-### ⚠️ MANUAL SETUP REQUIRED: NextAuth Secret
-
-**Before starting this section, you need to:**
-1. Generate a secret key by running: `openssl rand -base64 32`
-2. Add to .env.local: `NEXTAUTH_SECRET="<your-generated-secret>"`
-3. Add to .env.local: `NEXTAUTH_URL="http://localhost:3000"`
-
-- [ ] 3.1 Implement user authentication system
+- [x] 3.1 Implement user authentication system
 
   - Set up NextAuth.js v5 with credentials provider
   - Install bcryptjs for password hashing
@@ -105,7 +88,7 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 4. Core Journaling Interface
 
-- [ ] 4.1 Build journal writing interface
+- [x] 4.1 Build journal writing interface
 
   - Create distraction-free writing component with word count
   - Implement optimistic UI for instant saving without blocking
@@ -120,7 +103,7 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 5. Voice Input Integration
 
-- [ ] 5.1 Add Web Speech API integration
+- [x] 5.1 Add Web Speech API integration
 
   - Integrate Web Speech API for speech-to-text functionality
   - Add microphone button with visual feedback and permissions handling
@@ -132,19 +115,9 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 6. AI-Powered Journaling Tips
 
-### ⚠️ MANUAL SETUP REQUIRED: OpenAI API Key
+- [x] 6.1 Implement AI prompt generation and writing tips system
 
-**Before starting this section, you need to:**
-1. Go to https://platform.openai.com/api-keys
-2. Create a new API key (or use existing one)
-3. Copy the API key (starts with `sk-...`)
-4. Add to .env.local: `OPENAI_API_KEY="sk-..."`
-5. Set up billing limits in OpenAI dashboard to avoid surprises
-6. Recommended: Set a monthly budget alert at $20
-
-- [ ] 6.1 Implement AI prompt generation and writing tips system
-
-  - Set up OpenAI GPT-4.5 (o1) API integration
+  - Set up OpenAI API integration
   - Create editable prompt template system in lib/prompts/ directory
   - Create journal-prompt-generation.md and writing-tips.md template files
   - Build prompt template loader utility in lib/ai/prompt-loader.ts
@@ -159,7 +132,7 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## 7. Journal History and Log
 
-- [ ] 7.1 Create journal log with visualization
+- [x] 7.1 Create journal log with visualization
 
   - Build chronological journal entries display
   - Integrate Chart.js for frequency visualization
@@ -178,18 +151,30 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
   - Create parts-analysis.md prompt template file with:
     - Instructions to receive existing parts as context (names, roles, descriptions, quotes)
-    - Logic to match new expressions to existing parts first
-    - Only create new parts when expressions are distinctly different
+    - **Priority instruction: FIRST match expressions to existing parts, THEN consider new parts**
+    - Only create new parts when no existing part matches above 75% similarity
+    - Maximum 3 new parts per entry, maximum 5 per batch
     - Sentence-based quote extraction (complete sentences only)
   - Build AI-powered parts analysis using OpenAI GPT-4.5 (o1)
   - Implement asynchronous background analysis triggered after journal save (fire and forget, no polling)
   - Add analysisStatus field to JournalEntry model (pending, processing, completed, failed)
   - Create background analysis API route in app/api/journal/entries/[id]/analyze/
-  - Implement incremental analysis:
+  - Implement priority-based matching:
     - Fetch all existing parts for the user
     - Pass existing parts to AI prompt as context
-    - AI determines if expressions match existing parts or need new parts
+    - AI FIRST attempts to match each expression to existing parts
+    - AI ONLY creates new parts if no existing part matches above 75% similarity
     - Update existing parts with new quotes when matched
+  - Implement duplicate detection with similarity scoring:
+    - Name similarity check (80% threshold using Levenshtein distance)
+    - Role matching (exact match required)
+    - Description keyword overlap (minimum 2 shared keywords)
+    - Overall similarity score (75% threshold for matching)
+    - Weighted scoring: name (50%), role (25%), keywords (25%)
+  - Implement analysis limits:
+    - Maximum 3 new parts per single entry
+    - Maximum 5 new parts per batch analysis
+    - Prioritize highest confidence parts when limits reached
   - Create parts categorization (Protector, Manager, Firefighter, Exile)
   - Add logic to replace lowest confidence part when 11th part is identified
   - Extract and store complete sentences as meaningful quotes
@@ -197,8 +182,8 @@ This implementation plan converts the IFS Journal App design into actionable cod
   - Add manual "Analyze" button for failed analyses
   - Implement parts highlighting in journal log using assigned colors
   - Add hover tooltips showing part names and click navigation
-  - **Deliverable:** Automatic non-blocking parts discovery with highlighted journal entries and no duplicate parts
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 6.2, 6.3, 6.4, 6.5_
+  - **Deliverable:** Automatic non-blocking parts discovery with highlighted journal entries, strict duplicate prevention, and analysis limits
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.15, 6.2, 6.3, 6.4, 6.5_
 
 ## 9. Parts Catalog and Management
 
@@ -220,9 +205,26 @@ This implementation plan converts the IFS Journal App design into actionable cod
   - **Deliverable:** Complete parts management system with catalog, editing, and delete undo
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8_
 
+- [ ] 9.2 Add interactive treemap visualization to parts page
+
+  - Install recharts library for treemap visualization
+  - Create PartsTreemap component in components/parts/
+  - Transform parts data into treemap format (name, size, color, partId, role)
+  - Configure Recharts Treemap component with:
+    - Custom cell colors from part.color
+    - Responsive container (400px desktop, 300px mobile)
+    - Rounded corners and shadow matching design system
+  - Implement hover tooltips showing part name, role, and appearance count
+  - Add click handlers to navigate to /parts/[id] on rectangle click
+  - Replace Activity Overview section on /parts page with PartsTreemap
+  - Hide treemap when no parts exist (show empty state instead)
+  - Ensure parts grid remains below treemap
+  - **Deliverable:** Interactive treemap visualization replacing Activity Overview
+  - _Requirements: 4.12, 4.13, 4.14, 4.15, 4.16_
+
 ## 10. Parts Conversation Interface
 
-- [ ] 10.1 Build part conversation interface
+- [x] 10.1 Build part conversation interface
 
   - Create part-conversation.md prompt template file
   - Create chat-style conversation component
@@ -254,6 +256,7 @@ This implementation plan converts the IFS Journal App design into actionable cod
 ### ⚠️ MANUAL SETUP REQUIRED: Vercel Deployment
 
 **Before starting this section, you need to:**
+
 1. Go to https://vercel.com and sign in with GitHub
 2. Click "Add New Project"
 3. Import your GitHub repository
@@ -290,14 +293,15 @@ This implementation plan converts the IFS Journal App design into actionable cod
 
 ## Optional Testing Tasks
 
-- [ ]* 14.1 Set up testing framework
+- [ ]\* 14.1 Set up testing framework
+
   - Configure Jest and React Testing Library
   - Create unit tests for core components
   - Add integration tests for API endpoints
   - Set up Playwright for E2E testing
   - _Requirements: All requirements need testing coverage_
 
-- [ ]* 14.2 Create comprehensive test coverage
+- [ ]\* 14.2 Create comprehensive test coverage
   - Write tests for authentication flows
   - Test journal entry creation and management
   - Test parts analysis and conversation features

@@ -85,34 +85,21 @@ model PartAnalysis {
   @@map("part_analyses")
 }
 
-// Conversations
+// Conversations - Simple exchange storage
 model PartConversation {
-  id        String   @id @default(cuid())
-  userId    String
-  partId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  partId       String
+  userMessage  String   @db.Text
+  partResponse String   @db.Text
+  createdAt    DateTime @default(now())
 
   // Relations
-  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  part     Part                  @relation(fields: [partId], references: [id], onDelete: Cascade)
-  messages ConversationMessage[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  part Part @relation(fields: [partId], references: [id], onDelete: Cascade)
 
+  @@index([partId, createdAt])
   @@map("part_conversations")
-}
-
-model ConversationMessage {
-  id             String   @id @default(cuid())
-  conversationId String
-  role           String   // user, part
-  content        String   @db.Text
-  timestamp      DateTime @default(now())
-
-  // Relations
-  conversation PartConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, timestamp])
-  @@map("conversation_messages")
 }
 
 // Parts Operations (for delete undo functionality)

@@ -55,10 +55,16 @@ The IFS Journal App is a web-based journaling application designed to help users
 3. THE IFS_Journal_App SHALL track analysis status for each journal entry (pending, processing, completed, failed)
 4. THE IFS_Journal_App SHALL identify and categorize parts as Protectors, Managers, Firefighters, or Exiles
 5. THE IFS_Journal_App SHALL maintain a maximum of 10 distinct parts to ensure quality over quantity
-6. WHEN similar parts are identified, THE IFS_Journal_App SHALL update existing parts with new quotes and insights rather than create duplicates
-7. THE IFS_Journal_App SHALL extract specific quotes and highlight relevant phrases for each identified part
-8. THE IFS_Journal_App SHALL use incremental analysis that builds on previous parts understanding for each new entry
-9. THE IFS_Journal_App SHALL allow users to retry failed analyses manually
+6. WHEN analyzing a journal entry, THE IFS_Journal_App SHALL first match expressions to existing parts before considering creating new parts
+7. THE IFS_Journal_App SHALL only create a new part if no existing part matches the expression with similarity above 75%
+8. WHEN an expression matches an existing part, THE IFS_Journal_App SHALL update that existing part with new quotes and insights
+9. THE IFS_Journal_App SHALL extract specific quotes and highlight relevant phrases for each identified part
+10. THE IFS_Journal_App SHALL use incremental analysis that builds on previous parts understanding for each new entry
+11. THE IFS_Journal_App SHALL allow users to retry failed analyses manually
+12. WHEN analyzing a single journal entry, THE IFS_Journal_App SHALL identify a maximum of 3 new parts per entry
+13. WHEN analyzing multiple entries in batch, THE IFS_Journal_App SHALL identify a maximum of 5 new parts total across all entries
+14. THE IFS_Journal_App SHALL detect similar parts using semantic similarity with a threshold of 80% string similarity for names
+15. THE IFS_Journal_App SHALL detect similar parts based on role and description keyword overlap with a minimum of 2 shared keywords
 
 ### Requirement 4: Parts Catalog and Management
 
@@ -77,6 +83,11 @@ The IFS Journal App is a web-based journaling application designed to help users
 9. THE IFS_Journal_App SHALL allow users to undo part deletion within 24 hours of execution
 10. WHEN a user undoes a delete, THE IFS_Journal_App SHALL restore the part with all its quotes, analyses, and highlights
 11. THE IFS_Journal_App SHALL display an undo notification with action button immediately after part deletion
+12. THE IFS_Journal_App SHALL display an interactive treemap visualization showing parts hierarchically sized by appearance count
+13. WHEN a user hovers over a treemap rectangle, THE IFS_Journal_App SHALL display a tooltip with the part's name, role, and appearance count
+14. WHEN a user clicks on a treemap rectangle, THE IFS_Journal_App SHALL navigate to the corresponding part detail page
+15. THE IFS_Journal_App SHALL color each treemap rectangle using the part's assigned color
+16. THE IFS_Journal_App SHALL use a third-party React treemap library for reliable visualization rendering
 
 ### Requirement 5: Interactive Part Conversations
 

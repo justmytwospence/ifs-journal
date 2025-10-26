@@ -404,6 +404,16 @@ src/
 - Interactive part management (merge/delete)
 - Reanalyze functionality
 
+**PartsTreemap Component:**
+- Interactive treemap visualization replacing Activity Overview section
+- Uses third-party React treemap library (recharts or react-d3-tree)
+- Hierarchical display with rectangle size proportional to appearance count
+- Each rectangle colored with part's assigned color
+- Hover tooltips showing part name, role, and appearance count
+- Click navigation to individual part detail pages
+- Responsive sizing within container
+- Hidden when no parts exist (shows empty state instead)
+
 **JournalLog Component:**
 - Chronological entry display with parts highlighting
 - Bar chart visualization showing which days had journal entries
@@ -445,7 +455,6 @@ src/app/api/
 ├── parts/
 │   ├── route.ts               # GET /api/parts
 │   ├── [id]/route.ts          # GET/PUT/DELETE /api/parts/:id
-│   ├── [id]/merge/route.ts    # POST /api/parts/:id/merge
 │   ├── reanalyze/route.ts     # POST /api/parts/reanalyze
 │   └── operations/
 │       ├── route.ts           # GET /api/parts/operations (list recent operations)
@@ -458,6 +467,72 @@ src/app/api/
     ├── profile/route.ts       # GET/PUT /api/user/profile
     ├── export/route.ts        # GET /api/user/export
     └── notifications/route.ts # PUT /api/user/notifications
+```
+
+## Duplicate Detection Algorithm
+
+### Similarity Scoring
+
+The system uses a multi-factor approach to detect duplicate parts:
+
+**Name Similarity (80% threshold):**
+- Calculate Levenshtein distance between part names
+- Normalize by removing articles ("the", "a", "an")
+- Case-insensitive comparison
+- Example: "The Critic" matches "Critic" at 100%
+
+**Role Matching:**
+- Exact role match required for keyword comparison
+- Same role increases likelihood of duplicate
+
+**Description Keyword Overlap (minimum 2 shared keywords):**
+- Extract keywords from descriptions (nouns, verbs, adjectives)
+- Common IFS keywords: "critic", "judge", "perfectionist", "worrier", "anxious", "fear", "avoider", "procrastinator", "escape", "hurt", "abandoned", "lonely", "angry", "protector", "guardian", "shield"
+- Count shared keywords between new and existing part descriptions
+- Minimum 2 shared keywords indicates potential duplicate
+
+**Overall Similarity Score (75% threshold):**
+- Weighted combination of name similarity (50%), role match (25%), and keyword overlap (25%)
+- If overall score > 75%, match to existing part instead of creating new one
+- Update existing part with new quotes and insights
+
+### Implementation
+
+```typescript
+interface SimilarityResult {
+  partId: string
+  score: number
+  reasons: string[]
+}
+
+function findSimilarPart(
+  newPart: { name: string; role: string; description: string },
+  existingParts: Part[]
+): SimilarityResult | null {
+  let bestMatch: SimilarityResult | null = null
+  
+  for (const existing of existingParts) {
+    const nameScore = calculateNameSimilarity(newPart.name, existing.name)
+    const roleMatch = newPart.role === existing.role ? 1.0 : 0.0
+    const keywordScore = calculateKeywordOverlap(newPart.description, existing.description)
+    
+    const overallScore = (nameScore * 0.5) + (roleMatch * 0.25) + (keywordScore * 0.25)
+    
+    if (overallScore > 0.75 && (!bestMatch || overallScore > bestMatch.score)) {
+      bestMatch = {
+        partId: existing.id,
+        score: overallScore,
+        reasons: [
+          nameScore > 0.8 ? 'Similar name' : '',
+          roleMatch === 1.0 ? 'Same role' : '',
+          keywordScore > 0.5 ? 'Overlapping keywords' : ''
+        ].filter(Boolean)
+      }
+    }
+  }
+  
+  return bestMatch
+}
 ```
 
 ## Error Handling
@@ -516,6 +591,46 @@ interface ErrorResponse {
 - **Contract Tests:** Validate OpenAI API response formats
 - **Prompt Testing:** Regression tests for prompt template changes
 - **Fallback Testing:** Ensure graceful degradation when OpenAI API is unavailable
+
+### Parts Treemap Visualization
+
+**Library Selection:**
+- **Recharts** - Preferred option for React integration
+  - Built-in Treemap component with responsive design
+  - TypeScript support out of the box
+  - Customizable tooltips and click handlers
+  - Active maintenance and good documentation
+  - Lightweight and performant
+
+**Data Structure:**
+```typescript
+interface TreemapData {
+  name: string
+  size: number // appearance count
+  color: string // part's assigned color
+  partId: string // for navigation
+  role: string // for tooltip
+}
+```
+
+**Implementation Details:**
+- Replace Activity Overview section on /parts page
+- Transform parts array into treemap data format
+- Configure Recharts Treemap with:
+  - Custom cell colors from part.color
+  - Hover tooltips showing name, role, appearances
+  - Click handlers for navigation to /parts/[id]
+  - Responsive container sizing
+- Handle empty state (no parts) by hiding treemap
+- Maintain existing parts grid below treemap
+
+**Visual Design:**
+- Container height: 400px on desktop, 300px on mobile
+- Rounded corners (12px) matching design system
+- Subtle shadow for card elevation
+- Smooth hover transitions
+- Part name labels inside rectangles when space allows
+- Tooltip appears on hover with part details
 
 ## Security Considerations
 
@@ -579,12 +694,21 @@ interface ErrorResponse {
 - **Non-Blocking:** Analysis does not block journal saving or user navigation
 - **Simple Async Implementation:** Analysis triggered via Next.js API route with async processing (fire and forget, no polling)
 - **No Polling:** User doesn't wait for analysis to complete, results appear when ready
-- **Duplicate Prevention:**
+- **Priority-Based Matching:**
   - Fetch all existing parts before analysis
   - Pass existing parts to AI as context (names, roles, descriptions, quotes)
-  - AI matches new expressions to existing parts first
-  - Only creates new parts when expressions are distinctly different
+  - **FIRST:** AI attempts to match each expression to existing parts
+  - **THEN:** Only considers creating new parts if no existing part matches above 75% similarity
   - Updates existing parts with new quotes when matched
+- **Duplicate Prevention:**
+  - Semantic similarity check with 80% threshold for name matching
+  - Role and description keyword overlap (minimum 2 shared keywords)
+  - Only create new part if no existing part matches above 75% overall similarity
+  - Prevents creating similar parts like "The Critic", "The Judge", "The Perfectionist"
+- **Analysis Limits:**
+  - Maximum 3 new parts per single journal entry
+  - Maximum 5 new parts per batch analysis
+  - Prioritize highest confidence parts when limits are reached
 - **Sentence-Based Quotes:** Parts analysis extracts complete sentences as quotes, not individual words
 - **Meaningful Highlighting:** Journal entries highlight complete sentences or meaningful phrases that express parts
 - **Contextual Analysis:** AI considers full sentence context when attributing expressions to parts

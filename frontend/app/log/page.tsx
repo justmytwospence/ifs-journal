@@ -1,57 +1,307 @@
 'use client'
 
-import { Navigation } from '@/components/layout'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
+import { AppNav } from '@/components/AppNav'
+import { useState, useMemo } from 'react'
+import Link from 'next/link'
+import { formatEntryDate } from '@/lib/date-utils'
+import { createEntrySlug } from '@/lib/slug-utils'
+import { useQuery } from '@tanstack/react-query'
+
+interface Part {
+  id: string
+  name: string
+  role: string
+  color: string
+}
+
+interface PartAnalysis {
+  id: string
+  partId: string
+  highlights: string[]
+  part: Part
+}
+
+interface JournalEntry {
+  id: string
+  prompt: string
+  content: string
+  wordCount: number
+  analysisStatus: string
+  createdAt: string
+  partAnalyses?: PartAnalysis[]
+}
 
 export default function LogPage() {
-  // Placeholder data
-  const entries = [
-    {
-      id: '1',
-      date: 'Oct 26, 2024',
-      content: 'Today I noticed my inner critic being very active. It kept telling me I wasn\'t doing enough...',
-      wordCount: 245,
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+  // Fetch entries
+  const { data: entriesData, isLoading: entriesLoading } = useQuery({
+    queryKey: ['journal-entries'],
+    queryFn: async () => {
+      const response = await fetch('/api/journal/entries')
+      if (!response.ok) throw new Error('Failed to fetch entries')
+      return response.json()
     },
-    {
-      id: '2',
-      date: 'Oct 25, 2024',
-      content: 'Feeling more peaceful today. I spent time with my creative part and it felt really good...',
-      wordCount: 189,
+  })
+
+  // Fetch parts for filter
+  const { data: partsData, isLoading: partsLoading } = useQuery({
+    queryKey: ['parts'],
+    queryFn: async () => {
+      const response = await fetch('/api/parts')
+      if (!response.ok) throw new Error('Failed to fetch parts')
+      return response.json()
     },
-    {
-      id: '3',
-      date: 'Oct 24, 2024',
-      content: 'Anxiety was high this morning. My protector part was working overtime to keep me safe...',
-      wordCount: 312,
-    },
-  ]
+  })
+
+  const entries: JournalEntry[] = entriesData?.entries || []
+  const parts: Part[] = partsData?.parts || []
+
+  // Filter and search entries
+  const filteredEntries = useMemo(() => {
+    let filtered = entries
+
+    // Filter by part
+    if (selectedPartId) {
+      filtered = filtered.filter((entry) =>
+        entry.partAnalyses?.some((analysis) => analysis.partId === selectedPartId)
+      )
+    }
+
+    // Search in content and prompt
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (entry) =>
+          entry.content.toLowerCase().includes(query) ||
+          entry.prompt.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [entries, selectedPartId, searchQuery])
+
+  const loading = entriesLoading || partsLoading
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AppNav />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading your journal entries...</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen">
-      <Navigation />
-      <main className="section-padding">
-        <div className="container-width max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="heading-2 mb-2">Journal Log</h1>
-            <p className="body">Review your past entries and track your journaling journey</p>
+    <div className="min-h-screen bg-gray-50">
+      <AppNav />
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Journal Log</h1>
+          <p className="text-lg text-gray-600">
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'} in your journal
+          </p>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="mb-6 space-y-4">
+          {/* Search Bar and Filter */}
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search Bar */}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search entries..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pl-12 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <svg
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+
+            {/* Part Filter Dropdown */}
+            {parts.length > 0 && (
+              <div className="relative w-full md:w-64">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {selectedPartId ? (
+                    <>
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ 
+                          backgroundColor: parts.find(p => p.id === selectedPartId)?.color 
+                        }}
+                      />
+                      <span className="text-gray-900 font-medium">
+                        {parts.find(p => p.id === selectedPartId)?.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-700">All Parts</span>
+                  )}
+                </div>
+                <svg
+                  className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setIsDropdownOpen(false)}
+                  />
+                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                    <button
+                      onClick={() => {
+                        setSelectedPartId(null)
+                        setIsDropdownOpen(false)
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
+                        !selectedPartId ? 'bg-indigo-50' : ''
+                      }`}
+                    >
+                      <span className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}>
+                        All Parts
+                      </span>
+                    </button>
+                    {parts.map((part) => (
+                      <button
+                        key={part.id}
+                        onClick={() => {
+                          setSelectedPartId(part.id)
+                          setIsDropdownOpen(false)
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
+                          selectedPartId === part.id ? 'bg-gray-50' : ''
+                        }`}
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: part.color }}
+                        />
+                        <span className="text-gray-900 font-medium">{part.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              </div>
+            )}
           </div>
 
+          {/* Active Filters Display */}
+          {(searchQuery || selectedPartId) && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Showing {filteredEntries.length} of {entries.length} entries</span>
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  setSelectedPartId(null)
+                }}
+                className="text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Entries List */}
+        {entries.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+            <p className="text-gray-600 mb-4">No journal entries yet</p>
+            <Link
+              href="/journal"
+              className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Write your first entry
+            </Link>
+          </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+            <p className="text-gray-600 mb-2">No entries match your filters</p>
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setSelectedPartId(null)
+              }}
+              className="text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
           <div className="space-y-4">
-            {entries.map((entry) => (
-              <Card key={entry.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{entry.date}</CardTitle>
-                    <span className="body-small">{entry.wordCount} words</span>
+            {filteredEntries.map((entry) => (
+              <Link
+                key={entry.id}
+                href={`/journal/entries/${createEntrySlug(entry.createdAt)}`}
+                className="block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      {formatEntryDate(entry.createdAt)}
+                    </h3>
+                    <p className="text-sm text-gray-500">{entry.prompt}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="body">{entry.content}</p>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-3 ml-4">
+                    <span className="text-sm text-gray-500 whitespace-nowrap">
+                      {entry.wordCount} words
+                    </span>
+                    {entry.partAnalyses && entry.partAnalyses.length > 0 && (
+                      <div className="flex -space-x-2">
+                        {entry.partAnalyses.slice(0, 3).map((analysis) => (
+                          <div
+                            key={analysis.id}
+                            className="w-6 h-6 rounded-full border-2 border-white"
+                            style={{ backgroundColor: analysis.part.color }}
+                            title={analysis.part.name}
+                          />
+                        ))}
+                        {entry.partAnalyses.length > 3 && (
+                          <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs text-gray-600">
+                            +{entry.partAnalyses.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-gray-700 line-clamp-3">{entry.content}</p>
+              </Link>
             ))}
           </div>
-        </div>
+        )}
       </main>
     </div>
   )

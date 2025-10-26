@@ -1,38 +1,37 @@
 @import "tailwindcss";
 
-@theme {
-  /* Primary therapeutic palette */
-  --color-primary: #6366f1;
-  --color-secondary: #8b5cf6;
-  --color-accent: #06b6d4;
-  
-  /* Part color palette */
-  --color-part-protector: #ef4444;
-  --color-part-manager: #f59e0b;
-  --color-part-firefighter: #f97316;
-  --color-part-exile: #8b5cf6;
-  
-  /* Neutral palette */
-  --color-background: #fefefe;
-  --color-surface: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text-primary: #1e293b;
-  --color-text-secondary: #64748b;
-  
-  /* Font families */
-  --font-family-sans: 'Inter', -apple-system, sans-serif;
-  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
-}
-
 * {
   box-sizing: border-box;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure all interactive elements show pointer cursor */
+button,
+a,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+select,
+label[for],
+summary,
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Disabled elements should show not-allowed cursor */
+button:disabled,
+[disabled],
+.cursor-not-allowed {
+  cursor: not-allowed;
 }
 

@@ -1,46 +1,331 @@
 'use client'
 
-import { Navigation } from '@/components/layout'
-import { Card, CardHeader, CardTitle, CardContent, Button, Textarea } from '@/components/ui'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { AppNav } from '@/components/AppNav'
+import { Toast } from '@/components/ui/Toast'
+
+const prompts = [
+  'What emotions are you experiencing right now, and which part of you might be feeling them?',
+  'Describe a moment today when you noticed different parts of yourself in conflict.',
+  'What does your inner critic say to you most often?',
+  'When do you feel most at peace with yourself?',
+  'Reflect on a time when you felt the need to protect yourself emotionally.',
+]
 
 export default function JournalPage() {
   const [content, setContent] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loadingPrompt, setLoadingPrompt] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const [recognition, setRecognition] = useState<unknown>(null)
+  const [interimTranscript, setInterimTranscript] = useState('')
+  const [isInitialized, setIsInitialized] = useState(false)
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length
 
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = (window as unknown).webkitSpeechRecognition || (window as unknown).SpeechRecognition
+      const recognitionInstance = new SpeechRecognition()
+      recognitionInstance.continuous = true
+      recognitionInstance.interimResults = true
+      recognitionInstance.lang = 'en-US'
+
+      recognitionInstance.onresult = (event: unknown) => {
+        let interim = ''
+        let final = ''
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            final += transcript + ' '
+          } else {
+            interim += transcript
+          }
+        }
+
+        if (final) {
+          setContent((prev) => prev + final)
+          setInterimTranscript('')
+        } else {
+          setInterimTranscript(interim)
+        }
+      }
+
+      recognitionInstance.onerror = (event: unknown) => {
+        console.error('Speech recognition error:', event.error)
+        setIsListening(false)
+        if (event.error === 'not-allowed') {
+          setToast({ message: 'Microphone access denied', type: 'error' })
+        }
+      }
+
+      recognitionInstance.onend = () => {
+        setIsListening(false)
+      }
+
+      setRecognition(recognitionInstance)
+    }
+  }, [])
+
+  const toggleListening = () => {
+    if (!recognition) {
+      setToast({ message: 'Speech recognition not supported', type: 'error' })
+      return
+    }
+
+    if (isListening) {
+      recognition.stop()
+      setIsListening(false)
+      setInterimTranscript('')
+    } else {
+      recognition.start()
+      setIsListening(true)
+    }
+  }
+
+  // Auto-save draft to localStorage
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (content) {
+        localStorage.setItem('journal-draft', content)
+      }
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [content])
+
+  // Load draft and prompt on mount
+  useEffect(() => {
+    const draft = localStorage.getItem('journal-draft')
+    if (draft) {
+      setContent(draft)
+    }
+    
+    const savedPrompt = localStorage.getItem('journal-prompt')
+    if (savedPrompt) {
+      setPrompt(savedPrompt)
+    } else {
+      setPrompt(prompts[0])
+    }
+    
+    setIsInitialized(true)
+  }, [])
+
+  // Auto-save prompt to localStorage (only after initialization)
+  useEffect(() => {
+    if (isInitialized && prompt) {
+      localStorage.setItem('journal-prompt', prompt)
+    }
+  }, [prompt, isInitialized])
+
+  const handleNewPrompt = () => {
+    if (content.trim()) {
+      setShowConfirm(true)
+    } else {
+      generateNewPrompt()
+    }
+  }
+
+  const generateNewPrompt = async () => {
+    setShowConfirm(false)
+    setLoadingPrompt(true)
+    try {
+      const response = await fetch('/api/prompts/generate', {
+        method: 'POST',
+      })
+      const data = await response.json()
+      
+      if (data.prompt) {
+        setPrompt(data.prompt)
+        setContent('')
+        localStorage.removeItem('journal-draft')
+        localStorage.setItem('journal-prompt', data.prompt)
+      } else if (data.fallback) {
+        setPrompt(data.fallback)
+        setContent('')
+        localStorage.removeItem('journal-draft')
+        localStorage.setItem('journal-prompt', data.fallback)
+      }
+    } catch (error) {
+      const currentIndex = prompts.indexOf(prompt)
+      const nextIndex = (currentIndex + 1) % prompts.length
+      const newPrompt = prompts[nextIndex]
+      setPrompt(newPrompt)
+      setContent('')
+      localStorage.removeItem('journal-draft')
+      localStorage.setItem('journal-prompt', newPrompt)
+    } finally {
+      setLoadingPrompt(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!content.trim()) {
+      setToast({ message: 'Please write something first', type: 'error' })
+      return
+    }
+
+    setSaving(true)
+
+    try {
+      const response = await fetch('/api/journal/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          content,
+          wordCount,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save')
+      }
+
+      setToast({ message: 'Entry saved successfully!', type: 'success' })
+      setContent('')
+      localStorage.removeItem('journal-draft')
+      
+      // Analysis is triggered automatically in the background by the API
+    } catch (error) {
+      setToast({ message: 'Failed to save entry', type: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen">
-      <Navigation />
-      <main className="section-padding">
-        <div className="container-width max-w-4xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Today's Journal Entry</CardTitle>
-              <p className="body mt-2">
-                <strong>Prompt:</strong> What emotions are you experiencing right now, and which part of you might be feeling them?
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+    <div className="min-h-screen bg-gray-50">
+      <AppNav />
+
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div>
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-4">Today&apos;s Journal Entry</h2>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt:</p>
+                <p className="text-blue-700">{prompt || 'Loading...'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <textarea
+                  value={content + interimTranscript}
+                  onChange={(e) => {
+                    const newValue = e.target.value
+                    // Remove interim transcript from the end if present
+                    if (interimTranscript && newValue.endsWith(interimTranscript)) {
+                      setContent(newValue.slice(0, -interimTranscript.length))
+                    } else {
+                      setContent(newValue)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSave()
+                    }
+                  }}
                   placeholder="Start writing your thoughts..."
                   rows={12}
-                  className="w-full"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                 />
-                <div className="flex items-center justify-between">
-                  <span className="body-small">{wordCount} words</span>
-                  <div className="flex gap-2">
-                    <Button variant="secondary">New Prompt</Button>
-                    <Button variant="primary">Save Entry</Button>
-                  </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">{wordCount} words</span>
+                  {recognition && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={toggleListening}
+                        className={`p-2 rounded-lg transition cursor-pointer ${
+                          isListening
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                        title={isListening ? 'Stop recording' : 'Start voice input'}
+                      >
+                        {isListening ? (
+                          <svg className="w-5 h-5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                      {isListening && (
+                        <span className="text-xs text-red-600 italic animate-pulse">
+                          Listening...
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleNewPrompt}
+                    disabled={loadingPrompt}
+                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingPrompt ? 'Generating...' : 'New Prompt'}
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+                  >
+                    {saving ? 'Saving...' : 'Save Entry'}
+                    {!saving && (
+                      <span className="text-xs opacity-75">⌘↵</span>
+                    )}
+                  </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </main>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
+            <h3 className="text-xl font-bold mb-4">Clear current text?</h3>
+            <p className="text-gray-600 mb-6">
+              Getting a new prompt will clear your current text. Are you sure you want to continue?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={generateNewPrompt}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
