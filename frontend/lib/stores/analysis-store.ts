@@ -3,7 +3,7 @@ import { create } from 'zustand'
 interface AnalysisState {
   isAnalyzing: boolean
   analysisType: 'incremental' | 'batch' | null
-  setAnalyzing: (isAnalyzing: boolean, type?: 'incremental' | 'batch') => void
+  setAnalyzing: (isAnalyzing: boolean, type?: 'incremental' | 'batch' | null) => void
 }
 
 export const useAnalysisStore = create<AnalysisState>((set) => ({
