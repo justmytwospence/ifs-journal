@@ -101,9 +101,9 @@ The IFS Journal App is a web-based journaling application designed to help users
 4. THE IFS_Journal_App SHALL ensure part responses stay in character and reflect the part's established voice and concerns
 5. THE IFS_Journal_App SHALL keep responses conversational and under 150 words
 
-### Requirement 6: Journal History with Parts Highlighting 
+### Requirement 6: Journal History with Parts Highlighting
 
-**User Story:** As a user tracking my IFS journey, I want to see all my journal entries with parts expressions highlighted and visualize my journaling frequency over time, so that I can observe patterns, and understand when different parts are active, 
+**User Story:** As a user tracking my IFS journey, I want to see all my journal entries with parts expressions highlighted and visualize my journaling frequency over time, so that I can observe patterns, and understand when different parts are active,
 
 #### Acceptance Criteria
 
