@@ -260,44 +260,10 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             <div className="mt-6 text-sm text-gray-500 italic">Analysis pending...</div>
           )}
           {entry.analysisStatus === 'processing' && (
-            <div className="mt-6 flex items-center gap-2">
-              <span className="text-sm text-blue-600 italic">Analyzing parts...</span>
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch(`/api/journal/entries/${entryId}/incremental-analysis`, {
-                      method: 'POST',
-                    })
-                    fetchEntry(entryId)
-                  } catch (error) {
-                    console.error('Failed to retry analysis:', error)
-                  }
-                }}
-                className="text-sm text-blue-600 hover:text-blue-700 underline"
-              >
-                Retry
-              </button>
-            </div>
+            <div className="mt-6 text-sm text-blue-600 italic">Analyzing parts...</div>
           )}
           {entry.analysisStatus === 'failed' && (
-            <div className="mt-6 flex items-center gap-2">
-              <span className="text-sm text-red-600 italic">Analysis failed</span>
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch(`/api/journal/entries/${entryId}/analyze`, {
-                      method: 'POST',
-                    })
-                    fetchEntry(entryId)
-                  } catch (error) {
-                    console.error('Failed to retry analysis:', error)
-                  }
-                }}
-                className="text-sm text-blue-600 hover:text-blue-700 underline"
-              >
-                Retry
-              </button>
-            </div>
+            <div className="mt-6 text-sm text-red-600 italic">Analysis failed</div>
           )}
         </div>
       </main>

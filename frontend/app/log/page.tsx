@@ -86,6 +86,78 @@ export default function LogPage() {
 
   const loading = entriesLoading || partsLoading
 
+  // Function to get excerpt with highlighted quote for selected part
+  const getEntryExcerpt = (entry: JournalEntry) => {
+    if (!selectedPartId || !entry.partAnalyses) {
+      return entry.content
+    }
+
+    // Find the analysis for the selected part
+    const relevantAnalysis = entry.partAnalyses.find(a => a.partId === selectedPartId)
+    if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
+      return entry.content
+    }
+
+    // Get the first highlight
+    const highlight = relevantAnalysis.highlights[0]
+    const highlightIndex = entry.content.toLowerCase().indexOf(highlight.toLowerCase())
+    
+    if (highlightIndex === -1) {
+      return entry.content
+    }
+
+    // Extract context around the highlight (about 150 chars before and after)
+    const contextLength = 150
+    const start = Math.max(0, highlightIndex - contextLength)
+    const end = Math.min(entry.content.length, highlightIndex + highlight.length + contextLength)
+    
+    let excerpt = entry.content.substring(start, end)
+    
+    // Add ellipsis if we're not at the start/end
+    if (start > 0) excerpt = '...' + excerpt
+    if (end < entry.content.length) excerpt = excerpt + '...'
+    
+    return excerpt
+  }
+
+  // Function to render excerpt with highlighted text
+  const renderExcerpt = (entry: JournalEntry) => {
+    const excerpt = getEntryExcerpt(entry)
+    
+    if (!selectedPartId || !entry.partAnalyses) {
+      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+    }
+
+    const relevantAnalysis = entry.partAnalyses.find(a => a.partId === selectedPartId)
+    if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
+      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+    }
+
+    const highlight = relevantAnalysis.highlights[0]
+    const highlightIndex = excerpt.toLowerCase().indexOf(highlight.toLowerCase())
+    
+    if (highlightIndex === -1) {
+      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+    }
+
+    const before = excerpt.substring(0, highlightIndex)
+    const highlighted = excerpt.substring(highlightIndex, highlightIndex + highlight.length)
+    const after = excerpt.substring(highlightIndex + highlight.length)
+
+    return (
+      <p className="text-gray-700 line-clamp-3">
+        {before}
+        <span 
+          className="font-bold"
+          style={{ color: relevantAnalysis.part.color }}
+        >
+          {highlighted}
+        </span>
+        {after}
+      </p>
+    )
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -294,7 +366,7 @@ export default function LogPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-gray-700 line-clamp-3">{entry.content}</p>
+                {renderExcerpt(entry)}
               </Link>
             ))}
           </div>
