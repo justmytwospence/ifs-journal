@@ -96,6 +96,7 @@ Analyze this entry and return a JSON object with this structure:
       "id": "existing-part-id-or-null-for-new",
       "name": "The Critic",
       "role": "Manager",
+      "icon": "●",
       "description": "Keeps me on track by pointing out mistakes",
       "quotes": ["Complete sentence from the entry"],
       "confidence": 0.85
@@ -103,5 +104,32 @@ Analyze this entry and return a JSON object with this structure:
   ]
 }
 ```
+
+**Icon Assignment for NEW Parts:**
+
+When creating a NEW part (id is null), assign a thematically relevant emoji that captures its essence:
+- 🛡️ Shield (protector, defender)
+- 📋 Clipboard (planner, organizer)
+- 🔥 Fire (reactive, intense)
+- 💔 Broken heart (wounded, hurt)
+- 👁️ Eye (observer, watcher)
+- ⚡ Lightning (quick reactor, firefighter)
+- 🎭 Theater masks (performer, people-pleaser)
+- 🧊 Ice (frozen, numb, avoidant)
+- 🌪️ Tornado (chaos, overwhelm)
+- 💭 Thought bubble (worrier, overthinker)
+- 🎯 Target (perfectionist, achiever)
+- 🚨 Siren (alarm, anxiety)
+- 🧱 Brick (wall, barrier)
+- 🌊 Wave (emotional, flowing)
+- ⚖️ Scale (judge, critic)
+- 🎪 Circus tent (juggler, multitasker)
+- 🔒 Lock (controller, restrictor)
+- 🌱 Seedling (young, vulnerable)
+- 🎨 Palette (creative, expressive)
+- 🏃 Runner (escape, avoidance)
+
+Choose an icon that best represents the part's role, personality, or protective strategy. Each part should have a unique icon that hasn't been used by existing parts.
+For existing parts (id is not null), you can omit the icon field or use the existing part's icon.
 
 Return ONLY the JSON, no other text.

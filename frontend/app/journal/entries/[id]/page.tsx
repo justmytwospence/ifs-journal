@@ -78,32 +78,62 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   const highlightText = (text: string, analyses: PartAnalysis[] = []) => {
     if (!analyses || analyses.length === 0) return text
 
-    const highlights: { start: number; end: number; part: Part }[] = []
+    const highlights: { start: number; end: number; part: Part; text: string }[] = []
 
     analyses.forEach((analysis) => {
       analysis.highlights.forEach((highlight) => {
-        const index = text.indexOf(highlight)
-        if (index !== -1) {
+        // Try exact match first
+        let index = text.indexOf(highlight)
+        
+        // If no exact match, try case-insensitive
+        if (index === -1) {
+          const lowerText = text.toLowerCase()
+          const lowerHighlight = highlight.toLowerCase()
+          index = lowerText.indexOf(lowerHighlight)
+          
+          // If found with case-insensitive, use the actual text from the entry
+          if (index !== -1) {
+            const actualText = text.substring(index, index + highlight.length)
+            highlights.push({
+              start: index,
+              end: index + highlight.length,
+              part: analysis.part,
+              text: actualText,
+            })
+          }
+        } else {
           highlights.push({
             start: index,
             end: index + highlight.length,
             part: analysis.part,
+            text: highlight,
           })
         }
       })
     })
 
-    highlights.sort((a, b) => a.start - b.start)
+    // Remove overlapping highlights (keep the first one)
+    const filteredHighlights = highlights.filter((h, i) => {
+      for (let j = 0; j < i; j++) {
+        const other = highlights[j]
+        if (h.start < other.end && h.end > other.start) {
+          return false // Overlaps with an earlier highlight
+        }
+      }
+      return true
+    })
+
+    filteredHighlights.sort((a, b) => a.start - b.start)
 
     const parts: React.ReactElement[] = []
     let lastIndex = 0
 
-    highlights.forEach((highlight, i) => {
+    filteredHighlights.forEach((highlight, i) => {
       if (highlight.start > lastIndex) {
         parts.push(<span key={`text-${i}`}>{text.slice(lastIndex, highlight.start)}</span>)
       }
 
-      const highlightedText = text.slice(highlight.start, highlight.end)
+      const highlightedText = highlight.text
       
       parts.push(
         <span
@@ -114,7 +144,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           data-quote={highlightedText}
         >
           {highlightedText}
-          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
             {highlight.part.name}
           </span>
         </span>
@@ -230,7 +260,24 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             <div className="mt-6 text-sm text-gray-500 italic">Analysis pending...</div>
           )}
           {entry.analysisStatus === 'processing' && (
-            <div className="mt-6 text-sm text-blue-600 italic">Analyzing parts...</div>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="text-sm text-blue-600 italic">Analyzing parts...</span>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch(`/api/journal/entries/${entryId}/incremental-analysis`, {
+                      method: 'POST',
+                    })
+                    fetchEntry(entryId)
+                  } catch (error) {
+                    console.error('Failed to retry analysis:', error)
+                  }
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 underline"
+              >
+                Retry
+              </button>
+            </div>
           )}
           {entry.analysisStatus === 'failed' && (
             <div className="mt-6 flex items-center gap-2">

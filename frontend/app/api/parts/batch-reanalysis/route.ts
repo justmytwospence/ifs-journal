@@ -74,10 +74,24 @@ export async function POST(request: Request) {
 
     const result = JSON.parse(completion.choices[0]?.message?.content || '{"parts":[],"entryMappings":[]}')
 
-    // Create all identified parts (max 10)
+    // Find which parts are actually used in entry mappings
+    const usedPartIds = new Set<string>()
+    for (const mapping of result.entryMappings) {
+      for (const partRef of mapping.parts) {
+        usedPartIds.add(partRef.tempId)
+      }
+    }
+
+    // Create only the parts that are actually mapped to entries (max 10)
     const createdParts = new Map<string, { id: string; name: string }>()
     
     for (const partData of result.parts.slice(0, 10)) {
+      // Skip parts that aren't mapped to any entries
+      if (!usedPartIds.has(partData.tempId)) {
+        console.log(`Skipping unmapped part: ${partData.name} (${partData.tempId})`)
+        continue
+      }
+
       const part = await prisma.part.create({
         data: {
           userId: session.user.id,
@@ -85,6 +99,7 @@ export async function POST(request: Request) {
           description: partData.description,
           role: partData.role,
           color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
+          icon: partData.icon || '●',
           quotes: partData.quotes || [],
         },
       })
@@ -93,9 +108,13 @@ export async function POST(request: Request) {
     }
 
     // Create part analyses for each entry
+    const processedEntryIds = new Set<string>()
+    
     for (const mapping of result.entryMappings) {
       const entry = entries.find(e => e.id === mapping.entryId)
       if (!entry) continue
+
+      processedEntryIds.add(entry.id)
 
       for (const partRef of mapping.parts) {
         const part = createdParts.get(partRef.tempId)
@@ -116,6 +135,18 @@ export async function POST(request: Request) {
         where: { id: entry.id },
         data: { analysisStatus: 'completed' },
       })
+    }
+
+    // Update any entries that weren't mapped to completed status as well
+    const unmappedEntries = entries.filter(e => !processedEntryIds.has(e.id))
+    if (unmappedEntries.length > 0) {
+      await prisma.journalEntry.updateMany({
+        where: { 
+          id: { in: unmappedEntries.map(e => e.id) }
+        },
+        data: { analysisStatus: 'completed' },
+      })
+      console.log(`Updated ${unmappedEntries.length} unmapped entries to completed status`)
     }
 
     console.log(`Batch reanalysis complete: Created ${createdParts.size} parts for ${entries.length} entries`)

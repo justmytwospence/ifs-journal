@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AppNav } from '@/components/AppNav'
 import { Toast } from '@/components/ui/Toast'
+import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 const prompts = [
   'What emotions are you experiencing right now, and which part of you might be feeling them?',
@@ -19,6 +20,7 @@ export default function JournalPage() {
   const [loadingPrompt, setLoadingPrompt] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const { setAnalyzing } = useAnalysisStore()
   const [isListening, setIsListening] = useState(false)
   const [recognition, setRecognition] = useState<unknown>(null)
   const [interimTranscript, setInterimTranscript] = useState('')
@@ -103,14 +105,14 @@ export default function JournalPage() {
     if (draft) {
       setContent(draft)
     }
-    
+
     const savedPrompt = localStorage.getItem('journal-prompt')
     if (savedPrompt) {
       setPrompt(savedPrompt)
     } else {
       setPrompt(prompts[0])
     }
-    
+
     setIsInitialized(true)
   }, [])
 
@@ -137,7 +139,7 @@ export default function JournalPage() {
         method: 'POST',
       })
       const data = await response.json()
-      
+
       if (data.prompt) {
         setPrompt(data.prompt)
         setContent('')
@@ -188,8 +190,14 @@ export default function JournalPage() {
       setToast({ message: 'Entry saved successfully!', type: 'success' })
       setContent('')
       localStorage.removeItem('journal-draft')
-      
+
       // Analysis is triggered automatically in the background by the API
+      setAnalyzing(true, 'incremental')
+
+      // Clear the analyzing indicator after a delay (analysis happens in background)
+      setTimeout(() => {
+        setAnalyzing(false)
+      }, 3000)
     } catch (error) {
       setToast({ message: 'Failed to save entry', type: 'error' })
     } finally {
@@ -202,13 +210,29 @@ export default function JournalPage() {
       <AppNav />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-2">Journal</h2>
+          <p className="text-gray-600">Write about your thoughts and feelings</p>
+        </div>
+
         <div>
           <div className="bg-white rounded-2xl shadow-sm p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-4">Today&apos;s Journal Entry</h2>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt:</p>
-                <p className="text-blue-700">{prompt || 'Loading...'}</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
+                    <p className="text-blue-700">{prompt || 'Loading...'}</p>
+                  </div>
+                  <button
+                    onClick={handleNewPrompt}
+                    disabled={loadingPrompt}
+                    className="px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap border border-blue-200"
+                  >
+                    {loadingPrompt ? 'Generating...' : 'New Prompt'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -244,11 +268,10 @@ export default function JournalPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={toggleListening}
-                        className={`p-2 rounded-lg transition cursor-pointer ${
-                          isListening
-                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={`p-2 rounded-lg transition cursor-pointer ${isListening
+                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                         title={isListening ? 'Stop recording' : 'Start voice input'}
                       >
                         {isListening ? (
@@ -269,25 +292,16 @@ export default function JournalPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleNewPrompt}
-                    disabled={loadingPrompt}
-                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loadingPrompt ? 'Generating...' : 'New Prompt'}
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
-                  >
-                    {saving ? 'Saving...' : 'Save Entry'}
-                    {!saving && (
-                      <span className="text-xs opacity-75">⌘↵</span>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+                >
+                  {saving ? 'Saving...' : 'Save Entry'}
+                  {!saving && (
+                    <span className="text-xs opacity-75">⌘↵</span>
+                  )}
+                </button>
               </div>
             </div>
           </div>

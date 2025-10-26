@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
+import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 export function AppNav() {
   const router = useRouter()
@@ -11,6 +12,7 @@ export function AppNav() {
   const { data: session } = useSession()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { isAnalyzing, analysisType } = useAnalysisStore()
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
@@ -83,7 +85,16 @@ export function AppNav() {
               </Link>
             </div>
           </div>
-          <div className="relative" ref={dropdownRef}>
+          <div className="flex items-center gap-4">
+            {isAnalyzing && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-blue-700">
+                  {analysisType === 'batch' ? 'Batch analyzing...' : 'Analyzing...'}
+                </span>
+              </div>
+            )}
+            <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-white font-semibold flex items-center justify-center hover:shadow-lg transition-shadow"
@@ -111,6 +122,7 @@ export function AppNav() {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -52,6 +52,7 @@ export async function GET() {
         name: part.name,
         role: part.role,
         color: part.color,
+        icon: part.icon,
         description: part.description,
         quotes: part.quotes,
         appearances: part.partAnalyses.length,

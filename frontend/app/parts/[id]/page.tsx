@@ -17,9 +17,11 @@ interface Part {
   name: string
   role: string
   color: string
+  icon?: string
   description: string
   quotes: string[]
   quotesWithEntries?: QuoteWithEntry[]
+  weeklyActivity?: number[]
 }
 
 interface ConversationMessage {
@@ -234,15 +236,40 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
           <div className="bg-white rounded-2xl shadow-sm p-8 mb-6">
             <div className="flex items-center gap-4 mb-4">
               <div 
-                className="w-16 h-16 rounded-xl flex items-center justify-center text-4xl"
+                className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-4xl font-bold"
                 style={{ backgroundColor: part.color }}
               >
-                {getPartIcon(part.role)}
+                {getPartIcon(part.icon)}
               </div>
-              <div>
+              <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-1">{part.name}</h1>
                 <span className="text-sm text-gray-500">{part.role}</span>
               </div>
+              {/* Activity Sparkline */}
+              {part.weeklyActivity && part.weeklyActivity.length > 0 && (
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-gray-500 mb-1">Last 30 days</span>
+                  <svg width="150" height="32" className="inline-block">
+                    {part.weeklyActivity.map((value, i) => {
+                      const max = Math.max(...part.weeklyActivity!, 1)
+                      const barHeight = (value / max) * 32
+                      const barWidth = 150 / part.weeklyActivity!.length
+                      return (
+                        <rect
+                          key={i}
+                          x={i * barWidth}
+                          y={32 - barHeight}
+                          width={barWidth - 1}
+                          height={barHeight}
+                          fill={part.color}
+                          opacity={0.7}
+                          rx={1}
+                        />
+                      )
+                    })}
+                  </svg>
+                </div>
+              )}
             </div>
             <p className="text-gray-700 text-lg">{part.description}</p>
           </div>

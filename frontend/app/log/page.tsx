@@ -12,6 +12,7 @@ interface Part {
   name: string
   role: string
   color: string
+  icon?: string
 }
 
 interface PartAnalysis {
@@ -40,7 +41,7 @@ export default function LogPage() {
   const { data: entriesData, isLoading: entriesLoading } = useQuery({
     queryKey: ['journal-entries'],
     queryFn: async () => {
-      const response = await fetch('/api/journal/entries')
+      const response = await fetch('/api/journal/entries?includeAnalyses=true')
       if (!response.ok) throw new Error('Failed to fetch entries')
       return response.json()
     },
@@ -105,8 +106,8 @@ export default function LogPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Journal Log</h1>
-          <p className="text-lg text-gray-600">
+          <h2 className="text-3xl font-bold mb-2">Journal Log</h2>
+          <p className="text-gray-600">
             {entries.length} {entries.length === 1 ? 'entry' : 'entries'} in your journal
           </p>
         </div>
@@ -149,12 +150,9 @@ export default function LogPage() {
                 <div className="flex items-center gap-3">
                   {selectedPartId ? (
                     <>
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ 
-                          backgroundColor: parts.find(p => p.id === selectedPartId)?.color 
-                        }}
-                      />
+                      <span className="text-lg">
+                        {parts.find(p => p.id === selectedPartId)?.icon || '●'}
+                      </span>
                       <span className="text-gray-900 font-medium">
                         {parts.find(p => p.id === selectedPartId)?.name}
                       </span>
@@ -204,10 +202,9 @@ export default function LogPage() {
                           selectedPartId === part.id ? 'bg-gray-50' : ''
                         }`}
                       >
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: part.color }}
-                        />
+                        <span className="text-lg shrink-0">
+                          {part.icon || '●'}
+                        </span>
                         <span className="text-gray-900 font-medium">{part.name}</span>
                       </button>
                     ))}

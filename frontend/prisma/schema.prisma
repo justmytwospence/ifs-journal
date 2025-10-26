@@ -55,6 +55,7 @@ model Part {
   description String   @db.Text
   role        String   // Protector, Manager, Firefighter, Exile
   color       String   // Hex color for UI consistency
+  icon        String   @default("●") // Simple unicode symbol for visual identification
   quotes      String[] // Array of complete sentences expressing this part's voice
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

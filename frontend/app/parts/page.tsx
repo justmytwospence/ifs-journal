@@ -7,12 +7,14 @@ import { Toast } from '@/components/ui/Toast'
 import { PartsTreemap } from '@/components/parts/PartsTreemap'
 import { slugify } from '@/lib/slug-utils'
 import { getPartIcon } from '@/lib/part-icons'
+import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 interface Part {
   id: string
   name: string
   role: string
   color: string
+  icon?: string
   description: string
   appearances: number
   activityTrend: number[]
@@ -24,6 +26,7 @@ export default function PartsPage() {
   const [reanalyzing, setReanalyzing] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const { setAnalyzing } = useAnalysisStore()
 
   useEffect(() => {
     fetchParts()
@@ -44,6 +47,10 @@ export default function PartsPage() {
   const handleReanalyze = async () => {
     setShowConfirmDialog(false)
     setReanalyzing(true)
+    setAnalyzing(true, 'batch')
+    
+    // Immediately clear existing parts to show loading state
+    setParts([])
     
     try {
       const response = await fetch('/api/parts/batch-reanalysis', {
@@ -54,18 +61,18 @@ export default function PartsPage() {
       
       if (response.ok) {
         setToast({ 
-          message: `Reanalysis started for ${data.entriesAnalyzed} entries. Check back in a few minutes.`, 
+          message: `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`, 
           type: 'success' 
         })
-        // Refresh parts after a delay to show new results
-        setTimeout(() => {
-          fetchParts()
-        }, 3000)
+        // Immediately fetch the new parts
+        await fetchParts()
       } else {
         setToast({ 
           message: data.error || 'Failed to start reanalysis', 
           type: 'error' 
         })
+        // Reload parts even on error to show current state
+        await fetchParts()
       }
     } catch (error) {
       console.error('Failed to reanalyze:', error)
@@ -73,8 +80,11 @@ export default function PartsPage() {
         message: 'Failed to start reanalysis', 
         type: 'error' 
       })
+      // Reload parts even on error
+      await fetchParts()
     } finally {
       setReanalyzing(false)
+      setAnalyzing(false)
     }
   }
   return (
@@ -97,8 +107,16 @@ export default function PartsPage() {
           </button>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading parts...</div>
+        {loading || reanalyzing ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">
+              {reanalyzing ? 'Reanalyzing all journal entries...' : 'Loading parts...'}
+            </p>
+            {reanalyzing && (
+              <p className="text-sm text-gray-400 mt-2">This may take a minute</p>
+            )}
+          </div>
         ) : parts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">No parts discovered yet</p>
@@ -120,10 +138,10 @@ export default function PartsPage() {
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-bold"
                       style={{ backgroundColor: part.color }}
                     >
-                      {getPartIcon(part.role)}
+                      {getPartIcon(part.icon)}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold mb-1">{part.name}</h3>

@@ -42,7 +42,13 @@ export async function POST(request: Request) {
       max_tokens: 150,
     })
 
-    const prompt = completion.choices[0]?.message?.content?.trim() || 'What are you feeling right now?'
+    let prompt = completion.choices[0]?.message?.content?.trim() || 'What are you feeling right now?'
+    
+    // Remove surrounding quotes if present
+    if ((prompt.startsWith('"') && prompt.endsWith('"')) || 
+        (prompt.startsWith("'") && prompt.endsWith("'"))) {
+      prompt = prompt.slice(1, -1)
+    }
 
     return NextResponse.json({ prompt })
   } catch (error) {

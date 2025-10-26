@@ -43,15 +43,25 @@ function levenshteinDistance(str1: string, str2: string): number {
 
 // Calculate name similarity (0-1 score)
 function calculateNameSimilarity(name1: string, name2: string): number {
-  // Normalize: lowercase and remove articles
+  // Normalize: lowercase, remove articles, and common suffixes
   const normalize = (name: string) =>
-    name.toLowerCase().replace(/^(the|a|an)\s+/, '').trim()
+    name.toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .replace(/\s+(part|one|self)$/i, '')
+      .trim()
 
   const n1 = normalize(name1)
   const n2 = normalize(name2)
 
   // Exact match after normalization
   if (n1 === n2) return 1.0
+
+  // Check if one name contains the other (high similarity)
+  if (n1.includes(n2) || n2.includes(n1)) {
+    const shorter = Math.min(n1.length, n2.length)
+    const longer = Math.max(n1.length, n2.length)
+    return shorter / longer
+  }
 
   // Calculate Levenshtein distance
   const distance = levenshteinDistance(n1, n2)
@@ -87,6 +97,14 @@ function calculateKeywordOverlap(desc1: string, desc2: string): number {
     'numb',
     'shame',
     'vulnerable',
+    'compassion',
+    'observer',
+    'witness',
+    'watcher',
+    'kind',
+    'gentle',
+    'caring',
+    'understanding',
   ]
 
   const d1Lower = desc1.toLowerCase()
@@ -131,8 +149,8 @@ function findSimilarPart(
     // Weighted overall similarity: name (50%), role (25%), keywords (25%)
     const overallScore = nameScore * 0.5 + roleMatch * 0.25 + keywordScore * 0.25
 
-    // Track best match
-    if (overallScore > 0.75 && (!bestMatch || overallScore > bestMatch.score)) {
+    // Track best match (lowered threshold to 65% to catch more duplicates)
+    if (overallScore > 0.65 && (!bestMatch || overallScore > bestMatch.score)) {
       bestMatch = {
         id: existing.id,
         score: overallScore,
@@ -213,6 +231,11 @@ export async function POST(
       // If AI didn't match, do our own similarity check
       if (!matchedPartId) {
         matchedPartId = findSimilarPart(partData, existingParts)
+        if (matchedPartId) {
+          console.log(`Similarity check matched "${partData.name}" to existing part ID: ${matchedPartId}`)
+        } else {
+          console.log(`No similar part found for "${partData.name}", creating new part`)
+        }
       }
 
       if (matchedPartId) {

@@ -62,16 +62,40 @@ export async function GET(
       }))
     )
 
+    // Calculate activity over last 30 days
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const activityByDay: Record<string, number> = {}
+    part.partAnalyses.forEach(analysis => {
+      const entryDate = entryDateMap.get(analysis.entryId)
+      if (entryDate && entryDate >= thirtyDaysAgo) {
+        const dateKey = entryDate.toISOString().split('T')[0]
+        activityByDay[dateKey] = (activityByDay[dateKey] || 0) + 1
+      }
+    })
+    
+    // Create array of daily counts for last 30 days
+    const weeklyActivity: number[] = []
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateKey = date.toISOString().split('T')[0]
+      weeklyActivity.push(activityByDay[dateKey] || 0)
+    }
+
     return NextResponse.json({ 
       part: {
         id: part.id,
         name: part.name,
         role: part.role,
         color: part.color,
+        icon: part.icon,
         description: part.description,
         quotes: part.quotes,
         quotesWithEntries,
         appearances: part.partAnalyses.length,
+        weeklyActivity,
       }
     })
   } catch (error) {
