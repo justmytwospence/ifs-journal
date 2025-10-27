@@ -62,13 +62,15 @@ export async function POST() {
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Analyze all these journal entries together and identify up to 10 distinct parts.' },
+        { role: 'user', content: 'Analyze all these journal entries together and identify up to 9 distinct parts.' },
       ],
       temperature: 0.7,
       response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(completion.choices[0]?.message?.content || '{"parts":[],"entryMappings":[]}')
+
+    console.log(`AI returned ${result.parts?.length || 0} parts and ${result.entryMappings?.length || 0} entry mappings`)
 
     // Find which parts are actually used in entry mappings
     const usedPartIds = new Set<string>()
@@ -78,14 +80,17 @@ export async function POST() {
       }
     }
 
-    // Create only the parts that are actually mapped to entries (max 10)
+    // Filter to only parts that are used, then enforce max 10
+    const usedParts = result.parts.filter((p: { tempId: string }) => usedPartIds.has(p.tempId))
+    
+    if (usedParts.length > 9) {
+      console.log(`AI returned ${usedParts.length} used parts, limiting to 9`)
+    }
+
+    // Create only the parts that are actually mapped to entries (max 9)
     const createdParts = new Map<string, { id: string; name: string }>()
 
-    for (const partData of result.parts.slice(0, 10)) {
-      if (!usedPartIds.has(partData.tempId)) {
-        console.log(`Skipping unmapped part: ${partData.name} (${partData.tempId})`)
-        continue
-      }
+    for (const partData of usedParts.slice(0, 9)) {
 
       const part = await prisma.part.create({
         data: {
@@ -113,16 +118,21 @@ export async function POST() {
 
       for (const partRef of mapping.parts) {
         const part = createdParts.get(partRef.tempId)
-        if (!part) continue
+        if (!part) {
+          console.log(`Warning: Part with tempId ${partRef.tempId} not found in createdParts`)
+          continue
+        }
 
-        await prisma.partAnalysis.create({
+        const analysis = await prisma.partAnalysis.create({
           data: {
             entryId: entry.id,
             partId: part.id,
             highlights: partRef.highlights || [],
+            reasoning: partRef.reasoning || {},
             confidence: partRef.confidence || 0.8,
           },
         })
+        console.log(`Created analysis ${analysis.id} for part ${part.name} in entry ${entry.id}`)
       }
 
       // Update entry status to completed
@@ -144,7 +154,19 @@ export async function POST() {
       console.log(`Updated ${unmappedEntries.length} unmapped entries to completed status`)
     }
 
+    // Verify parts were created with analyses
+    const verifyParts = await prisma.part.findMany({
+      where: { userId: session.user.id },
+      include: {
+        partAnalyses: true,
+      },
+    })
+
     console.log(`Batch reanalysis complete: Created ${createdParts.size} parts for ${entries.length} entries`)
+    console.log(`Verification: Found ${verifyParts.length} parts in database`)
+    verifyParts.forEach(p => {
+      console.log(`  - ${p.name}: ${p.partAnalyses.length} analyses`)
+    })
 
     return NextResponse.json({
       success: true,

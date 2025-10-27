@@ -99,6 +99,7 @@ export async function GET(request: Request) {
                     name: true,
                     role: true,
                     color: true,
+                    icon: true,
                   },
                 },
               },

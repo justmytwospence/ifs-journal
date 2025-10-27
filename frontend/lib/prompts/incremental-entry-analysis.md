@@ -32,7 +32,7 @@ Analyze the journal entry to identify distinct internal parts (sub-personalities
 
 **Quality Over Quantity:**
 
-- Most people have 3-5 core parts, not 10+
+- Most people have 3-5 core parts, not 9+
 - Each part should represent a MAJOR distinct voice or protective strategy
 - Avoid creating parts for:
   - Minor variations in mood or tone
@@ -49,14 +49,19 @@ Analyze the journal entry to identify distinct internal parts (sub-personalities
 
 **Analysis Limits:**
 
+- **CRITICAL**: Every entry MUST have at least one part identified with at least one quote
+- Try VERY HARD to find at least one expression from at least one part in every entry
 - Most entries will match 1-2 existing parts, not create new ones
 - Only create a new part if it's truly distinct and not similar to any existing part
-- Maximum 10 parts total - if identifying an 11th, replace the lowest confidence existing part
+- Maximum 9 parts total - if identifying a 10th, replace the lowest confidence existing part
 - Prefer matching existing parts over creating new ones
+- If you're struggling to identify a part, look for ANY emotional expression, concern, or protective strategy and match it to the most relevant existing part
 
 **Other Guidelines:**
 
 - Extract complete sentences as quotes (not fragments or single words)
+- **CRITICAL**: Quotes MUST be exact, word-for-word copies from the entry content - do not paraphrase, summarize, or modify the text in any way
+- Copy the exact punctuation, capitalization, and wording from the entry
 - Categorize as: Protector, Manager, Firefighter, or Exile
 
 ## Part Types
@@ -82,12 +87,15 @@ Analyze this entry and return a JSON object with this structure:
 
 **IMPORTANT INSTRUCTIONS:**
 
-1. Review the existing parts list carefully
-2. For EACH expression you identify, check if it matches ANY existing part
-3. If there's ANY thematic overlap with an existing part, use that part's ID
-4. Only set "id" to null if the expression is COMPLETELY different from all existing parts
-5. Aim to return 0-2 parts per entry (most entries express 1-2 parts, not 5-10)
-6. Be conservative - when in doubt, match to an existing part
+1. **CRITICAL**: You MUST identify at least one part with at least one quote for this entry - never return an empty parts array
+2. Review the existing parts list carefully
+3. For EACH expression you identify, check if it matches ANY existing part
+4. If there's ANY thematic overlap with an existing part, use that part's ID
+5. Only set "id" to null if the expression is COMPLETELY different from all existing parts
+6. Include ALL parts that are clearly supported by quotes in the entry - there is no upper limit
+7. If multiple distinct parts are expressing themselves with clear evidence, include all of them
+8. Be conservative - when in doubt, match to an existing part
+9. If you're having trouble identifying a part, look for ANY emotional tone, concern, or perspective in the entry and match it to the closest existing part
 
 ```json
 {
@@ -98,12 +106,19 @@ Analyze this entry and return a JSON object with this structure:
       "role": "Manager",
       "icon": "●",
       "description": "Keeps me on track by pointing out mistakes",
-      "quotes": ["Complete sentence from the entry"],
+      "quotes": ["Exact sentence copied word-for-word from the entry content"],
+      "reasoning": {
+        "Exact sentence copied word-for-word from the entry content": "One sentence explaining why this quote belongs to this part"
+      },
       "confidence": 0.85
     }
   ]
 }
 ```
+
+**CRITICAL REMINDERS**: 
+- The "quotes" array MUST contain exact, verbatim text from the entry content. These quotes will be used to highlight text in the UI, so they must match the entry content exactly (including punctuation and capitalization).
+- The "reasoning" object maps each quote to a brief one-sentence justification explaining WHY that specific quote is attributed to this part. Keep each reasoning concise and specific to the quote.
 
 **Icon Assignment for NEW Parts:**
 

@@ -23,6 +23,7 @@ interface PartAnalysis {
   id: string
   partId: string
   highlights: string[]
+  reasoning: Record<string, string>
   part: Part
 }
 
@@ -164,7 +165,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   const highlightText = (text: string, analyses: PartAnalysis[] = []) => {
     if (!analyses || analyses.length === 0) return text
 
-    const highlights: { start: number; end: number; part: Part; text: string }[] = []
+    const highlights: { start: number; end: number; part: Part; text: string; reasoning: string }[] = []
 
     analyses.forEach((analysis) => {
       analysis.highlights.forEach((highlight) => {
@@ -185,6 +186,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               end: index + highlight.length,
               part: analysis.part,
               text: actualText,
+              reasoning: analysis.reasoning?.[highlight] || '',
             })
           }
         } else {
@@ -193,6 +195,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             end: index + highlight.length,
             part: analysis.part,
             text: highlight,
+            reasoning: analysis.reasoning?.[highlight] || '',
           })
         }
       })
@@ -230,8 +233,15 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           data-quote={highlightedText}
         >
           {highlightedText}
-          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-            {highlight.part.name}
+          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-80 shadow-2xl border border-gray-700 font-sans">
+            <div className="font-bold text-base mb-2" style={{ color: highlight.part.color }}>{highlight.part.name}</div>
+            {highlight.reasoning && (
+              <div className="text-gray-200 text-left leading-relaxed">{highlight.reasoning}</div>
+            )}
+            {/* Arrow pointing down */}
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+              <div className="border-8 border-transparent border-t-gray-900"></div>
+            </div>
           </span>
         </span>
       )

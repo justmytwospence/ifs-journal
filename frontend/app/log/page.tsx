@@ -1,7 +1,7 @@
 'use client'
 
 import { AppNav } from '@/components/AppNav'
-import { useState, useMemo, useEffect, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatEntryDate } from '@/lib/date-utils'
@@ -51,6 +51,8 @@ function LogPageContent() {
     }
     return 1
   })
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const previousEntryCountRef = useRef<number>(0)
 
   // Save to sessionStorage whenever it changes
   useEffect(() => {
@@ -87,6 +89,48 @@ function LogPageContent() {
   const entries: JournalEntry[] = entriesData?.entries || []
   const totalCount: number = entriesData?.totalCount || 0
   const parts: Part[] = Array.isArray(partsData) ? partsData : []
+
+  // Filter and search entries
+  const filteredEntries = useMemo(() => {
+    let filtered = entries
+
+    // Filter by part
+    if (selectedPartId) {
+      filtered = filtered.filter((entry) =>
+        entry.partAnalyses?.some((analysis) => analysis.partId === selectedPartId)
+      )
+    }
+
+    // Search in content and prompt
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (entry) =>
+          entry.content.toLowerCase().includes(query) ||
+          entry.prompt.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [entries, selectedPartId, searchQuery])
+
+  // Auto-load more weeks if we haven't reached all entries yet but current week range has no new entries
+  useEffect(() => {
+    if (isLoadingMore && !entriesFetching && entriesData) {
+      const currentEntryCount = entriesData.entries?.length || 0
+      const totalCount = entriesData.totalCount || 0
+      const currentFilteredCount = filteredEntries.length
+      
+      // If we still have more entries to load but didn't get any new filtered entries, keep loading
+      if (currentEntryCount < totalCount && currentFilteredCount === previousEntryCountRef.current) {
+        // Use setTimeout to avoid cascading renders
+        setTimeout(() => setWeeksToLoad(prev => prev + 1), 0)
+      } else {
+        // Either we got new entries or we've loaded everything - stop loading
+        setTimeout(() => setIsLoadingMore(false), 0)
+      }
+    }
+  }, [isLoadingMore, entriesFetching, entriesData, filteredEntries.length])
 
   // Only show loading skeleton on initial load, not when loading more weeks
   const isInitialLoading = (entriesLoading || partsLoading) && entries.length === 0
@@ -156,30 +200,6 @@ function LogPageContent() {
     }
     return `${startMonth} ${startDay} – ${endMonth} ${endDay}${year}`
   }
-
-  // Filter and search entries
-  const filteredEntries = useMemo(() => {
-    let filtered = entries
-
-    // Filter by part
-    if (selectedPartId) {
-      filtered = filtered.filter((entry) =>
-        entry.partAnalyses?.some((analysis) => analysis.partId === selectedPartId)
-      )
-    }
-
-    // Search in content and prompt
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (entry) =>
-          entry.content.toLowerCase().includes(query) ||
-          entry.prompt.toLowerCase().includes(query)
-      )
-    }
-
-    return filtered
-  }, [entries, selectedPartId, searchQuery])
 
   // Group entries by calendar week
   const entriesByWeek = useMemo(() => {
@@ -484,19 +504,24 @@ function LogPageContent() {
                           </div>
                           <div className="flex items-center gap-3 ml-4">
                             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
-                              <div className="flex -space-x-2">
+                              <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
                                 {entry.partAnalyses.slice(0, 3).map((analysis) => (
-                                  <div
-                                    key={analysis.id}
-                                    className="w-6 h-6 rounded-full border-2 border-white"
-                                    style={{ backgroundColor: analysis.part.color }}
-                                    title={analysis.part.name}
-                                  />
+                                  <div key={analysis.id} className="relative group">
+                                    <span className="text-lg">
+                                      {analysis.part.icon || '●'}
+                                    </span>
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-lg">
+                                      {analysis.part.name}
+                                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                                        <div className="border-4 border-transparent border-t-gray-900"></div>
+                                      </div>
+                                    </div>
+                                  </div>
                                 ))}
                                 {entry.partAnalyses.length > 3 && (
-                                  <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs text-gray-600">
+                                  <span className="text-xs text-gray-600 flex items-center">
                                     +{entry.partAnalyses.length - 3}
-                                  </div>
+                                  </span>
                                 )}
                               </div>
                             )}
@@ -517,11 +542,15 @@ function LogPageContent() {
             {entries.length < totalCount && (
               <div className="mt-8 text-center">
                 <button
-                  onClick={() => setWeeksToLoad(prev => prev + 1)}
-                  disabled={entriesFetching}
+                  onClick={() => {
+                    previousEntryCountRef.current = filteredEntries.length
+                    setIsLoadingMore(true)
+                    setWeeksToLoad(prev => prev + 1)
+                  }}
+                  disabled={entriesFetching || isLoadingMore}
                   className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {entriesFetching ? 'Loading...' : 'Load one more week'}
+                  {(entriesFetching || isLoadingMore) ? 'Loading...' : 'Load one more week'}
                 </button>
               </div>
             )}

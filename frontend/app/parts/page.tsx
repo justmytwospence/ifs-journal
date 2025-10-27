@@ -28,7 +28,7 @@ export default function PartsPage() {
   const [reanalyzing, setReanalyzing] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const { setAnalyzing } = useAnalysisStore()
+  const { isAnalyzing, analysisType, setAnalyzing } = useAnalysisStore()
   const queryClient = useQueryClient()
 
   // Fetch parts using React Query
@@ -46,6 +46,9 @@ export default function PartsPage() {
   
   // Apply minimum loading time to prevent skeleton flashing
   const showLoading = useMinimumLoadingTime(isLoading)
+  
+  // Check if we're doing a batch reanalysis (either local state or global state)
+  const isBatchAnalyzing = reanalyzing || (isAnalyzing && analysisType === 'batch')
 
   // Prefetch individual part pages
   useEffect(() => {
@@ -112,7 +115,7 @@ export default function PartsPage() {
     }
   }
   // Show error state without skeleton
-  if (isError && !reanalyzing) {
+  if (isError && !isBatchAnalyzing) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
@@ -138,7 +141,7 @@ export default function PartsPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {showLoading || reanalyzing ? (
+        {showLoading || isBatchAnalyzing ? (
           <>
             <div className="mb-8 flex items-center justify-between">
               <h2 className="text-3xl font-bold">Your Parts</h2>
@@ -147,16 +150,10 @@ export default function PartsPage() {
                 disabled={true}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
-                {reanalyzing ? 'Starting Reanalysis...' : 'Reanalyze All Entries'}
+                {isBatchAnalyzing ? 'Reanalyzing...' : 'Reanalyze All Entries'}
               </button>
             </div>
-            <PartsPageSkeleton />
-            {reanalyzing && (
-              <div className="text-center mt-4">
-                <p className="text-gray-500">Reanalyzing all journal entries...</p>
-                <p className="text-sm text-gray-400 mt-2">This may take a minute</p>
-              </div>
-            )}
+            <PartsPageSkeleton reanalyzing={isBatchAnalyzing} />
           </>
         ) : (
           <>
@@ -164,10 +161,10 @@ export default function PartsPage() {
               <h2 className="text-3xl font-bold">Your Parts</h2>
               <button 
                 onClick={() => setShowConfirmDialog(true)}
-                disabled={reanalyzing}
+                disabled={isBatchAnalyzing}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
               >
-                {reanalyzing ? 'Starting Reanalysis...' : 'Reanalyze All Entries'}
+                {isBatchAnalyzing ? 'Reanalyzing...' : 'Reanalyze All Entries'}
               </button>
             </div>
 

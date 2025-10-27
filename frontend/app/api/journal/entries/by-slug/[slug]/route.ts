@@ -48,6 +48,7 @@ export async function GET(
           id: analysis.id,
           partId: analysis.partId,
           highlights: analysis.highlights,
+          reasoning: analysis.reasoning,
           part: {
             id: analysis.part.id,
             name: analysis.part.name,

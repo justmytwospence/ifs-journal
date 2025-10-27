@@ -83,7 +83,37 @@ export default function JournalPage() {
         }
 
         if (final) {
-          setContent((prev) => prev + final)
+          setContent((prev) => {
+            // Capitalize first letter if this is the start of content or after sentence-ending punctuation
+            let processedText = final.trim()
+
+            if (prev.trim().length === 0) {
+              // First sentence - capitalize first letter
+              processedText = processedText.charAt(0).toUpperCase() + processedText.slice(1)
+            } else {
+              // Check if previous content ends with sentence-ending punctuation
+              const lastChar = prev.trim().slice(-1)
+              if (['.', '!', '?'].includes(lastChar)) {
+                processedText = processedText.charAt(0).toUpperCase() + processedText.slice(1)
+              }
+            }
+
+            // Add appropriate punctuation at the end if it doesn't have any
+            const lastCharOfNew = processedText.slice(-1)
+            if (!['.', '!', '?', ','].includes(lastCharOfNew)) {
+              // Detect if it's a question based on question words
+              const questionWords = ['who', 'what', 'when', 'where', 'why', 'how', 'is', 'are', 'do', 'does', 'did', 'can', 'could', 'would', 'should', 'will', 'have', 'has']
+              const firstWord = processedText.toLowerCase().split(' ')[0]
+
+              if (questionWords.includes(firstWord)) {
+                processedText += '?'
+              } else {
+                processedText += '.'
+              }
+            }
+
+            return prev + (prev.trim().length > 0 ? ' ' : '') + processedText
+          })
           setInterimTranscript('')
         } else {
           setInterimTranscript(interim)
@@ -312,7 +342,7 @@ export default function JournalPage() {
             if (statusData.entry.analysisStatus === 'completed' || statusData.entry.analysisStatus === 'failed') {
               setAnalyzing(false)
               clearInterval(pollInterval)
-              
+
               // Invalidate all queries that depend on analysis results
               queryClient.invalidateQueries({ queryKey: ['parts'] })
               queryClient.invalidateQueries({ queryKey: ['part'] })
@@ -329,7 +359,7 @@ export default function JournalPage() {
       setTimeout(() => {
         setAnalyzing(false)
         clearInterval(pollInterval)
-        
+
         // Invalidate queries even on timeout
         queryClient.invalidateQueries({ queryKey: ['parts'] })
         queryClient.invalidateQueries({ queryKey: ['part'] })
@@ -424,14 +454,13 @@ export default function JournalPage() {
                 {/* Progress Bar Container */}
                 <div className="flex-1 relative h-10 bg-gray-200 rounded-lg overflow-hidden">
                   {/* Progress Fill */}
-                  <div 
-                    className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out ${
-                      wordCount < 100 
-                        ? 'bg-red-500' 
-                        : wordCount < 250 
-                        ? 'bg-blue-500' 
+                  <div
+                    className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out ${wordCount < 100
+                      ? 'bg-red-500'
+                      : wordCount < 250
+                        ? 'bg-blue-500'
                         : 'bg-green-500'
-                    }`}
+                      }`}
                     style={{ width: `${Math.min((wordCount / 750) * 100, 100)}%` }}
                   />
                   {/* Word Count Text Overlay */}
@@ -468,11 +497,10 @@ export default function JournalPage() {
                 {/* Writing Tips Toggle */}
                 <button
                   onClick={toggleWritingTips}
-                  className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
-                    showWritingTips
-                      ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${showWritingTips
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   title={showWritingTips ? 'Hide writing tips' : 'Show writing tips'}
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -484,11 +512,10 @@ export default function JournalPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className={`h-10 px-6 rounded-lg font-medium transition shadow-sm flex items-center gap-2 shrink-0 ${
-                    isDemo 
-                      ? 'bg-gray-400 text-white opacity-50 cursor-pointer' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-                  }`}
+                  className={`h-10 px-6 rounded-lg font-medium transition shadow-sm flex items-center gap-2 shrink-0 ${isDemo
+                    ? 'bg-gray-400 text-white opacity-50 cursor-pointer'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                    }`}
                   title={isDemo ? 'Demo users cannot save entries' : ''}
                 >
                   {saving ? 'Saving...' : 'Save Entry'}

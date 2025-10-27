@@ -74,6 +74,7 @@ model PartAnalysis {
   entryId    String
   partId     String
   highlights String[] // Array of complete sentences or meaningful phrases to highlight
+  reasoning  Json     // Map of highlight text to reasoning (why this quote belongs to this part)
   confidence Float    // AI confidence score
   createdAt  DateTime @default(now())
 

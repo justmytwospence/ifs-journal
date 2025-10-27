@@ -258,8 +258,8 @@ export async function POST(
           part = existingPart
         }
       } else {
-        // Check if we need to enforce 10-part maximum
-        if (existingParts.length >= 10) {
+        // Check if we need to enforce 9-part maximum
+        if (existingParts.length >= 9) {
           // Find the part with lowest confidence across all analyses
           const partsWithConfidence = await Promise.all(
             existingParts.map(async (p) => {
@@ -314,6 +314,7 @@ export async function POST(
             entryId: entry.id,
             partId: part.id,
             highlights: partData.quotes,
+            reasoning: partData.reasoning || {},
             confidence: partData.confidence,
           },
         })

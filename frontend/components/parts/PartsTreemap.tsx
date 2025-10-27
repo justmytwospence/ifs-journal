@@ -18,6 +18,7 @@ interface TreemapCellProps {
   width: number
   height: number
   name: string
+  displayName?: string
   color: string
   depth: number
   partId?: string
@@ -62,10 +63,13 @@ const getFittedText = (text: string, width: number, maxFontSize: number) => {
 
 // Custom content component for treemap cells
 const CustomizedContent = (props: TreemapCellProps) => {
-  const { x, y, width, height, name, color, depth } = props
+  const { x, y, width, height, name, displayName, color, depth } = props
   
   // Depth 1 = role groups, depth 2 = individual parts
   const isRoleGroup = depth === 1
+  
+  // Use displayName for parts (to show clean name without ID), name for role groups
+  const textToDisplay = isRoleGroup ? name : (displayName || name)
   
   // Calculate minimum dimensions to show text
   const minWidth = isRoleGroup ? 80 : 50
@@ -75,7 +79,7 @@ const CustomizedContent = (props: TreemapCellProps) => {
   // Calculate fitted text and font size
   const maxFontSize = isRoleGroup ? 12 : 14
   const { text: fittedText, fontSize } = showName 
-    ? getFittedText(name, width, maxFontSize)
+    ? getFittedText(textToDisplay, width, maxFontSize)
     : { text: '', fontSize: maxFontSize }
   
   return (
@@ -119,13 +123,17 @@ const CustomizedContent = (props: TreemapCellProps) => {
 const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
+    // Use displayName if available (for parts), otherwise use name (for role groups)
+    const displayText = data.displayName || data.name
     return (
       <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
-        <p className="font-semibold text-gray-900">{data.name}</p>
-        <p className="text-sm text-gray-600">{data.role}</p>
-        <p className="text-sm text-gray-500 mt-1">
-          {data.size} {data.size === 1 ? 'appearance' : 'appearances'}
-        </p>
+        <p className="font-semibold text-gray-900">{displayText}</p>
+        {data.role && <p className="text-sm text-gray-600">{data.role}</p>}
+        {data.size && (
+          <p className="text-sm text-gray-500 mt-1">
+            {data.size} {data.size === 1 ? 'appearance' : 'appearances'}
+          </p>
+        )}
       </div>
     )
   }
@@ -145,10 +153,12 @@ export function PartsTreemap({ parts }: PartsTreemapProps) {
   }, {} as Record<string, Part[]>)
 
   // Transform into hierarchical treemap format
+  // Use part ID in the name to ensure uniqueness for Recharts key generation
   const treemapData = Object.entries(groupedByRole).map(([role, roleParts]) => ({
     name: role,
     children: roleParts.map((part) => ({
-      name: part.name,
+      name: `${part.name}-${part.id}`, // Include ID to ensure unique keys
+      displayName: part.name, // Keep original name for display
       size: part.appearances,
       color: part.color,
       partId: part.id,
