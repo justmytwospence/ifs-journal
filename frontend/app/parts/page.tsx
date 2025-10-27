@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppNav } from '@/components/AppNav'
@@ -11,6 +11,7 @@ import { slugify } from '@/lib/slug-utils'
 import { getPartIcon } from '@/lib/part-icons'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 interface Part {
   id: string
@@ -28,7 +29,6 @@ export default function PartsPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const { setAnalyzing } = useAnalysisStore()
-  const modalRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
   // Fetch parts using React Query
@@ -47,11 +47,7 @@ export default function PartsPage() {
   // Apply minimum loading time to prevent skeleton flashing
   const showLoading = useMinimumLoadingTime(isLoading)
 
-  useEffect(() => {
-    if (showConfirmDialog && modalRef.current) {
-      modalRef.current.focus()
-    }
-  }, [showConfirmDialog])
+
 
   const handleReanalyze = async () => {
     setShowConfirmDialog(false)
@@ -206,44 +202,15 @@ export default function PartsPage() {
       </main>
 
       {/* Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div 
-          ref={modalRef}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleReanalyze()
-            } else if (e.key === 'Escape') {
-              setShowConfirmDialog(false)
-            }
-          }}
-          tabIndex={-1}
-        >
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">Reanalyze All Journal Entries?</h3>
-            <p className="text-gray-600 mb-6">
-              This will delete all existing parts and reanalyze all your journal entries from scratch. 
-              This process may take a few minutes depending on how many entries you have.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowConfirmDialog(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
-              >
-                Cancel
-                <span className="text-xs opacity-60">Esc</span>
-              </button>
-              <button
-                onClick={handleReanalyze}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
-              >
-                Continue
-                <span className="text-xs opacity-75">↵</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleReanalyze}
+        title="Reanalyze All Journal Entries?"
+        message="This will delete all existing parts and reanalyze all your journal entries from scratch. This process may take a few minutes depending on how many entries you have."
+        confirmText="Continue"
+        isLoading={reanalyzing}
+      />
 
       {/* Toast Notification */}
       {toast && (

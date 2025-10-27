@@ -3,9 +3,11 @@
 import { AppNav } from '@/components/AppNav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { slugify } from '@/lib/slug-utils'
 import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
+import { useRouter } from 'next/navigation'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 interface Part {
   id: string
@@ -44,6 +46,9 @@ interface EntryNavigation {
 
 export default function JournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const [entryId, setEntryId] = useState<string>('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     params.then(p => {
@@ -76,6 +81,27 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     },
     enabled: !!entryId,
   })
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/journal/entries/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete entry')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+      router.push('/log')
+    },
+  })
+
+  const handleDelete = () => {
+    if (entry) {
+      deleteMutation.mutate(entry.id)
+    }
+  }
 
   useEffect(() => {
     // Scroll to highlighted quote if hash is present
@@ -230,8 +256,14 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             ← Back to Journal Log
           </Link>
           
-          {/* Navigation buttons */}
+          {/* Navigation and action buttons */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
+            >
+              Delete
+            </button>
             {navigation?.previous ? (
               <Link
                 href={`/log/${navigation.previous.slug}`}
@@ -334,6 +366,18 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             <div className="mt-6 text-sm text-red-600 italic">Analysis failed</div>
           )}
         </div>
+
+        {/* Delete confirmation modal */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={handleDelete}
+          title="Delete Journal Entry?"
+          message="This will permanently delete this entry and all associated part analyses. This action cannot be undone."
+          confirmText={deleteMutation.isPending ? 'Deleting...' : 'Delete Entry'}
+          confirmButtonClass="bg-red-600 hover:bg-red-700"
+          isLoading={deleteMutation.isPending}
+        />
       </main>
     </div>
   )
