@@ -37,8 +37,8 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 1. THE IFS_Journal_App SHALL provide a distraction-free writing interface with word count tracking ✅
 2. THE IFS_Journal_App SHALL support speech-to-text input for hands-free journaling ✅
-3. WHEN a user is writing, THE IFS_Journal_App SHALL optionally provide live writing tips to help explore parts more deeply ⚠️ (Prompt template exists but UI not implemented)
-4. THE IFS_Journal_App SHALL allow users to toggle writing tips on/off based on their preference ⚠️ (Not implemented)
+3. WHEN a user is writing, THE IFS_Journal_App SHALL optionally provide live writing tips to help explore parts more deeply ✅
+4. THE IFS_Journal_App SHALL allow users to toggle writing tips on/off based on their preference ✅
 5. WHEN a user saves an entry, THE IFS_Journal_App SHALL store it with the associated prompt and timestamp ✅
 6. THE IFS_Journal_App SHALL save journal entries without blocking the user interface ✅
 7. THE IFS_Journal_App SHALL automatically trigger parts analysis in the background after an entry is saved ✅

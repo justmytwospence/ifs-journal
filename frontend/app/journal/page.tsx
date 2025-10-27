@@ -27,6 +27,9 @@ export default function JournalPage() {
   const [recognition, setRecognition] = useState<any>(null)
   const [interimTranscript, setInterimTranscript] = useState('')
   const [isInitialized, setIsInitialized] = useState(false)
+  const [showWritingTips, setShowWritingTips] = useState(false)
+  const [writingTip, setWritingTip] = useState<string | null>(null)
+  const [loadingTip, setLoadingTip] = useState(false)
   const wordCount = (content + interimTranscript).trim().split(/\s+/).filter(Boolean).length
 
   // Initialize speech recognition
@@ -115,6 +118,11 @@ export default function JournalPage() {
       setPrompt(prompts[0])
     }
 
+    const tipsEnabled = localStorage.getItem('writing-tips-enabled')
+    if (tipsEnabled === 'true') {
+      setShowWritingTips(true)
+    }
+
     setIsInitialized(true)
   }, [])
 
@@ -124,6 +132,44 @@ export default function JournalPage() {
       localStorage.setItem('journal-prompt', prompt)
     }
   }, [prompt, isInitialized])
+
+  // Generate writing tips when content changes
+  useEffect(() => {
+    if (!showWritingTips || !content || content.trim().length < 50) {
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setLoadingTip(true)
+      try {
+        const response = await fetch('/api/prompts/writing-tips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, content }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setWritingTip(data.tip)
+        }
+      } catch (error) {
+        console.error('Failed to generate writing tip:', error)
+      } finally {
+        setLoadingTip(false)
+      }
+    }, 3000) // Wait 3 seconds after user stops typing
+
+    return () => clearTimeout(timer)
+  }, [content, prompt, showWritingTips])
+
+  const toggleWritingTips = () => {
+    const newValue = !showWritingTips
+    setShowWritingTips(newValue)
+    localStorage.setItem('writing-tips-enabled', String(newValue))
+    if (!newValue) {
+      setWritingTip(null)
+    }
+  }
 
   const handleNewPrompt = () => {
     if (content.trim()) {
@@ -247,19 +293,32 @@ export default function JournalPage() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal</h2>
-          <button
-            onClick={handleNewPrompt}
-            disabled={loadingPrompt}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
-          >
-            {loadingPrompt ? 'Generating...' : 'New Prompt'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleWritingTips}
+              className={`px-4 py-2 rounded-lg font-medium transition shadow-sm cursor-pointer whitespace-nowrap ${
+                showWritingTips
+                  ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              title="Toggle writing tips"
+            >
+              {showWritingTips ? '💡 Tips On' : '💡 Tips Off'}
+            </button>
+            <button
+              onClick={handleNewPrompt}
+              disabled={loadingPrompt}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+            >
+              {loadingPrompt ? 'Generating...' : 'New Prompt'}
+            </button>
+          </div>
         </div>
 
         <div>
           <div className="bg-white rounded-2xl shadow-sm p-8">
             <div className="mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
@@ -267,6 +326,28 @@ export default function JournalPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Writing tips display */}
+              {showWritingTips && (
+                <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl px-4 py-3 mb-4">
+                  {loadingTip ? (
+                    <div className="space-y-2">
+                      <div className="h-3 bg-purple-200 rounded animate-pulse" />
+                      <div className="h-3 bg-purple-200 rounded animate-pulse w-5/6" />
+                    </div>
+                  ) : writingTip ? (
+                    <p className="text-sm text-gray-700 leading-relaxed">{writingTip}</p>
+                  ) : content.trim().length < 50 ? (
+                    <p className="text-sm text-gray-500 italic">
+                      Start writing to receive personalized tips...
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      Keep writing to receive tips...
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
