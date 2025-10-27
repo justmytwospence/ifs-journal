@@ -311,7 +311,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                   (showAllQuotes ? part.quotesWithEntries : part.quotesWithEntries.slice(0, 3)).map((quote, i) => (
                     <li key={i}>
                       <Link
-                        href={`/journal/entries/${quote.entryCreatedAt ? createEntrySlug(quote.entryCreatedAt) : quote.entryId}#quote-${encodeURIComponent(quote.text)}`}
+                        href={`/log/${quote.entryCreatedAt ? createEntrySlug(quote.entryCreatedAt) : quote.entryId}#quote-${encodeURIComponent(quote.text)}`}
                         className="block text-gray-700 italic border-l-4 pl-4 py-2 hover:bg-gray-50 transition-colors rounded-r"
                         style={{ borderColor: part.color }}
                       >

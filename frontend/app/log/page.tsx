@@ -352,7 +352,7 @@ function LogPageContent() {
             {filteredEntries.map((entry) => (
               <Link
                 key={entry.id}
-                href={`/journal/entries/${createEntrySlug(entry.createdAt)}`}
+                href={`/log/${createEntrySlug(entry.createdAt)}`}
                 className="block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100"
               >
                 <div className="flex items-start justify-between mb-3">
