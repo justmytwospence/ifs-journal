@@ -7,6 +7,7 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith('/register') ||
     req.nextUrl.pathname.startsWith('/reset-password')
   const isPublicPage = req.nextUrl.pathname === '/' ||
+    req.nextUrl.pathname === '/demo' ||
     req.nextUrl.pathname.startsWith('/api/auth')
 
   // Redirect logged-in users away from auth pages

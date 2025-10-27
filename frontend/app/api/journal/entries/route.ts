@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { z } from 'zod'
+import { demoGuard } from '@/lib/demo-guard'
 
 const createEntrySchema = z.object({
   prompt: z.string(),
@@ -15,6 +16,10 @@ export async function POST(request: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Prevent demo users from creating entries
+    const demoCheck = await demoGuard()
+    if (demoCheck) return demoCheck
 
     const body = await request.json()
     const { prompt, content, wordCount } = createEntrySchema.parse(body)
@@ -64,11 +69,26 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const includeAnalyses = searchParams.get('includeAnalyses') === 'true'
+    const weeks = parseInt(searchParams.get('weeks') || '1', 10)
+    
+    // Calculate date for N weeks ago
+    const weeksAgo = new Date()
+    weeksAgo.setDate(weeksAgo.getDate() - (weeks * 7))
 
+    const where = { userId: session.user.id }
+
+    // Get total count
+    const totalCount = await prisma.journalEntry.count({ where })
+
+    // Get entries from the last N weeks
     const entries = await prisma.journalEntry.findMany({
-      where: { userId: session.user.id },
+      where: {
+        ...where,
+        createdAt: {
+          gte: weeksAgo,
+        },
+      },
       orderBy: { createdAt: 'desc' },
-      take: 50,
       include: includeAnalyses
         ? {
             partAnalyses: {
@@ -87,7 +107,7 @@ export async function GET(request: Request) {
         : undefined,
     })
 
-    return NextResponse.json({ entries })
+    return NextResponse.json({ entries, totalCount, weeks })
   } catch (error) {
     console.error('Get entries error:', error)
     return NextResponse.json({ error: 'Failed to fetch entries' }, { status: 500 })

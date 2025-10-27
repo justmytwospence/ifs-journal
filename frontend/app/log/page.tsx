@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatEntryDate } from '@/lib/date-utils'
 import { createEntrySlug, slugify } from '@/lib/slug-utils'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { LogPageSkeleton } from '@/components/ui/skeleton/LogPageSkeleton'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 
@@ -41,15 +41,36 @@ function LogPageContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const queryClient = useQueryClient()
+  
+  // Persist weeksToLoad in sessionStorage
+  const [weeksToLoad, setWeeksToLoad] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('journal-weeks-loaded')
+      return saved ? parseInt(saved, 10) : 1
+    }
+    return 1
+  })
+
+  // Save to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('journal-weeks-loaded', weeksToLoad.toString())
+    }
+  }, [weeksToLoad])
 
   // Fetch entries
-  const { data: entriesData, isLoading: entriesLoading } = useQuery({
-    queryKey: ['journal-entries'],
+  const { data: entriesData, isLoading: entriesLoading, isFetching: entriesFetching } = useQuery({
+    queryKey: ['journal-entries', weeksToLoad],
     queryFn: async () => {
-      const response = await fetch('/api/journal/entries?includeAnalyses=true')
+      const response = await fetch(`/api/journal/entries?includeAnalyses=true&weeks=${weeksToLoad}`)
       if (!response.ok) throw new Error('Failed to fetch entries')
       return response.json()
     },
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour - keep in cache longer
+    refetchOnWindowFocus: false, // Don't refetch when returning to the page
   })
 
   // Fetch parts for filter
@@ -64,12 +85,30 @@ function LogPageContent() {
   })
 
   const entries: JournalEntry[] = entriesData?.entries || []
+  const totalCount: number = entriesData?.totalCount || 0
   const parts: Part[] = Array.isArray(partsData) ? partsData : []
 
-  const loading = entriesLoading || partsLoading
+  // Only show loading skeleton on initial load, not when loading more weeks
+  const isInitialLoading = (entriesLoading || partsLoading) && entries.length === 0
 
-  // Apply minimum loading time to prevent skeleton flashing
-  const showLoading = useMinimumLoadingTime(loading)
+  // Prefetch individual entries
+  useEffect(() => {
+    entries.forEach((entry) => {
+      const slug = createEntrySlug(entry.createdAt)
+      queryClient.prefetchQuery({
+        queryKey: ['journal-entry', slug],
+        queryFn: async () => {
+          const response = await fetch(`/api/journal/entries/by-slug/${slug}`)
+          if (!response.ok) throw new Error('Failed to fetch entry')
+          const data = await response.json()
+          return data.entry
+        },
+      })
+    })
+  }, [entries, queryClient])
+
+  // Apply minimum loading time to prevent skeleton flashing only on initial load
+  const showLoading = useMinimumLoadingTime(isInitialLoading)
 
   // Handle URL parameter for part filtering
   useEffect(() => {
@@ -85,6 +124,38 @@ function LogPageContent() {
       setSelectedPartId(part.id)
     }
   }, [partSlugFromUrl, parts, partsLoading])
+
+  // Helper function to get the start of the week (Sunday) at midnight
+  const getWeekStart = (date: Date) => {
+    const d = new Date(date)
+    d.setHours(0, 0, 0, 0)
+    const day = d.getDay()
+    const diff = -day // Go back to Sunday
+    const weekStart = new Date(d)
+    weekStart.setDate(d.getDate() + diff)
+    return weekStart
+  }
+
+  // Helper function to format week range
+  const formatWeekRange = (weekStart: Date) => {
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const weekYear = weekStart.getFullYear()
+    
+    const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' })
+    const startDay = weekStart.getDate()
+    const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' })
+    const endDay = weekEnd.getDate()
+    const year = weekYear !== currentYear ? `, ${weekYear}` : ''
+    
+    if (startMonth === endMonth) {
+      return `${startMonth} ${startDay}–${endDay}${year}`
+    }
+    return `${startMonth} ${startDay} – ${endMonth} ${endDay}${year}`
+  }
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
@@ -109,6 +180,27 @@ function LogPageContent() {
 
     return filtered
   }, [entries, selectedPartId, searchQuery])
+
+  // Group entries by calendar week
+  const entriesByWeek = useMemo(() => {
+    const weeks = new Map<string, JournalEntry[]>()
+    
+    filteredEntries.forEach((entry) => {
+      const entryDate = new Date(entry.createdAt)
+      const weekStart = getWeekStart(entryDate)
+      const weekKey = weekStart.toISOString()
+      
+      if (!weeks.has(weekKey)) {
+        weeks.set(weekKey, [])
+      }
+      weeks.get(weekKey)!.push(entry)
+    })
+    
+    return Array.from(weeks.entries()).map(([weekKey, entries]) => ({
+      weekStart: new Date(weekKey),
+      entries,
+    }))
+  }, [filteredEntries])
 
   // Function to get excerpt with highlighted quote for selected part
   const getEntryExcerpt = (entry: JournalEntry) => {
@@ -201,7 +293,7 @@ function LogPageContent() {
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal Log</h2>
           <p className="text-gray-600">
-            {entries.length} {entries.length === 1 ? 'entry' : 'entries'} in your journal
+            {totalCount} {totalCount === 1 ? 'entry' : 'entries'} in your journal
           </p>
         </div>
 
@@ -324,7 +416,7 @@ function LogPageContent() {
         </div>
 
         {/* Entries List */}
-        {entries.length === 0 ? (
+        {totalCount === 0 ? (
           <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
             <p className="text-gray-600 mb-4">No journal entries yet</p>
             <Link
@@ -348,47 +440,92 @@ function LogPageContent() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredEntries.map((entry) => (
-              <Link
-                key={entry.id}
-                href={`/log/${createEntrySlug(entry.createdAt)}`}
-                className="block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {formatEntryDate(entry.createdAt)}
-                    </h3>
-                    <p className="text-sm text-gray-500 font-semibold">{entry.prompt}</p>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    {entry.partAnalyses && entry.partAnalyses.length > 0 && (
-                      <div className="flex -space-x-2">
-                        {entry.partAnalyses.slice(0, 3).map((analysis) => (
-                          <div
-                            key={analysis.id}
-                            className="w-6 h-6 rounded-full border-2 border-white"
-                            style={{ backgroundColor: analysis.part.color }}
-                            title={analysis.part.name}
-                          />
-                        ))}
-                        {entry.partAnalyses.length > 3 && (
-                          <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-                            +{entry.partAnalyses.length - 3}
-                          </div>
-                        )}
+          <>
+            <div className="space-y-8">
+              {entriesByWeek.map(({ weekStart, entries: weekEntries }, weekIndex) => (
+                <div key={weekStart.toISOString()}>
+                  {/* Week Divider */}
+                  {weekIndex > 0 && (
+                    <div className="relative mb-8">
+                      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-gray-200"></div>
                       </div>
-                    )}
-                    <span className="text-sm text-gray-500 whitespace-nowrap">
-                      {entry.wordCount} words
-                    </span>
+                      <div className="relative flex justify-center">
+                        <span className="px-3 bg-gray-50 text-sm text-gray-500 font-medium">
+                          {formatWeekRange(weekStart)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* First week label (no divider above) */}
+                  {weekIndex === 0 && (
+                    <div className="mb-4 text-center">
+                      <span className="text-sm text-gray-500 font-medium">
+                        {formatWeekRange(weekStart)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Week's entries */}
+                  <div className="space-y-4">
+                    {weekEntries.map((entry) => (
+                      <Link
+                        key={entry.id}
+                        href={`/log/${createEntrySlug(entry.createdAt)}`}
+                        className="block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                              {formatEntryDate(entry.createdAt)}
+                            </h3>
+                            <p className="text-sm text-gray-500 font-semibold">{entry.prompt}</p>
+                          </div>
+                          <div className="flex items-center gap-3 ml-4">
+                            {entry.partAnalyses && entry.partAnalyses.length > 0 && (
+                              <div className="flex -space-x-2">
+                                {entry.partAnalyses.slice(0, 3).map((analysis) => (
+                                  <div
+                                    key={analysis.id}
+                                    className="w-6 h-6 rounded-full border-2 border-white"
+                                    style={{ backgroundColor: analysis.part.color }}
+                                    title={analysis.part.name}
+                                  />
+                                ))}
+                                {entry.partAnalyses.length > 3 && (
+                                  <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs text-gray-600">
+                                    +{entry.partAnalyses.length - 3}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-500 whitespace-nowrap">
+                              {entry.wordCount} words
+                            </span>
+                          </div>
+                        </div>
+                        {renderExcerpt(entry)}
+                      </Link>
+                    ))}
                   </div>
                 </div>
-                {renderExcerpt(entry)}
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {entries.length < totalCount && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={() => setWeeksToLoad(prev => prev + 1)}
+                  disabled={entriesFetching}
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {entriesFetching ? 'Loading...' : 'Load one more week'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

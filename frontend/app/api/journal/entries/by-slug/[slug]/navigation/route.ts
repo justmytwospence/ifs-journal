@@ -34,20 +34,33 @@ export async function GET(
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    // Get previous (newer) and next (older) entries
-    const previousEntry = currentIndex > 0 ? entries[currentIndex - 1] : null
-    const nextEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null
+    // Get previous (older) and next (newer) entries
+    const previousEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null
+    const nextEntry = currentIndex > 0 ? entries[currentIndex - 1] : null
+
+    // Get full entry details for navigation entries to include prompt
+    const previousEntryDetails = previousEntry ? await prisma.journalEntry.findUnique({
+      where: { id: previousEntry.id },
+      select: { id: true, createdAt: true, prompt: true },
+    }) : null
+
+    const nextEntryDetails = nextEntry ? await prisma.journalEntry.findUnique({
+      where: { id: nextEntry.id },
+      select: { id: true, createdAt: true, prompt: true },
+    }) : null
 
     return NextResponse.json({ 
-      previous: previousEntry ? {
-        id: previousEntry.id,
-        slug: createEntrySlug(previousEntry.createdAt),
-        createdAt: previousEntry.createdAt,
+      previous: previousEntryDetails ? {
+        id: previousEntryDetails.id,
+        slug: createEntrySlug(previousEntryDetails.createdAt),
+        createdAt: previousEntryDetails.createdAt,
+        prompt: previousEntryDetails.prompt,
       } : null,
-      next: nextEntry ? {
-        id: nextEntry.id,
-        slug: createEntrySlug(nextEntry.createdAt),
-        createdAt: nextEntry.createdAt,
+      next: nextEntryDetails ? {
+        id: nextEntryDetails.id,
+        slug: createEntrySlug(nextEntryDetails.createdAt),
+        createdAt: nextEntryDetails.createdAt,
+        prompt: nextEntryDetails.prompt,
       } : null,
     })
   } catch (error) {

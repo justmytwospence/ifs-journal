@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Lora } from 'next/font/google'
 import { SessionProvider } from '@/components/auth/SessionProvider'
 import { QueryProvider } from '@/components/providers/QueryProvider'
+import { auth } from '@/lib/auth'
 import './globals.css'
 
 const inter = Inter({
@@ -21,16 +22,18 @@ export const metadata: Metadata = {
   description: 'A therapeutic journaling app based on Internal Family Systems (IFS) therapy principles',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await auth()
+  
   return (
     <html lang="en" className={`${inter.variable} ${lora.variable}`}>
       <body className="antialiased">
         <QueryProvider>
-          <SessionProvider>
+          <SessionProvider session={session}>
             {children}
           </SessionProvider>
         </QueryProvider>

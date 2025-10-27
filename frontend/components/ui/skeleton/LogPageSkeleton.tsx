@@ -5,9 +5,9 @@ export function LogPageSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading journal entries">
       {/* Page Header Skeleton */}
-      <div className="mb-8">
-        <Skeleton width={200} height={36} className="mb-2" />
-        <Skeleton width={250} height={20} />
+      <div className="mb-8 flex items-center justify-between">
+        <Skeleton width={200} height={36} />
+        <Skeleton width={180} height={24} />
       </div>
 
       {/* Search and Filter Bar Skeleton */}

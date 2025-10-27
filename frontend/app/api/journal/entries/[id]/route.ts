@@ -56,6 +56,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Prevent demo users from deleting entries
+    const { demoGuard } = await import('@/lib/demo-guard')
+    const demoCheck = await demoGuard()
+    if (demoCheck) return demoCheck
+
     const { id } = await params
 
     // Verify the entry belongs to the user before deleting

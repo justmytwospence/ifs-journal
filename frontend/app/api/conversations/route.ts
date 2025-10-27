@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { openai } from '@/lib/openai'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { demoGuard } from '@/lib/demo-guard'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,10 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Prevent demo users from creating conversations
+    const demoCheck = await demoGuard()
+    if (demoCheck) return demoCheck
 
     const { partId, message, conversationHistory } = await request.json()
 

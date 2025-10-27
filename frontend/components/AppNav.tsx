@@ -88,6 +88,13 @@ export function AppNav() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {session?.user?.isDemo && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+                <span className="text-sm font-medium text-purple-700">
+                  👁️ Demo Mode (Read-Only)
+                </span>
+              </div>
+            )}
             {isAnalyzing && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />

@@ -95,6 +95,22 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+
+          <Link
+            href="/demo"
+            className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+          >
+            Try Demo (Read-Only)
+          </Link>
+
           <p className="text-center text-sm text-gray-600 mt-6">
             Don't have an account?{' '}
             <Link href="/register" className="text-blue-600 hover:text-blue-700 font-semibold">

@@ -4,14 +4,7 @@ import { Skeleton } from './Skeleton'
 export function PartsPageSkeleton() {
   return (
     <div role="status" aria-busy="true" aria-label="Loading parts">
-      {/* Page Header Skeleton */}
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <Skeleton width={200} height={36} className="mb-2" />
-          <Skeleton width={350} height={20} />
-        </div>
-        <Skeleton width={200} height={40} />
-      </div>
+      {/* Page Header Skeleton - removed as it's now rendered outside the skeleton */}
 
       {/* Treemap Skeleton */}
       <div className="mb-8">

@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { AppNav } from '@/components/AppNav'
 import { Toast } from '@/components/ui/Toast'
+import { DemoToast } from '@/components/ui/DemoToast'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 const prompts = [
@@ -16,32 +19,35 @@ const prompts = [
 
 export default function JournalPage() {
   const queryClient = useQueryClient()
+  const { data: session } = useSession()
   const [content, setContent] = useState('')
   const [prompt, setPrompt] = useState('')
   const [saving, setSaving] = useState(false)
   const [loadingPrompt, setLoadingPrompt] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showDemoToast, setShowDemoToast] = useState(false)
   const { setAnalyzing } = useAnalysisStore()
   const [isListening, setIsListening] = useState(false)
-  const [recognition, setRecognition] = useState<any>(null)
+  const [recognition, setRecognition] = useState<unknown>(null)
   const [interimTranscript, setInterimTranscript] = useState('')
   const [isInitialized, setIsInitialized] = useState(false)
   const [showWritingTips, setShowWritingTips] = useState(false)
   const [writingTip, setWritingTip] = useState<string | null>(null)
   const [loadingTip, setLoadingTip] = useState(false)
   const wordCount = (content + interimTranscript).trim().split(/\s+/).filter(Boolean).length
+  const isDemo = session?.user?.isDemo
 
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const SpeechRecognition = (window as unknown).webkitSpeechRecognition || (window as unknown).SpeechRecognition
       const recognitionInstance = new SpeechRecognition()
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
       recognitionInstance.lang = 'en-US'
 
-      recognitionInstance.onresult = (event: any) => {
+      recognitionInstance.onresult = (event: unknown) => {
         let interim = ''
         let final = ''
 
@@ -62,7 +68,7 @@ export default function JournalPage() {
         }
       }
 
-      recognitionInstance.onerror = (event: any) => {
+      recognitionInstance.onerror = (event: unknown) => {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
         if (event.error === 'not-allowed') {
@@ -93,6 +99,20 @@ export default function JournalPage() {
       setIsListening(true)
     }
   }
+
+  // Handle escape key to stop speech recognition
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isListening && recognition) {
+        recognition.stop()
+        setIsListening(false)
+        setInterimTranscript('')
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isListening, recognition])
 
   // Auto-save draft to localStorage
   useEffect(() => {
@@ -213,6 +233,11 @@ export default function JournalPage() {
   }
 
   const handleSave = async () => {
+    if (isDemo) {
+      setShowDemoToast(true)
+      return
+    }
+
     if (!content.trim()) {
       setToast({ message: 'Please write something first', type: 'error' })
       return
@@ -230,6 +255,13 @@ export default function JournalPage() {
           wordCount,
         }),
       })
+
+      if (response.status === 403) {
+        const errorData = await response.json()
+        setToast({ message: errorData.error || 'Demo users cannot save entries', type: 'error' })
+        setSaving(false)
+        return
+      }
 
       if (!response.ok) {
         throw new Error('Failed to save')
@@ -410,24 +442,31 @@ export default function JournalPage() {
                 {/* Writing Tips Toggle */}
                 <button
                   onClick={toggleWritingTips}
-                  className={`h-10 px-4 rounded-lg font-medium transition shadow-sm cursor-pointer shrink-0 ${
+                  className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
                     showWritingTips
                       ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
-                  title="Toggle writing tips"
+                  title={showWritingTips ? 'Hide writing tips' : 'Show writing tips'}
                 >
-                  {showWritingTips ? '💡' : '💡'}
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+                  </svg>
                 </button>
 
                 {/* Save Button */}
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="h-10 px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 shrink-0"
+                  className={`h-10 px-6 rounded-lg font-medium transition shadow-sm flex items-center gap-2 shrink-0 ${
+                    isDemo 
+                      ? 'bg-gray-400 text-white opacity-50 cursor-pointer' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+                  }`}
+                  title={isDemo ? 'Demo users cannot save entries' : ''}
                 >
                   {saving ? 'Saving...' : 'Save Entry'}
-                  {!saving && (
+                  {!saving && !isDemo && (
                     <span className="text-xs opacity-75">⌘↵</span>
                   )}
                 </button>
@@ -445,30 +484,19 @@ export default function JournalPage() {
         />
       )}
 
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">Clear current text?</h3>
-            <p className="text-gray-600 mb-6">
-              Getting a new prompt will clear your current text. Are you sure you want to continue?
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={generateNewPrompt}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
+      {showDemoToast && (
+        <DemoToast onClose={() => setShowDemoToast(false)} />
       )}
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={generateNewPrompt}
+        title="Clear current text?"
+        message="Getting a new prompt will clear your current text. Are you sure you want to continue?"
+        confirmText="Continue"
+        isLoading={loadingPrompt}
+      />
     </div>
   )
 }

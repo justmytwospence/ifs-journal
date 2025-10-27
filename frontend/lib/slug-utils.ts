@@ -19,7 +19,7 @@ export function extractPartIdFromSlug(slug: string): string | null {
   return parts[parts.length - 1]
 }
 
-export function createEntrySlug(createdAt: string | Date): string {
+export function createEntrySlug(createdAt: string | Date, entryId?: string): string {
   // Create a slug from the date using UTC to ensure consistency: "2024-01-15-monday-3-45pm"
   const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
   
@@ -30,8 +30,10 @@ export function createEntrySlug(createdAt: string | Date): string {
   
   let hours = date.getUTCHours()
   const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0')
   const ampm = hours >= 12 ? 'pm' : 'am'
   hours = hours % 12 || 12
   
-  return `${year}-${month}-${day}-${weekday}-${hours}-${minutes}${ampm}`
+  // Include seconds to make it more unique
+  return `${year}-${month}-${day}-${weekday}-${hours}-${minutes}-${seconds}${ampm}`
 }

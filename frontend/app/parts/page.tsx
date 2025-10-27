@@ -47,6 +47,22 @@ export default function PartsPage() {
   // Apply minimum loading time to prevent skeleton flashing
   const showLoading = useMinimumLoadingTime(isLoading)
 
+  // Prefetch individual part pages
+  useEffect(() => {
+    parts.forEach((part) => {
+      const slug = slugify(part.name)
+      queryClient.prefetchQuery({
+        queryKey: ['part', slug],
+        queryFn: async () => {
+          const response = await fetch(`/api/parts/by-slug/${slug}`)
+          if (!response.ok) throw new Error('Failed to fetch part')
+          const data = await response.json()
+          return data.part
+        },
+      })
+    })
+  }, [parts, queryClient])
+
 
 
   const handleReanalyze = async () => {

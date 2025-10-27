@@ -4,10 +4,13 @@ import { AppNav } from '@/components/AppNav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSession } from 'next-auth/react'
 import { slugify } from '@/lib/slug-utils'
+import { formatFullEntryDate } from '@/lib/date-utils'
 import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
 import { useRouter } from 'next/navigation'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { DemoToast } from '@/components/ui/DemoToast'
 
 interface Part {
   id: string
@@ -37,6 +40,7 @@ interface NavigationEntry {
   id: string
   slug: string
   createdAt: string
+  prompt: string
 }
 
 interface EntryNavigation {
@@ -47,8 +51,11 @@ interface EntryNavigation {
 export default function JournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const [entryId, setEntryId] = useState<string>('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDemoToast, setShowDemoToast] = useState(false)
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { data: session } = useSession()
+  const isDemo = session?.user?.isDemo
 
   useEffect(() => {
     params.then(p => {
@@ -67,6 +74,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       return data.entry as JournalEntry
     },
     enabled: !!entryId,
+    retry: false,
   })
 
   // Fetch navigation (previous/next entries)
@@ -97,7 +105,35 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     },
   })
 
+  // Prefetch part pages for parts in this entry
+  useEffect(() => {
+    if (entry?.partAnalyses) {
+      const uniqueParts = Array.from(
+        new Set(entry.partAnalyses.map(a => a.part.id))
+      ).map(partId => entry.partAnalyses!.find(a => a.part.id === partId)!.part)
+
+      uniqueParts.forEach((part) => {
+        const slug = slugify(part.name)
+        queryClient.prefetchQuery({
+          queryKey: ['part', slug],
+          queryFn: async () => {
+            const response = await fetch(`/api/parts/by-slug/${slug}`)
+            if (!response.ok) throw new Error('Failed to fetch part')
+            const data = await response.json()
+            return data.part
+          },
+        })
+      })
+    }
+  }, [entry, queryClient])
+
   const handleDelete = () => {
+    if (isDemo) {
+      setShowDemoToast(true)
+      setShowDeleteConfirm(false)
+      return
+    }
+    
     if (entry) {
       deleteMutation.mutate(entry.id)
     }
@@ -220,6 +256,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               ← Back to Journal Log
             </Link>
             <div className="flex items-center gap-2">
+              <div className="w-16 h-8 bg-gray-200 rounded-lg animate-pulse" />
               <div className="w-24 h-8 bg-gray-200 rounded-lg animate-pulse" />
               <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
             </div>
@@ -230,7 +267,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     )
   }
 
-  if (isError || !entry) {
+  if (isError && !loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
@@ -241,6 +278,27 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               ← Back to Journal Log
             </Link>
           </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (!entry) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AppNav />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="mb-6 flex items-center justify-between">
+            <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              ← Back to Journal Log
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="w-24 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+            </div>
+          </div>
+          <JournalEntrySkeleton />
         </main>
       </div>
     )
@@ -260,19 +318,42 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-300 rounded-lg transition-colors"
+              className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
+                isDemo
+                  ? 'text-gray-400 border-gray-300 opacity-50 cursor-pointer'
+                  : 'text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300'
+              }`}
             >
               Delete
             </button>
             {navigation?.previous ? (
-              <Link
-                href={`/log/${navigation.previous.slug}`}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title={`Previous entry: ${new Date(navigation.previous.createdAt).toLocaleDateString()}`}
-              >
-                <span className="text-lg leading-none">←</span>
-                Previous
-              </Link>
+              <div className="relative group">
+                <Link
+                  href={`/log/${navigation.previous.slug}`}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-lg leading-none">←</span>
+                  Previous
+                </Link>
+                {/* Tooltip */}
+                <div className="absolute top-full right-0 mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                  <div className="bg-gray-900 text-white rounded-xl p-4 shadow-2xl border border-gray-700">
+                    <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                      Previous Entry
+                    </div>
+                    <div className="font-semibold text-base mb-2">
+                      {formatFullEntryDate(navigation.previous.createdAt)}
+                    </div>
+                    <div className="text-gray-300 text-sm leading-relaxed">
+                      {navigation.previous.prompt}
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute bottom-full right-4 -mb-px">
+                      <div className="border-8 border-transparent border-b-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
                 <span className="text-lg leading-none">←</span>
@@ -281,14 +362,33 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             )}
             
             {navigation?.next ? (
-              <Link
-                href={`/log/${navigation.next.slug}`}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title={`Next entry: ${new Date(navigation.next.createdAt).toLocaleDateString()}`}
-              >
-                Next
-                <span className="text-lg leading-none">→</span>
-              </Link>
+              <div className="relative group">
+                <Link
+                  href={`/log/${navigation.next.slug}`}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Next
+                  <span className="text-lg leading-none">→</span>
+                </Link>
+                {/* Tooltip */}
+                <div className="absolute top-full right-0 mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                  <div className="bg-gray-900 text-white rounded-xl p-4 shadow-2xl border border-gray-700">
+                    <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                      Next Entry
+                    </div>
+                    <div className="font-semibold text-base mb-2">
+                      {formatFullEntryDate(navigation.next.createdAt)}
+                    </div>
+                    <div className="text-gray-300 text-sm leading-relaxed">
+                      {navigation.next.prompt}
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute bottom-full right-4 -mb-px">
+                      <div className="border-8 border-transparent border-b-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
                 Next
@@ -302,12 +402,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold">
-                {new Date(entry.createdAt).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {formatFullEntryDate(entry.createdAt)}
               </h1>
               <span className="text-sm text-gray-500">{entry.wordCount} words</span>
             </div>
@@ -378,6 +473,10 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           confirmButtonClass="bg-red-600 hover:bg-red-700"
           isLoading={deleteMutation.isPending}
         />
+
+        {showDemoToast && (
+          <DemoToast onClose={() => setShowDemoToast(false)} />
+        )}
       </main>
     </div>
   )

@@ -200,63 +200,63 @@ async function main() {
       wordCount: 240,
       daysAgo: 8,
     },
-    // Entry 22 - Day 6 - Difficult conversation
+    // Entry 22 - Day 9 - Difficult conversation
     {
       prompt: "What conversation have you been avoiding?",
       content: `I finally talked to my mom about therapy. I've been avoiding it because I didn't want her to worry or feel guilty. But it was weighing on me. So I called her and just told her. I said I've been in therapy for a few months and it's really helping me. She was quiet for a moment and then she asked if it was because of something she did. I told her no, it's not about blame. It's just about me learning to understand myself better and work through some stuff. She asked what kind of stuff. I was honest. I told her about the anxiety, the perfectionism, the people-pleasing. How I've been struggling to feel good enough. She started crying. She said she had no idea I was going through all that. She said she's sorry if she ever made me feel like I wasn't enough. I told her it's not her fault. These patterns come from lots of places. But I appreciated her saying that. We talked for over an hour. Really talked. She told me about her own struggles with anxiety when she was younger. I never knew that. She said she's proud of me for getting help. That it takes courage. I felt so much lighter after we hung up. Like I'd been carrying this secret and now I don't have to anymore. My therapist was right. Vulnerability creates connection. When I let people see the real me, they can actually love the real me. Not just the perfect version I try to present.`,
       wordCount: 270,
-      daysAgo: 6,
+      daysAgo: 9,
     },
-    // Entry 23 - Day 5 - Self-compassion practice
+    // Entry 23 - Day 8 - Self-compassion practice
     {
       prompt: "How are you being kind to yourself today?",
       content: `I messed up at work today. Sent an email to the wrong person. It wasn't a huge deal but it was embarrassing. Old me would have spiraled. Would have beat myself up for hours. Would have let that critical voice tear me apart. But I'm trying something different now. When I noticed myself starting to spiral, I stopped. I put my hand on my heart and I said to myself "You made a mistake. You're human. It's okay." It felt awkward at first. But I kept doing it. I acknowledged the part of me that was scared and ashamed. I told it I understand why it's upset. Making mistakes feels vulnerable. But one mistake doesn't define me. I'm still competent. I'm still worthy. I apologized to the person, corrected the error, and moved on. That's it. I didn't let it ruin my whole day. I didn't let it confirm all my worst beliefs about myself. I just treated it like what it was - a small mistake that happens to everyone. My therapist calls this self-compassion. Treating yourself with the same kindness you'd show a friend. It's hard. That critical part doesn't want to let go. It thinks if it stops being harsh, I'll become lazy or careless. But that's not true. I can hold myself accountable without being cruel. I can learn from mistakes without shame. This is new for me but I'm practicing. Every day I'm practicing being kinder to myself.`,
       wordCount: 260,
-      daysAgo: 5,
+      daysAgo: 8,
     },
-    // Entry 24 - Day 4 - Joy and guilt
+    // Entry 24 - Day 7 - Joy and guilt
     {
       prompt: "What made you happy today?",
       content: `I laughed really hard today. Like genuine, belly-aching laughter. Sarah sent me a funny video and I just lost it. It felt so good. But then immediately after, I felt guilty. Like I don't deserve to be happy when I'm still working through so much stuff. When I still have bad days. When I'm still not perfect. Isn't that ridiculous? I can't even enjoy a moment of joy without that critical part jumping in to ruin it. I mentioned this in therapy and my therapist asked me where that belief comes from. That I don't deserve happiness. I don't know exactly. Maybe from growing up thinking I had to earn everything. That I had to be good enough to deserve good things. But that's not how it works. Happiness isn't something you earn. It's something you allow yourself to experience. Joy and struggle can coexist. I can be working on myself and still have moments of happiness. In fact, those moments are important. They remind me what I'm working towards. They give me hope. My therapist asked me to practice noticing joy without judgment. When something makes me happy, just let myself feel it. Don't analyze it or question whether I deserve it. Just feel it. So that's what I'm going to do. I'm going to let myself laugh. I'm going to let myself feel good. I'm going to let myself be happy, even if it's just for a moment. I deserve that. We all deserve that.`,
       wordCount: 260,
-      daysAgo: 4,
+      daysAgo: 7,
     },
-    // Entry 25 - Day 3 - Recognizing patterns
+    // Entry 25 - Day 5 - Recognizing patterns
     {
       prompt: "What pattern are you noticing?",
       content: `I'm starting to see how my different parts interact with each other. It's like they have relationships. When the anxious part gets activated, the critical part jumps in to try to control the situation. It thinks if it can just make me perfect, then there's nothing to be anxious about. But that just makes the anxious part more anxious because perfection is impossible. Then the part that wants to please everyone tries to smooth things over by making me say yes to everything and put everyone else first. But that exhausts me, so the part that just wants to rest and hide kicks in. And then the critical part judges me for resting, which activates the anxious part again. It's a cycle. A exhausting, painful cycle. But now that I can see it, I can interrupt it. When I notice the critical part getting loud, I can pause. I can thank it for trying to help and remind it that criticism isn't actually helping. When the anxious part gets activated, I can ground myself and remind it that I'm safe. When the people-pleasing part wants to say yes to everything, I can check in with myself about what I actually want and need. I'm learning to be the calm, compassionate presence in the middle of all these parts. My therapist calls it Self with a capital S. The part of me that's not reactive or scared or critical. The part that can hold space for all the other parts with love and understanding. I'm getting better at accessing that. It takes practice but I'm getting there.`,
       wordCount: 280,
-      daysAgo: 3,
+      daysAgo: 5,
     },
-    // Entry 26 - Day 2 - Gratitude
+    // Entry 26 - Day 4 - Gratitude
     {
       prompt: "What are you grateful for?",
       content: `My therapist asked me to write about gratitude today. At first I rolled my eyes. It felt very self-help-y. But I'm trying to keep an open mind so here goes. I'm grateful for my friend Sarah. For sticking with me even when I was distant and flaky. For being understanding when I finally opened up. For inviting me to things even when I usually say no. She's a good friend and I don't tell her that enough. I'm grateful for my therapist. For creating a safe space where I can be messy and confused and not have it together. For helping me understand myself. For not giving up on me even when I wanted to give up on myself. I'm grateful for my body. I've been pretty mean to it over the years. Criticizing it, ignoring its needs, pushing it too hard. But it keeps showing up for me. It keeps breathing and moving and healing. It deserves better treatment. I'm grateful for this journaling practice. For giving me a place to process my thoughts and feelings. For helping me see my progress. For being a witness to my journey. I'm grateful for the hard days because they make me appreciate the good days more. I'm grateful for my parts, even the difficult ones. They're all trying to help me survive. I'm grateful for second chances. For the opportunity to change and grow. For not being stuck in old patterns forever. I'm grateful for hope. For believing that things can get better. And they are getting better. Slowly but surely.`,
       wordCount: 270,
-      daysAgo: 2,
+      daysAgo: 4,
     },
-    // Entry 27 - Day 1 - Future self
+    // Entry 27 - Day 3 - Future self
     {
       prompt: "What do you want for your future?",
       content: `I've been thinking about what I want my life to look like. Not in a specific way like what job or where I live. But how I want to feel. I want to feel at peace with myself. I want to wake up and not immediately start criticizing myself or worrying about everything. I want to feel comfortable in my own skin. I want to have meaningful relationships where I can be authentic. Where I don't have to perform or pretend. Where I can be messy and imperfect and still be loved. I want to do work that feels meaningful. I don't know what that looks like yet but I want to feel like I'm contributing something. Like my life matters. I want to be able to handle challenges without falling apart. To trust that I'm resilient and capable. To know that I can get through hard things. I want to enjoy my life. To notice beauty and joy. To laugh more. To be present instead of always worrying about the past or future. I want to be kind to myself. To treat myself with compassion and understanding. To be my own friend instead of my own worst enemy. I don't know if I'll ever be completely "healed" or whatever. Maybe that's not even the goal. Maybe the goal is just to keep growing and learning and being gentle with myself along the way. I'm not where I want to be yet. But I'm not where I was. And that's something.`,
       wordCount: 260,
-      daysAgo: 1,
+      daysAgo: 3,
     },
-    // Entry 28 - Today - Integration
+    // Entry 28 - 2 days ago - Integration
     {
       prompt: "What are you learning about yourself?",
       content: `I had a really interesting realization in therapy today. All these parts I've been working with - the anxious one, the critical one, the people-pleaser, the one that wants to hide, the angry one - they're not separate from me. They ARE me. They're all aspects of who I am. And instead of trying to get rid of them or fix them, I'm learning to integrate them. To let them all have a voice without letting any one of them take over completely. It's like being the conductor of an orchestra. All the instruments are important. They all have something to contribute. But they need to work together in harmony. When one instrument is too loud, it drowns out the others. My critical part has been way too loud for way too long. It's been drowning out everything else. But I'm learning to turn down its volume. To let the other parts be heard too. The part that's creative and playful. The part that's wise and calm. The part that's brave and strong. They've been there all along. I just couldn't hear them over the criticism and anxiety. My therapist says this is what healing looks like in IFS. Not getting rid of parts but helping them find their right roles. Helping them trust that they don't have to work so hard to protect me. That I'm okay. That we're okay. I'm starting to feel more whole. More integrated. More like myself. Not the self I thought I should be, but the self I actually am. And that self is pretty okay.`,
       wordCount: 280,
-      daysAgo: 0,
+      daysAgo: 2,
     },
-    // Entry 29 - Today (evening) - Small victory
+    // Entry 29 - 1 day ago - Small victory
     {
       prompt: "What small win can you celebrate?",
       content: `Something small but significant happened today. I was scrolling social media and I saw a post from an old college friend. She just got promoted and bought a house and looks so happy. Old me would have immediately compared myself to her and felt like a failure. That critical part would have jumped in with all the ways I'm not measuring up. But today I just felt happy for her. I even commented congratulations and meant it. There was no comparison. No judgment of myself. Just genuine happiness for someone else's success. That might not sound like a big deal but for me it's huge. I've spent so much of my life comparing myself to others and feeling like I'm losing some imaginary race. But there is no race. We're all on our own paths. Her success doesn't diminish me. My timeline doesn't have to look like anyone else's. I'm exactly where I'm supposed to be right now. And where I am is okay. Better than okay actually. I'm doing the work. I'm growing. I'm healing. That's worth celebrating. I texted my therapist about this and she sent back a bunch of celebration emojis. She gets it. These small shifts in perspective are the real work. This is what progress looks like. Not dramatic transformations but small, steady changes in how I relate to myself and the world. I'll take it.`,
       wordCount: 240,
-      daysAgo: 0,
+      daysAgo: 1,
     },
-    // Entry 30 - Today (night) - Looking forward
+    // Entry 30 - Today - Looking forward
     {
       prompt: "What are you looking forward to?",
       content: `It's late and I'm writing this before bed. I'm looking forward to tomorrow. That's new for me. For so long I dreaded each day. Woke up with anxiety about what might go wrong. But lately I've been feeling different. More hopeful. More curious about what might happen. I'm looking forward to my therapy session this week. To continuing this work. To discovering more about myself. I'm looking forward to coffee with Sarah on Saturday. To having a friend I can be real with. To connection and laughter. I'm looking forward to the project I'm working on at work. It's challenging but in a good way. I'm actually excited about it. I'm looking forward to spring. To warmer weather and longer days. To getting outside more. Maybe I'll actually get that dog I've been thinking about. I'm looking forward to seeing where this journey takes me. Three months ago I was stuck and miserable and hopeless. Now I'm still figuring things out but I have hope. I have tools. I have support. I have myself. And I'm learning that I'm enough. I'm looking forward to continuing to learn that. To really believing it. To living like I believe it. This journaling practice has been really helpful. Seeing my progress written out like this. Seeing how far I've come. I'm going to keep doing it. Keep showing up for myself. Keep doing the work. Because I'm worth it. We're all worth it.`,

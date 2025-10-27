@@ -59,6 +59,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
       return data.part as Part
     },
     enabled: !!slug,
+    retry: false,
   })
 
   const part = partData || null
@@ -221,7 +222,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  if (partError || !part) {
+  if (partError && !partLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
@@ -232,6 +233,22 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               ← Back to Parts
             </Link>
           </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (!part) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AppNav />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="mb-6">
+            <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              ← Back to Parts
+            </Link>
+          </div>
+          <PartDetailSkeleton />
         </main>
       </div>
     )

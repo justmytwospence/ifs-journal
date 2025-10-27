@@ -9,6 +9,11 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Prevent demo users from deleting account
+    const { demoGuard } = await import('@/lib/demo-guard')
+    const demoCheck = await demoGuard()
+    if (demoCheck) return demoCheck
+
     // Delete all user data (cascading deletes will handle related records)
     await prisma.user.delete({
       where: { id: session.user.id },
