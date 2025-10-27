@@ -3,7 +3,9 @@
 import { AppNav } from '@/components/AppNav'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { slugify } from '@/lib/slug-utils'
+import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
 
 interface Part {
   id: string
@@ -30,16 +32,26 @@ interface JournalEntry {
 }
 
 export default function JournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
-  const [entry, setEntry] = useState<JournalEntry | null>(null)
-  const [loading, setLoading] = useState(true)
   const [entryId, setEntryId] = useState<string>('')
 
   useEffect(() => {
     params.then(p => {
       setEntryId(p.id)
-      fetchEntry(p.id)
     })
   }, [params])
+
+  // Fetch entry using React Query
+  const { data: entry, isLoading: loading, isError } = useQuery({
+    queryKey: ['journal-entry', entryId],
+    queryFn: async () => {
+      if (!entryId) throw new Error('No entry ID')
+      const response = await fetch(`/api/journal/entries/by-slug/${entryId}`)
+      if (!response.ok) throw new Error('Failed to fetch entry')
+      const data = await response.json()
+      return data.entry as JournalEntry
+    },
+    enabled: !!entryId,
+  })
 
   useEffect(() => {
     // Scroll to highlighted quote if hash is present
@@ -62,18 +74,6 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       }
     }
   }, [entry])
-
-  const fetchEntry = async (slug: string) => {
-    try {
-      const response = await fetch(`/api/journal/entries/by-slug/${slug}`)
-      const data = await response.json()
-      setEntry(data.entry)
-    } catch (error) {
-      console.error('Failed to fetch entry:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const highlightText = (text: string, analyses: PartAnalysis[] = []) => {
     if (!analyses || analyses.length === 0) return text
@@ -165,13 +165,18 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-gray-50">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center py-12 text-gray-500">Loading entry...</div>
+          <div className="mb-6">
+            <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              ← Back to Journal Log
+            </Link>
+          </div>
+          <JournalEntrySkeleton />
         </main>
       </div>
     )
   }
 
-  if (!entry) {
+  if (isError || !entry) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />

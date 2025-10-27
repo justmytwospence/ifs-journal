@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AppNav } from '@/components/AppNav'
 import { Toast } from '@/components/ui/Toast'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
@@ -14,6 +15,7 @@ const prompts = [
 ]
 
 export default function JournalPage() {
+  const queryClient = useQueryClient()
   const [content, setContent] = useState('')
   const [prompt, setPrompt] = useState('')
   const [saving, setSaving] = useState(false)
@@ -30,7 +32,7 @@ export default function JournalPage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as unknown).SpeechRecognition
       const recognitionInstance = new SpeechRecognition()
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
@@ -206,6 +208,12 @@ export default function JournalPage() {
             if (statusData.entry.analysisStatus === 'completed' || statusData.entry.analysisStatus === 'failed') {
               setAnalyzing(false)
               clearInterval(pollInterval)
+              
+              // Invalidate all queries that depend on analysis results
+              queryClient.invalidateQueries({ queryKey: ['parts'] })
+              queryClient.invalidateQueries({ queryKey: ['part'] })
+              queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+              queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
             }
           }
         } catch (error) {
@@ -217,6 +225,12 @@ export default function JournalPage() {
       setTimeout(() => {
         setAnalyzing(false)
         clearInterval(pollInterval)
+        
+        // Invalidate queries even on timeout
+        queryClient.invalidateQueries({ queryKey: ['parts'] })
+        queryClient.invalidateQueries({ queryKey: ['part'] })
+        queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+        queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
       }, 30000)
     } catch (error) {
       setToast({ message: 'Failed to save entry', type: 'error' })

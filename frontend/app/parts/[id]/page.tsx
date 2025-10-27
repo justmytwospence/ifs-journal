@@ -3,8 +3,11 @@
 import { AppNav } from '@/components/AppNav'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { createEntrySlug } from '@/lib/slug-utils'
 import { getPartIcon } from '@/lib/part-icons'
+import { PartDetailSkeleton } from '@/components/ui/skeleton/PartDetailSkeleton'
+import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 
 interface QuoteWithEntry {
   text: string
@@ -32,8 +35,7 @@ interface ConversationMessage {
 }
 
 export default function PartDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const [part, setPart] = useState<Part | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [slug, setSlug] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<ConversationMessage[]>([])
   const [sending, setSending] = useState(false)
@@ -41,63 +43,68 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
   const [showAllQuotes, setShowAllQuotes] = useState(false)
   const conversationEndRef = useRef<HTMLDivElement>(null)
 
+  // Unwrap params
   useEffect(() => {
-    params.then(p => {
-      fetchPart(p.id)
-      fetchConversationHistory(p.id)
-    })
+    params.then(p => setSlug(p.id))
   }, [params])
+
+  // Fetch part details using React Query
+  const { data: partData, isLoading: partLoading, isError: partError } = useQuery({
+    queryKey: ['part', slug],
+    queryFn: async () => {
+      if (!slug) throw new Error('No slug provided')
+      const response = await fetch(`/api/parts/by-slug/${slug}`)
+      if (!response.ok) throw new Error('Failed to fetch part')
+      const data = await response.json()
+      return data.part as Part
+    },
+    enabled: !!slug,
+  })
+
+  const part = partData || null
+
+  // Fetch conversation history using React Query
+  const { data: conversationData, isLoading: conversationLoading } = useQuery({
+    queryKey: ['conversation', part?.id],
+    queryFn: async () => {
+      if (!part?.id) throw new Error('No part ID')
+      const response = await fetch(`/api/conversations/${part.id}`)
+      if (!response.ok) throw new Error('Failed to fetch conversations')
+      const data = await response.json()
+      
+      const messages: ConversationMessage[] = []
+      if (data.conversations) {
+        data.conversations.forEach((conv: { id: string; userMessage: string; partResponse: string; createdAt: string }) => {
+          messages.push({
+            id: conv.id,
+            role: 'user',
+            content: conv.userMessage,
+            createdAt: conv.createdAt,
+          })
+          messages.push({
+            id: conv.id,
+            role: 'part',
+            content: conv.partResponse,
+            createdAt: conv.createdAt,
+          })
+        })
+      }
+      return messages
+    },
+    enabled: !!part?.id,
+  })
+
+  // Update conversation state when data is fetched
+  useEffect(() => {
+    if (conversationData) {
+      setConversation(conversationData)
+    }
+  }, [conversationData])
 
   useEffect(() => {
     // Scroll to bottom when conversation updates
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversation])
-
-  const fetchPart = async (slug: string) => {
-    try {
-      const response = await fetch(`/api/parts/by-slug/${slug}`)
-      const data = await response.json()
-      setPart(data.part)
-    } catch (error) {
-      console.error('Failed to fetch part:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchConversationHistory = async (slug: string) => {
-    try {
-      // First get the part to get its actual ID
-      const partResponse = await fetch(`/api/parts/by-slug/${slug}`)
-      const partData = await partResponse.json()
-      
-      if (partData.part?.id) {
-        const response = await fetch(`/api/conversations/${partData.part.id}`)
-        const data = await response.json()
-        
-        if (data.conversations) {
-          const messages: ConversationMessage[] = []
-          data.conversations.forEach((conv: { id: string; userMessage: string; partResponse: string; createdAt: string }) => {
-            messages.push({
-              id: conv.id,
-              role: 'user',
-              content: conv.userMessage,
-              createdAt: conv.createdAt,
-            })
-            messages.push({
-              id: conv.id,
-              role: 'part',
-              content: conv.partResponse,
-              createdAt: conv.createdAt,
-            })
-          })
-          setConversation(messages)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch conversation history:', error)
-    }
-  }
 
   const handleSendMessage = async () => {
     if (!message.trim() || !part || sending) return
@@ -193,18 +200,28 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  if (loading) {
+  const loading = partLoading || conversationLoading
+  
+  // Apply minimum loading time to prevent skeleton flashing
+  const showLoading = useMinimumLoadingTime(loading)
+
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center py-12 text-gray-500">Loading part...</div>
+          <div className="mb-6">
+            <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              ← Back to Parts
+            </Link>
+          </div>
+          <PartDetailSkeleton />
         </main>
       </div>
     )
   }
 
-  if (!part) {
+  if (partError || !part) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
@@ -321,7 +338,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               <h2 className="text-xl font-semibold mb-4">Actions</h2>
               <div className="space-y-3">
                 <Link
-                  href={`/log?partId=${part.id}`}
+                  href={`/log?part=${slug}`}
                   className="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition text-center"
                 >
                   View Related Entries

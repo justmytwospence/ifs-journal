@@ -1,11 +1,14 @@
 'use client'
 
 import { AppNav } from '@/components/AppNav'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatEntryDate } from '@/lib/date-utils'
-import { createEntrySlug } from '@/lib/slug-utils'
+import { createEntrySlug, slugify } from '@/lib/slug-utils'
 import { useQuery } from '@tanstack/react-query'
+import { LogPageSkeleton } from '@/components/ui/skeleton/LogPageSkeleton'
+import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 
 interface Part {
   id: string
@@ -33,6 +36,8 @@ interface JournalEntry {
 }
 
 export default function LogPage() {
+  const searchParams = useSearchParams()
+  const partSlugFromUrl = searchParams.get('part')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -53,12 +58,33 @@ export default function LogPage() {
     queryFn: async () => {
       const response = await fetch('/api/parts')
       if (!response.ok) throw new Error('Failed to fetch parts')
-      return response.json()
+      const data = await response.json()
+      return data.parts as Part[]
     },
   })
 
   const entries: JournalEntry[] = entriesData?.entries || []
-  const parts: Part[] = partsData?.parts || []
+  const parts: Part[] = Array.isArray(partsData) ? partsData : []
+
+  const loading = entriesLoading || partsLoading
+
+  // Apply minimum loading time to prevent skeleton flashing
+  const showLoading = useMinimumLoadingTime(loading)
+
+  // Handle URL parameter for part filtering
+  useEffect(() => {
+    // Only run when parts have loaded and we have a URL parameter
+    if (!partSlugFromUrl || partsLoading || parts.length === 0) {
+      return
+    }
+
+    // Find the part by slug
+    const part = parts.find(p => slugify(p.name) === partSlugFromUrl)
+
+    if (part) {
+      setSelectedPartId(part.id)
+    }
+  }, [partSlugFromUrl, parts, partsLoading])
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
@@ -84,8 +110,6 @@ export default function LogPage() {
     return filtered
   }, [entries, selectedPartId, searchQuery])
 
-  const loading = entriesLoading || partsLoading
-
   // Function to get excerpt with highlighted quote for selected part
   const getEntryExcerpt = (entry: JournalEntry) => {
     if (!selectedPartId || !entry.partAnalyses) {
@@ -101,7 +125,7 @@ export default function LogPage() {
     // Get the first highlight
     const highlight = relevantAnalysis.highlights[0]
     const highlightIndex = entry.content.toLowerCase().indexOf(highlight.toLowerCase())
-    
+
     if (highlightIndex === -1) {
       return entry.content
     }
@@ -110,20 +134,20 @@ export default function LogPage() {
     const contextLength = 150
     const start = Math.max(0, highlightIndex - contextLength)
     const end = Math.min(entry.content.length, highlightIndex + highlight.length + contextLength)
-    
+
     let excerpt = entry.content.substring(start, end)
-    
+
     // Add ellipsis if we're not at the start/end
     if (start > 0) excerpt = '...' + excerpt
     if (end < entry.content.length) excerpt = excerpt + '...'
-    
+
     return excerpt
   }
 
   // Function to render excerpt with highlighted text
   const renderExcerpt = (entry: JournalEntry) => {
     const excerpt = getEntryExcerpt(entry)
-    
+
     if (!selectedPartId || !entry.partAnalyses) {
       return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
@@ -135,7 +159,7 @@ export default function LogPage() {
 
     const highlight = relevantAnalysis.highlights[0]
     const highlightIndex = excerpt.toLowerCase().indexOf(highlight.toLowerCase())
-    
+
     if (highlightIndex === -1) {
       return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
@@ -147,7 +171,7 @@ export default function LogPage() {
     return (
       <p className="font-serif text-gray-700 line-clamp-3">
         {before}
-        <span 
+        <span
           className="font-bold"
           style={{ color: relevantAnalysis.part.color }}
         >
@@ -158,15 +182,12 @@ export default function LogPage() {
     )
   }
 
-  if (loading) {
+  if (showLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading your journal entries...</p>
-          </div>
+          <LogPageSkeleton />
         </main>
       </div>
     )
@@ -215,74 +236,72 @@ export default function LogPage() {
             {/* Part Filter Dropdown */}
             {parts.length > 0 && (
               <div className="relative w-full md:w-64">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  {selectedPartId ? (
-                    <>
-                      <span className="text-lg">
-                        {parts.find(p => p.id === selectedPartId)?.icon || '●'}
-                      </span>
-                      <span className="text-gray-900 font-medium">
-                        {parts.find(p => p.id === selectedPartId)?.name}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-gray-700">All Parts</span>
-                  )}
-                </div>
-                <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-gray-50 transition-colors"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                  <div className="flex items-center gap-3">
+                    {selectedPartId ? (
+                      <>
+                        <span className="text-lg">
+                          {parts.find(p => p.id === selectedPartId)?.icon || '●'}
+                        </span>
+                        <span className="text-gray-900 font-medium">
+                          {parts.find(p => p.id === selectedPartId)?.name}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-gray-700">All Parts</span>
+                    )}
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-              {isDropdownOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setIsDropdownOpen(false)}
-                  />
-                  <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                    <button
-                      onClick={() => {
-                        setSelectedPartId(null)
-                        setIsDropdownOpen(false)
-                      }}
-                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
-                        !selectedPartId ? 'bg-indigo-50' : ''
-                      }`}
-                    >
-                      <span className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}>
-                        All Parts
-                      </span>
-                    </button>
-                    {parts.map((part) => (
+                {isDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsDropdownOpen(false)}
+                    />
+                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                       <button
-                        key={part.id}
                         onClick={() => {
-                          setSelectedPartId(part.id)
+                          setSelectedPartId(null)
                           setIsDropdownOpen(false)
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
-                          selectedPartId === part.id ? 'bg-gray-50' : ''
-                        }`}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${!selectedPartId ? 'bg-indigo-50' : ''
+                          }`}
                       >
-                        <span className="text-lg shrink-0">
-                          {part.icon || '●'}
+                        <span className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}>
+                          All Parts
                         </span>
-                        <span className="text-gray-900 font-medium">{part.name}</span>
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
+                      {parts.map((part) => (
+                        <button
+                          key={part.id}
+                          onClick={() => {
+                            setSelectedPartId(part.id)
+                            setIsDropdownOpen(false)
+                          }}
+                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${selectedPartId === part.id ? 'bg-gray-50' : ''
+                            }`}
+                        >
+                          <span className="text-lg shrink-0">
+                            {part.icon || '●'}
+                          </span>
+                          <span className="text-gray-900 font-medium">{part.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
