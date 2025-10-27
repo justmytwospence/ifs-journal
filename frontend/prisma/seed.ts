@@ -27,14 +27,14 @@ async function main() {
 
   // Try to find existing user first
   let testUser = await prisma.user.findUnique({
-    where: { email: 'ifs@spencerboucher.com' }
+    where: { email: 'demo@ifsjournal.me' }
   })
 
   // If user doesn't exist, create it
   if (!testUser) {
     testUser = await prisma.user.create({
       data: {
-        email: 'ifs@spencerboucher.com',
+        email: 'demo@ifsjournal.me',
         passwordHash,
         emailVerified: true,
       },
@@ -283,7 +283,7 @@ async function main() {
   console.log(`✅ Created ${entries.length} journal entries`)
   console.log('\n🎉 Database seeding completed successfully!')
   console.log('\nTest account:')
-  console.log(`  📧 ifs@spencerboucher.com / password123 (with ${entries.length} journal entries)`)
+  console.log(`  📧 demo@ifsjournal.me / password123 (with ${entries.length} journal entries)`)
 }
 
 main()

@@ -12,7 +12,7 @@ export default function DemoPage() {
     const loginAsDemo = async () => {
       try {
         const result = await signIn('credentials', {
-          email: 'ifs@spencerboucher.com',
+          email: 'demo@ifsjournal.me',
           password: 'password123',
           isDemo: 'true', // Pass as string since it goes through form data
           redirect: false,

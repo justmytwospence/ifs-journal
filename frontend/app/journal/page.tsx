@@ -9,6 +9,27 @@ import { DemoToast } from '@/components/ui/DemoToast'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
+// Type declarations for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number
+  results: SpeechRecognitionResultList
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start: () => void
+  stop: () => void
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
+}
+
 const prompts = [
   'What emotions are you experiencing right now, and which part of you might be feeling them?',
   'Describe a moment today when you noticed different parts of yourself in conflict.',
@@ -29,7 +50,7 @@ export default function JournalPage() {
   const [showDemoToast, setShowDemoToast] = useState(false)
   const { setAnalyzing } = useAnalysisStore()
   const [isListening, setIsListening] = useState(false)
-  const [recognition, setRecognition] = useState<unknown>(null)
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null)
   const [interimTranscript, setInterimTranscript] = useState('')
   const [isInitialized, setIsInitialized] = useState(false)
   const [showWritingTips, setShowWritingTips] = useState(false)
@@ -41,13 +62,14 @@ export default function JournalPage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as unknown).webkitSpeechRecognition || (window as unknown).SpeechRecognition
-      const recognitionInstance = new SpeechRecognition()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const recognitionInstance = new SpeechRecognitionAPI() as SpeechRecognition
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
       recognitionInstance.lang = 'en-US'
 
-      recognitionInstance.onresult = (event: unknown) => {
+      recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         let interim = ''
         let final = ''
 
@@ -68,7 +90,7 @@ export default function JournalPage() {
         }
       }
 
-      recognitionInstance.onerror = (event: unknown) => {
+      recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
         if (event.error === 'not-allowed') {
@@ -95,8 +117,12 @@ export default function JournalPage() {
       setIsListening(false)
       setInterimTranscript('')
     } else {
-      recognition.start()
-      setIsListening(true)
+      try {
+        recognition.start()
+        setIsListening(true)
+      } catch {
+        setToast({ message: 'Failed to start voice input', type: 'error' })
+      }
     }
   }
 
@@ -219,7 +245,7 @@ export default function JournalPage() {
         localStorage.removeItem('journal-draft')
         localStorage.setItem('journal-prompt', data.fallback)
       }
-    } catch (error) {
+    } catch {
       const currentIndex = prompts.indexOf(prompt)
       const nextIndex = (currentIndex + 1) % prompts.length
       const newPrompt = prompts[nextIndex]
@@ -310,7 +336,7 @@ export default function JournalPage() {
         queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
         queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
       }, 30000)
-    } catch (error) {
+    } catch {
       setToast({ message: 'Failed to save entry', type: 'error' })
     } finally {
       setSaving(false)
