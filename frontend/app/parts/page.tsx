@@ -128,11 +128,8 @@ export default function PartsPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {showLoading || reanalyzing ? (
           <>
-            <div className="mb-8 flex items-start justify-between">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">Your Parts</h2>
-                <p className="text-gray-600">Discover and understand your internal family system</p>
-              </div>
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="text-3xl font-bold">Your Parts</h2>
               <button 
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={true}
@@ -151,11 +148,8 @@ export default function PartsPage() {
           </>
         ) : (
           <>
-            <div className="mb-8 flex items-start justify-between">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">Your Parts</h2>
-                <p className="text-gray-600">Discover and understand your internal family system</p>
-              </div>
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="text-3xl font-bold">Your Parts</h2>
               <button 
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={reanalyzing}
@@ -182,22 +176,26 @@ export default function PartsPage() {
                     <Link
                       key={part.id}
                       href={`/parts/${slugify(part.name)}`}
-                      className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow"
+                      className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col"
                     >
-                      <div className="flex items-start gap-4 mb-4">
+                      <div className="flex items-start gap-4 mb-3">
                         <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-bold"
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-bold shrink-0"
                           style={{ backgroundColor: part.color }}
                         >
                           {getPartIcon(part.icon)}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-1">{part.name}</h3>
-                          <span className="text-sm text-gray-500">{part.role}</span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold mb-0.5">{part.name}</h3>
+                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                            {part.role}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-sm mb-4">{part.description}</p>
-                      <div className="text-sm text-gray-500">{part.appearances} appearances</div>
+                      <p className="text-gray-600 text-sm flex-1 mb-4">{part.description}</p>
+                      <div className="text-sm text-gray-500 pt-3 border-t border-gray-100">
+                        {part.appearances} {part.appearances === 1 ? 'appearance' : 'appearances'}
+                      </div>
                     </Link>
                   ))}
                 </div>

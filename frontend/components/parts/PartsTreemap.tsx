@@ -166,24 +166,21 @@ export function PartsTreemap({ parts }: PartsTreemapProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">Parts Overview</h3>
-      <div className="w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%">
-          <Treemap
-            data={treemapData}
-            dataKey="size"
-            stroke="#fff"
-            fill="#8884d8"
-            content={<CustomizedContent {...({} as TreemapCellProps)} />}
-            onClick={handleClick}
-            animationDuration={0}
-            isAnimationActive={false}
-          >
-            <Tooltip content={<CustomTooltip />} />
-          </Treemap>
-        </ResponsiveContainer>
-      </div>
+    <div className="w-full h-[300px] md:h-[400px] rounded-xl overflow-hidden mb-6">
+      <ResponsiveContainer width="100%" height="100%">
+        <Treemap
+          data={treemapData}
+          dataKey="size"
+          stroke="#fff"
+          fill="#8884d8"
+          content={<CustomizedContent {...({} as TreemapCellProps)} />}
+          onClick={handleClick}
+          animationDuration={0}
+          isAnimationActive={false}
+        >
+          <Tooltip content={<CustomTooltip />} />
+        </Treemap>
+      </ResponsiveContainer>
     </div>
   )
 }

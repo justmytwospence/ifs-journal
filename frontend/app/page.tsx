@@ -1,4 +1,32 @@
-export default function Home() {
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import prisma from '@/lib/db'
+
+export default async function Home() {
+  const session = await auth()
+  
+  // If user is logged in, redirect based on today's entry
+  if (session?.user?.id) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const todayEntry = await prisma.journalEntry.findFirst({
+      where: {
+        userId: session.user.id,
+        createdAt: {
+          gte: today,
+        },
+      },
+    })
+    
+    if (todayEntry) {
+      redirect('/log')
+    } else {
+      redirect('/journal')
+    }
+  }
+  
+  // Show landing page for non-logged-in users
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-16">

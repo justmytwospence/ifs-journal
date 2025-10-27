@@ -198,8 +198,8 @@ function LogPageContent() {
       <AppNav />
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Journal Log</h2>
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-3xl font-bold">Journal Log</h2>
           <p className="text-gray-600">
             {entries.length} {entries.length === 1 ? 'entry' : 'entries'} in your journal
           </p>
@@ -360,7 +360,7 @@ function LogPageContent() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
                       {formatEntryDate(entry.createdAt)}
                     </h3>
-                    <p className="text-sm text-gray-500">{entry.prompt}</p>
+                    <p className="text-sm text-gray-500 font-semibold">{entry.prompt}</p>
                   </div>
                   <div className="flex items-center gap-3 ml-4">
                     {entry.partAnalyses && entry.partAnalyses.length > 0 && (

@@ -8,9 +8,9 @@ export function formatEntryDate(dateString: string): string {
     if (diffDays < 7) {
         return date.toLocaleDateString('en-US', { weekday: 'long' })
     }
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    })
+    
+    // Format as "Sunday October 26, 2025" (no comma after weekday)
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' })
+    const monthDay = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    return `${weekday} ${monthDay}`
 }

@@ -245,11 +245,8 @@ export default function JournalPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Journal</h2>
-            <p className="text-gray-600">Write about your thoughts and feelings</p>
-          </div>
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-3xl font-bold">Journal</h2>
           <button
             onClick={handleNewPrompt}
             disabled={loadingPrompt}

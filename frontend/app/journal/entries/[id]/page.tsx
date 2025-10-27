@@ -31,6 +31,17 @@ interface JournalEntry {
   partAnalyses?: PartAnalysis[]
 }
 
+interface NavigationEntry {
+  id: string
+  slug: string
+  createdAt: string
+}
+
+interface EntryNavigation {
+  previous: NavigationEntry | null
+  next: NavigationEntry | null
+}
+
 export default function JournalEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const [entryId, setEntryId] = useState<string>('')
 
@@ -49,6 +60,19 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       if (!response.ok) throw new Error('Failed to fetch entry')
       const data = await response.json()
       return data.entry as JournalEntry
+    },
+    enabled: !!entryId,
+  })
+
+  // Fetch navigation (previous/next entries)
+  const { data: navigation } = useQuery({
+    queryKey: ['journal-entry-navigation', entryId],
+    queryFn: async () => {
+      if (!entryId) throw new Error('No entry ID')
+      const response = await fetch(`/api/journal/entries/by-slug/${entryId}/navigation`)
+      if (!response.ok) throw new Error('Failed to fetch navigation')
+      const data = await response.json()
+      return data as EntryNavigation
     },
     enabled: !!entryId,
   })
@@ -165,10 +189,14 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen bg-gray-50">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8">
-          <div className="mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               ← Back to Journal Log
             </Link>
+            <div className="flex items-center gap-2">
+              <div className="w-24 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+            </div>
           </div>
           <JournalEntrySkeleton />
         </main>
@@ -197,10 +225,45 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       <AppNav />
       
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
             ← Back to Journal Log
           </Link>
+          
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-2">
+            {navigation?.previous ? (
+              <Link
+                href={`/journal/entries/${navigation.previous.slug}`}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                title={`Previous entry: ${new Date(navigation.previous.createdAt).toLocaleDateString()}`}
+              >
+                <span className="text-lg leading-none">←</span>
+                Previous
+              </Link>
+            ) : (
+              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                <span className="text-lg leading-none">←</span>
+                Previous
+              </div>
+            )}
+            
+            {navigation?.next ? (
+              <Link
+                href={`/journal/entries/${navigation.next.slug}`}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                title={`Next entry: ${new Date(navigation.next.createdAt).toLocaleDateString()}`}
+              >
+                Next
+                <span className="text-lg leading-none">→</span>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+                Next
+                <span className="text-lg leading-none">→</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-8">
@@ -218,7 +281,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
               <p className="text-sm font-medium text-blue-900 mb-1">Prompt:</p>
-              <p className="text-blue-700">{entry.prompt}</p>
+              <p className="text-blue-700 font-semibold">{entry.prompt}</p>
             </div>
 
             {/* Parts in this entry - moved above content */}
