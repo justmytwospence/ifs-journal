@@ -1,7 +1,7 @@
 'use client'
 
 import { AppNav } from '@/components/AppNav'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { formatEntryDate } from '@/lib/date-utils'
@@ -35,7 +35,7 @@ interface JournalEntry {
   partAnalyses?: PartAnalysis[]
 }
 
-export default function LogPage() {
+function LogPageContent() {
   const searchParams = useSearchParams()
   const partSlugFromUrl = searchParams.get('part')
   const [searchQuery, setSearchQuery] = useState('')
@@ -392,5 +392,20 @@ export default function LogPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function LogPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <AppNav />
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <LogPageSkeleton />
+        </main>
+      </div>
+    }>
+      <LogPageContent />
+    </Suspense>
   )
 }

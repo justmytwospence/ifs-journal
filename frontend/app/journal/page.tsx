@@ -32,13 +32,13 @@ export default function JournalPage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as unknown).SpeechRecognition
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       const recognitionInstance = new SpeechRecognition()
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
       recognitionInstance.lang = 'en-US'
 
-      recognitionInstance.onresult = (event: unknown) => {
+      recognitionInstance.onresult = (event: any) => {
         let interim = ''
         let final = ''
 
@@ -59,7 +59,7 @@ export default function JournalPage() {
         }
       }
 
-      recognitionInstance.onerror = (event: unknown) => {
+      recognitionInstance.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
         if (event.error === 'not-allowed') {

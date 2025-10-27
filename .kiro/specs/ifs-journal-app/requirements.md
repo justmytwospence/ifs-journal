@@ -35,14 +35,18 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL provide a distraction-free writing interface with word count tracking
-2. THE IFS_Journal_App SHALL support speech-to-text input for hands-free journaling
-3. WHEN a user is writing, THE IFS_Journal_App SHALL optionally provide live writing tips to help explore parts more deeply
-4. THE IFS_Journal_App SHALL allow users to toggle writing tips on/off based on their preference
-5. WHEN a user saves an entry, THE IFS_Journal_App SHALL store it with the associated prompt and timestamp
-6. THE IFS_Journal_App SHALL save journal entries optimistically without blocking the user interface
-7. THE IFS_Journal_App SHALL automatically trigger parts analysis in the background after an entry is saved
-8. THE IFS_Journal_App SHALL not block user navigation or writing while parts analysis is processing
+1. THE IFS_Journal_App SHALL provide a distraction-free writing interface with word count tracking ✅
+2. THE IFS_Journal_App SHALL support speech-to-text input for hands-free journaling ✅
+3. WHEN a user is writing, THE IFS_Journal_App SHALL optionally provide live writing tips to help explore parts more deeply ⚠️ (Prompt template exists but UI not implemented)
+4. THE IFS_Journal_App SHALL allow users to toggle writing tips on/off based on their preference ⚠️ (Not implemented)
+5. WHEN a user saves an entry, THE IFS_Journal_App SHALL store it with the associated prompt and timestamp ✅
+6. THE IFS_Journal_App SHALL save journal entries without blocking the user interface ✅
+7. THE IFS_Journal_App SHALL automatically trigger parts analysis in the background after an entry is saved ✅
+8. THE IFS_Journal_App SHALL not block user navigation or writing while parts analysis is processing ✅
+9. THE IFS_Journal_App SHALL poll for analysis completion status and update UI when analysis finishes ✅
+10. THE IFS_Journal_App SHALL provide visual progress indicator with color-coded word count goals ✅
+11. THE IFS_Journal_App SHALL auto-save draft content to localStorage to prevent data loss ✅
+12. THE IFS_Journal_App SHALL support keyboard shortcuts for saving entries (Cmd/Ctrl+Enter
 
 ### Requirement 3: Automatic Parts Discovery and Analysis
 
@@ -50,21 +54,23 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. WHEN a journal entry is saved, THE IFS_Journal_App SHALL analyze the content for internal parts expressions using existing parts as context
-2. THE IFS_Journal_App SHALL process parts analysis asynchronously in the background without blocking the user
-3. THE IFS_Journal_App SHALL track analysis status for each journal entry (pending, processing, completed, failed)
-4. THE IFS_Journal_App SHALL identify and categorize parts as Protectors, Managers, Firefighters, or Exiles
-5. THE IFS_Journal_App SHALL maintain a maximum of 10 distinct parts to ensure quality over quantity
-6. WHEN analyzing a journal entry, THE IFS_Journal_App SHALL first match expressions to existing parts before considering creating new parts
-7. THE IFS_Journal_App SHALL only create a new part if no existing part matches the expression with similarity above 75%
-8. WHEN an expression matches an existing part, THE IFS_Journal_App SHALL update that existing part with new quotes and insights
-9. THE IFS_Journal_App SHALL extract specific quotes and highlight relevant phrases for each identified part
-10. THE IFS_Journal_App SHALL use incremental analysis that builds on previous parts understanding for each new entry
-11. THE IFS_Journal_App SHALL allow users to retry failed analyses manually
-12. WHEN analyzing a single journal entry, THE IFS_Journal_App SHALL identify a maximum of 3 new parts per entry
-13. WHEN analyzing multiple entries in batch, THE IFS_Journal_App SHALL identify a maximum of 5 new parts total across all entries
-14. THE IFS_Journal_App SHALL detect similar parts using semantic similarity with a threshold of 80% string similarity for names
-15. THE IFS_Journal_App SHALL detect similar parts based on role and description keyword overlap with a minimum of 2 shared keywords
+1. WHEN a journal entry is saved, THE IFS_Journal_App SHALL analyze the content for internal parts expressions using existing parts as context ✅
+2. THE IFS_Journal_App SHALL process parts analysis asynchronously in the background without blocking the user ✅
+3. THE IFS_Journal_App SHALL track analysis status for each journal entry (pending, processing, completed, failed) ✅
+4. THE IFS_Journal_App SHALL identify and categorize parts as Protectors, Managers, Firefighters, or Exiles ✅
+5. THE IFS_Journal_App SHALL maintain a maximum of 10 distinct parts to ensure quality over quantity ✅
+6. WHEN analyzing a journal entry, THE IFS_Journal_App SHALL first match expressions to existing parts before considering creating new parts ✅
+7. THE IFS_Journal_App SHALL only create a new part if no existing part matches the expression with similarity above 75% ✅
+8. WHEN an expression matches an existing part, THE IFS_Journal_App SHALL update that existing part with new quotes and insights ✅
+9. THE IFS_Journal_App SHALL extract specific quotes and highlight relevant phrases for each identified part ✅
+10. THE IFS_Journal_App SHALL use incremental analysis that builds on previous parts understanding for each new entry ✅
+11. THE IFS_Journal_App SHALL allow users to retry failed analyses manually ⚠️ (Not implemented)
+12. WHEN analyzing a single journal entry, THE IFS_Journal_App SHALL identify a maximum of 3 new parts per entry ✅
+13. WHEN analyzing multiple entries in batch, THE IFS_Journal_App SHALL identify a maximum of 5 new parts total across all entries ✅
+14. THE IFS_Journal_App SHALL detect similar parts using semantic similarity with a threshold of 80% string similarity for names ✅
+15. THE IFS_Journal_App SHALL detect similar parts based on role and description keyword overlap with a minimum of 2 shared keywords ✅
+16. THE IFS_Journal_App SHALL provide a global analysis state indicator to show when analysis is in progress ✅
+17. THE IFS_Journal_App SHALL use separate prompt templates for incremental analysis and batch reanalysis ✅
 
 ### Requirement 4: Parts Catalog and Management
 
@@ -72,22 +78,25 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL display all discovered parts in a visual grid with names, roles, and descriptions
-2. THE IFS_Journal_App SHALL assign unique colors to each part for consistent visual identification
-3. THE IFS_Journal_App SHALL show key quotes and statistics for each part (number of appearances, recent expressions)
-4. WHEN a user clicks on a part, THE IFS_Journal_App SHALL navigate to a detailed part view
-5. THE IFS_Journal_App SHALL provide a "Reanalyze All Parts" function to comprehensively review the entire journal history
-6. THE IFS_Journal_App SHALL allow users to delete parts that are no longer relevant or were incorrectly identified
-7. WHEN a part is deleted, THE IFS_Journal_App SHALL update all associated journal entry highlights accordingly
-8. WHEN a user deletes a part, THE IFS_Journal_App SHALL create an operation snapshot for undo functionality
-9. THE IFS_Journal_App SHALL allow users to undo part deletion within 24 hours of execution
-10. WHEN a user undoes a delete, THE IFS_Journal_App SHALL restore the part with all its quotes, analyses, and highlights
-11. THE IFS_Journal_App SHALL display an undo notification with action button immediately after part deletion
-12. THE IFS_Journal_App SHALL display an interactive treemap visualization showing parts hierarchically sized by appearance count
-13. WHEN a user hovers over a treemap rectangle, THE IFS_Journal_App SHALL display a tooltip with the part's name, role, and appearance count
-14. WHEN a user clicks on a treemap rectangle, THE IFS_Journal_App SHALL navigate to the corresponding part detail page
-15. THE IFS_Journal_App SHALL color each treemap rectangle using the part's assigned color
-16. THE IFS_Journal_App SHALL use a third-party React treemap library for reliable visualization rendering
+1. THE IFS_Journal_App SHALL display all discovered parts in a visual grid with names, roles, and descriptions ✅
+2. THE IFS_Journal_App SHALL assign unique colors to each part for consistent visual identification ✅
+3. THE IFS_Journal_App SHALL show key quotes and statistics for each part (number of appearances, recent expressions) ✅
+4. WHEN a user clicks on a part, THE IFS_Journal_App SHALL navigate to a detailed part view using slug-based URLs ✅
+5. THE IFS_Journal_App SHALL provide a "Reanalyze All Entries" function to comprehensively review the entire journal history ✅
+6. THE IFS_Journal_App SHALL show a confirmation dialog before starting batch reanalysis ✅
+7. THE IFS_Journal_App SHALL delete all existing parts before batch reanalysis to start fresh ✅
+8. THE IFS_Journal_App SHALL allow users to delete parts that are no longer relevant or were incorrectly identified ⚠️ (Not implemented)
+9. WHEN a part is deleted, THE IFS_Journal_App SHALL update all associated journal entry highlights accordingly ⚠️ (Not implemented)
+10. WHEN a user deletes a part, THE IFS_Journal_App SHALL create an operation snapshot for undo functionality ⚠️ (Schema exists but not implemented)
+11. THE IFS_Journal_App SHALL allow users to undo part deletion within 24 hours of execution ⚠️ (Not implemented)
+12. WHEN a user undoes a delete, THE IFS_Journal_App SHALL restore the part with all its quotes, analyses, and highlights ⚠️ (Not implemented)
+13. THE IFS_Journal_App SHALL display an undo notification with action button immediately after part deletion ⚠️ (Not implemented)
+14. THE IFS_Journal_App SHALL display an interactive treemap visualization showing parts hierarchically sized by appearance count ✅
+15. WHEN a user hovers over a treemap rectangle, THE IFS_Journal_App SHALL display a tooltip with the part's name, role, and appearance count ✅
+16. WHEN a user clicks on a treemap rectangle, THE IFS_Journal_App SHALL navigate to the corresponding part detail page ✅
+17. THE IFS_Journal_App SHALL color each treemap rectangle using the part's assigned color ✅
+18. THE IFS_Journal_App SHALL use Recharts library for treemap visualization rendering ✅
+19. THE IFS_Journal_App SHALL assign unique icons to each part for visual identification ✅
 
 ### Requirement 5: Interactive Part Conversations
 
@@ -95,26 +104,34 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. WHEN viewing a part detail page, THE IFS_Journal_App SHALL provide a conversation interface
-2. THE IFS_Journal_App SHALL generate contextual responses based on the part's previous expressions and journal appearances
-3. THE IFS_Journal_App SHALL maintain conversation history within the session
-4. THE IFS_Journal_App SHALL ensure part responses stay in character and reflect the part's established voice and concerns
-5. THE IFS_Journal_App SHALL keep responses conversational and under 150 words
+1. WHEN viewing a part detail page, THE IFS_Journal_App SHALL provide a conversation interface ✅
+2. THE IFS_Journal_App SHALL generate contextual responses based on the part's previous expressions and journal appearances ✅
+3. THE IFS_Journal_App SHALL persist conversation history in the database ✅
+4. THE IFS_Journal_App SHALL ensure part responses stay in character and reflect the part's established voice and concerns ✅
+5. THE IFS_Journal_App SHALL keep responses conversational and under 150 words ✅
+6. THE IFS_Journal_App SHALL display conversation history in chronological order ✅
+7. THE IFS_Journal_App SHALL provide loading states while generating part responses ✅
+8. THE IFS_Journal_App SHALL handle AI service failures gracefully with error messages ✅
 
 ### Requirement 6: Journal History with Parts Highlighting
 
-**User Story:** As a user tracking my IFS journey, I want to see all my journal entries with parts expressions highlighted and visualize my journaling frequency over time, so that I can observe patterns, and understand when different parts are active,
+**User Story:** As a user tracking my IFS journey, I want to see all my journal entries with parts expressions highlighted and visualize my journaling frequency over time, so that I can observe patterns, and understand when different parts are active.
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL display all journal entries in chronological order with full content
-2. THE IFS_Journal_App SHALL highlight text phrases that correspond to specific parts using their assigned colors
-3. WHEN a user hovers over highlighted text, THE IFS_Journal_App SHALL show a tooltip with the part name
-4. WHEN a user clicks highlighted text, THE IFS_Journal_App SHALL navigate to that part's detail page
-5. THE IFS_Journal_App SHALL only highlight meaningful phrases, not every word
-6. THE IFS_Journal_App SHALL display a visual chart showing which days had journal entries
-7. THE IFS_Journal_App SHALL provide a search function to find entries by text content
-8. THE IFS_Journal_App SHALL allow users to filter entries by specific parts to see when each part was active
+1. THE IFS_Journal_App SHALL display all journal entries in reverse chronological order with excerpts ✅
+2. THE IFS_Journal_App SHALL show color-coded part indicators for each entry ✅
+3. THE IFS_Journal_App SHALL highlight text phrases in excerpts that correspond to specific parts using their assigned colors ✅
+4. WHEN a user clicks on an entry, THE IFS_Journal_App SHALL navigate to the full entry detail page ✅
+5. THE IFS_Journal_App SHALL only highlight meaningful phrases, not every word ✅
+6. THE IFS_Journal_App SHALL display a visual chart showing which days had journal entries ⚠️ (Not implemented on log page)
+7. THE IFS_Journal_App SHALL provide a search function to find entries by text content ✅
+8. THE IFS_Journal_App SHALL allow users to filter entries by specific parts to see when each part was active ✅
+9. THE IFS_Journal_App SHALL support URL parameters for part filtering to enable deep linking ✅
+10. THE IFS_Journal_App SHALL show entry count when filters are active ✅
+11. THE IFS_Journal_App SHALL provide a "Clear filters" button to reset search and part filters ✅
+12. THE IFS_Journal_App SHALL display part icons alongside part names in the filter dropdown ✅
+13. THE IFS_Journal_App SHALL show contextual excerpts when filtering by part, highlighting the relevant quote ✅
 
 ### Requirement 7: AI Prompt Management
 
@@ -131,14 +148,17 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL provide user registration with email and secure password
-2. THE IFS_Journal_App SHALL implement secure user authentication with session management
-3. THE IFS_Journal_App SHALL ensure complete data isolation between users
-4. THE IFS_Journal_App SHALL require authentication for all journal-related functionality
-5. THE IFS_Journal_App SHALL provide secure password reset functionality
-6. THE IFS_Journal_App SHALL allow users to delete their account and all associated data
-7. WHEN a user deletes their account, THE IFS_Journal_App SHALL immediately and permanently remove all journal entries, parts, conversations, and personal data
-8. THE IFS_Journal_App SHALL provide clear confirmation and warning before account deletion
+1. THE IFS_Journal_App SHALL provide user registration with email and secure password ✅
+2. THE IFS_Journal_App SHALL implement secure user authentication with session management using NextAuth.js v5 ✅
+3. THE IFS_Journal_App SHALL ensure complete data isolation between users ✅
+4. THE IFS_Journal_App SHALL require authentication for all journal-related functionality ✅
+5. THE IFS_Journal_App SHALL provide secure password reset functionality ⚠️ (Page exists but not implemented)
+6. THE IFS_Journal_App SHALL allow users to delete their account and all associated data ⚠️ (Not implemented)
+7. WHEN a user deletes their account, THE IFS_Journal_App SHALL immediately and permanently remove all journal entries, parts, conversations, and personal data ⚠️ (Not implemented)
+8. THE IFS_Journal_App SHALL provide clear confirmation and warning before account deletion ⚠️ (Not implemented)
+9. THE IFS_Journal_App SHALL use bcryptjs for password hashing with 12 rounds ✅
+10. THE IFS_Journal_App SHALL store JWT sessions in encrypted cookies ✅
+11. THE IFS_Journal_App SHALL protect API routes with authentication middleware ✅
 
 ### Requirement 9: Data Privacy and Security
 
@@ -146,12 +166,14 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL store all user data in a secure cloud database with encryption
-2. THE IFS_Journal_App SHALL not transmit journal content to external services except for AI analysis
-3. THE IFS_Journal_App SHALL use environment variables for API keys and sensitive configuration
-4. THE IFS_Journal_App SHALL provide clear information about data usage and AI processing
-5. THE IFS_Journal_App SHALL allow users to export their data
-6. THE IFS_Journal_App SHALL implement proper session security and CSRF protection
+1. THE IFS_Journal_App SHALL store all user data in a secure cloud database with encryption ✅
+2. THE IFS_Journal_App SHALL not transmit journal content to external services except for AI analysis ✅
+3. THE IFS_Journal_App SHALL use environment variables for API keys and sensitive configuration ✅
+4. THE IFS_Journal_App SHALL provide clear information about data usage and AI processing ⚠️ (Not implemented)
+5. THE IFS_Journal_App SHALL allow users to export their data ⚠️ (API route exists but not implemented)
+6. THE IFS_Journal_App SHALL implement proper session security and CSRF protection ✅
+7. THE IFS_Journal_App SHALL use Neon PostgreSQL with TLS encryption for data at rest and in transit ✅
+8. THE IFS_Journal_App SHALL implement Prisma ORM for SQL injection prevention ✅
 
 ### Requirement 10: Responsive User Interface
 
@@ -159,11 +181,14 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL provide a responsive design that works on desktop and mobile devices
-2. THE IFS_Journal_App SHALL use a tabbed interface for easy navigation between journaling, journal log, and parts views
-3. THE IFS_Journal_App SHALL maintain visual consistency with color-coded parts across all interfaces
-4. THE IFS_Journal_App SHALL provide intuitive navigation with clear visual feedback
-5. THE IFS_Journal_App SHALL optimize the writing interface for distraction-free journaling
+1. THE IFS_Journal_App SHALL provide a responsive design that works on desktop and mobile devices ✅
+2. THE IFS_Journal_App SHALL use a navigation component for easy access to journaling, journal log, parts, and profile views ✅
+3. THE IFS_Journal_App SHALL maintain visual consistency with color-coded parts across all interfaces ✅
+4. THE IFS_Journal_App SHALL provide intuitive navigation with clear visual feedback ✅
+5. THE IFS_Journal_App SHALL optimize the writing interface for distraction-free journaling ✅
+6. THE IFS_Journal_App SHALL use Tailwind CSS with a custom therapeutic design system ✅
+7. THE IFS_Journal_App SHALL provide skeleton loading states to prevent layout shifts ✅
+8. THE IFS_Journal_App SHALL use minimum loading times to prevent skeleton flashing ✅
 
 ### Requirement 11: Performance and Reliability
 
@@ -171,12 +196,14 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL load the main interface within 2 seconds
-2. THE IFS_Journal_App SHALL provide immediate feedback when saving journal entries (optimistic UI)
-3. THE IFS_Journal_App SHALL complete journal entry saves within 1 second for the user experience
-4. THE IFS_Journal_App SHALL handle AI service failures gracefully without losing user data
-5. THE IFS_Journal_App SHALL provide clear error messages and recovery options
-6. THE IFS_Journal_App SHALL auto-save draft content to prevent data loss
+1. THE IFS_Journal_App SHALL load the main interface within 2 seconds ✅
+2. THE IFS_Journal_App SHALL provide immediate feedback when saving journal entries ✅
+3. THE IFS_Journal_App SHALL complete journal entry saves within 1 second for the user experience ✅
+4. THE IFS_Journal_App SHALL handle AI service failures gracefully without losing user data ✅
+5. THE IFS_Journal_App SHALL provide clear error messages and recovery options ✅
+6. THE IFS_Journal_App SHALL auto-save draft content to localStorage to prevent data loss ✅
+7. THE IFS_Journal_App SHALL use TanStack Query for efficient data caching and synchronization ✅
+8. THE IFS_Journal_App SHALL invalidate relevant queries after analysis completion to refresh UI ✅
 
 ### Requirement 12: Deployment and Continuous Integration
 
@@ -184,8 +211,10 @@ The IFS Journal App is a web-based journaling application designed to help users
 
 #### Acceptance Criteria
 
-1. THE IFS_Journal_App SHALL support zero-downtime deployments
-2. THE IFS_Journal_App SHALL use containerized deployment for consistent environments
-3. THE IFS_Journal_App SHALL implement database migrations that are backward compatible
-4. THE IFS_Journal_App SHALL provide health checks for deployment verification
-5. THE IFS_Journal_App SHALL support rollback capabilities in case of deployment issues
+1. THE IFS_Journal_App SHALL support zero-downtime deployments ⚠️ (Not deployed to production)
+2. THE IFS_Journal_App SHALL use Vercel for serverless deployment ⚠️ (Not deployed to production)
+3. THE IFS_Journal_App SHALL implement database migrations that are backward compatible ✅
+4. THE IFS_Journal_App SHALL provide health checks for deployment verification ⚠️ (Not implemented)
+5. THE IFS_Journal_App SHALL support rollback capabilities in case of deployment issues ⚠️ (Not deployed to production)
+6. THE IFS_Journal_App SHALL use Prisma migrations for database schema evolution ✅
+7. THE IFS_Journal_App SHALL use Neon database branching for development and production environments ✅

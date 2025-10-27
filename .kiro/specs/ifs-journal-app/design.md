@@ -4,6 +4,30 @@
 
 The IFS Journal App is a web application built with modern web technologies to provide a secure, scalable, and therapeutic journaling experience. The architecture prioritizes user privacy, performance, and therapeutic effectiveness while supporting multiple users with complete data isolation.
 
+## Implementation Status
+
+This design document has been updated to reflect the **actual implementation** as of the current codebase state. Items marked with:
+- ✅ = Fully implemented and working
+- ⚠️ = Partially implemented or not yet built
+- No marker = Design specification (may or may not be implemented)
+
+**Key Implementation Highlights:**
+- Core journaling with voice input and auto-save ✅
+- AI-powered parts analysis (incremental and batch) ✅
+- Parts catalog with treemap visualization ✅
+- Part conversations with persistent history ✅
+- Journal log with search and parts filtering ✅
+- Authentication with NextAuth.js v5 ✅
+- Responsive UI with skeleton loading states ✅
+
+**Not Yet Implemented:**
+- Writing tips sidebar (prompt exists, UI not built)
+- Parts deletion and undo system (schema exists, UI not built)
+- Account deletion and data export (API routes exist, not wired up)
+- Password reset functionality (page exists, not functional)
+- Production deployment to Vercel
+- Activity calendar visualization on log page
+
 ## Architecture
 
 ### High-Level Architecture
@@ -112,6 +136,7 @@ erDiagram
         text description
         enum role "Protector|Manager|Firefighter|Exile"
         string color
+        string icon "unicode symbol"
         json quotes "array of strings"
         datetime createdAt
         datetime updatedAt
@@ -130,16 +155,9 @@ erDiagram
         string id PK
         string userId FK
         string partId FK
+        text userMessage
+        text partResponse
         datetime createdAt
-        datetime updatedAt
-    }
-    
-    ConversationMessage {
-        string id PK
-        string conversationId FK
-        enum role "user|part"
-        text content
-        datetime timestamp
     }
     
     PartsOperation {
@@ -160,23 +178,21 @@ erDiagram
     JournalEntry ||--o{ PartAnalysis : analyzed_for
     Part ||--o{ PartAnalysis : identified_in
     Part ||--o{ PartConversation : converses_with
-    
-    PartConversation ||--o{ ConversationMessage : contains
 ```
 
 ### Database Indexes
 
 ```sql
--- Performance indexes
+-- Performance indexes (implemented via Prisma schema)
 CREATE INDEX idx_journal_entries_user_created ON journal_entries(user_id, created_at DESC);
 CREATE INDEX idx_parts_user_id ON parts(user_id);
-CREATE INDEX idx_part_analysis_entry_id ON part_analysis(entry_id);
-CREATE INDEX idx_part_analysis_part_id ON part_analysis(part_id);
-CREATE INDEX idx_conversation_messages_conversation ON conversation_messages(conversation_id, timestamp);
-CREATE INDEX idx_parts_operations_user_expires ON parts_operations(user_id, expires_at) WHERE undone = false;
+CREATE INDEX idx_part_analysis_entry_id ON part_analyses(entry_id);
+CREATE INDEX idx_part_analysis_part_id ON part_analyses(part_id);
+CREATE INDEX idx_part_conversations_part_created ON part_conversations(part_id, created_at);
+CREATE INDEX idx_parts_operations_user_expires ON parts_operations(user_id, expires_at);
 
 -- Unique constraints
-CREATE UNIQUE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_users_email ON users(email);
 ```
 
 ### Core Entities
@@ -226,21 +242,14 @@ interface PartAnalysis {
   createdAt: Date
 }
 
-// Conversations
+// Conversations (Simplified - single exchange per record)
 interface PartConversation {
   id: string
   userId: string
   partId: string
-  messages: ConversationMessage[]
+  userMessage: string
+  partResponse: string
   createdAt: Date
-  updatedAt: Date
-}
-
-interface ConversationMessage {
-  id: string
-  role: 'user' | 'part'
-  content: string
-  timestamp: Date
 }
 
 // Parts Operations (for delete undo functionality)
@@ -332,142 +341,204 @@ interface DeletedPartSnapshot {
 ### Frontend Component Architecture
 
 ```
-src/
+frontend/
 ├── app/                  # Next.js App Router
 │   ├── (auth)/          # Route group for authentication
 │   │   ├── login/       # Login page
 │   │   ├── register/    # Registration page
-│   │   └── reset-password/ # Password reset page
-│   ├── (dashboard)/     # Route group for main app
-│   │   ├── journal/     # Journaling interface
-│   │   ├── log/         # Journal history with visualization
-│   │   ├── parts/       # Parts catalog and management
-│   │   └── parts/[id]/  # Individual part detail and conversation
+│   │   ├── reset-password/ # Password reset page (placeholder)
+│   │   └── layout.tsx   # Auth layout
+│   ├── journal/         # Journaling interface
+│   │   ├── entries/[id]/ # Individual entry detail page
+│   │   └── page.tsx     # Main journal writing page
+│   ├── log/             # Journal history with visualization
+│   │   ├── [date]/      # Entry detail by date slug
+│   │   └── page.tsx     # Journal log list page
+│   ├── parts/           # Parts catalog and management
+│   │   ├── [id]/        # Individual part detail and conversation (slug-based)
+│   │   └── page.tsx     # Parts catalog page
+│   ├── profile/         # User profile page
+│   │   └── page.tsx     # Profile management
 │   ├── api/             # Next.js API routes
 │   │   ├── auth/        # Authentication endpoints
+│   │   │   ├── [...nextauth]/ # NextAuth.js handler
+│   │   │   └── register/ # User registration
+│   │   ├── conversations/ # Part conversation endpoints
+│   │   │   └── [partId]/ # Conversation by part ID
 │   │   ├── journal/     # Journal endpoints
+│   │   │   └── entries/ # Entry CRUD operations
 │   │   ├── parts/       # Parts endpoints
-│   │   └── prompts/     # Prompt generation endpoints
+│   │   │   ├── [id]/    # Part by ID
+│   │   │   ├── batch-reanalysis/ # Batch reanalysis endpoint
+│   │   │   └── by-slug/ # Part lookup by slug
+│   │   ├── prompts/     # Prompt generation endpoints
+│   │   │   └── generate/ # Generate new prompt
+│   │   └── user/        # User management endpoints
+│   │       ├── account/ # Account deletion (placeholder)
+│   │       └── export/  # Data export (placeholder)
 │   ├── globals.css      # Global Tailwind CSS styles
 │   ├── layout.tsx       # Root layout component
 │   └── page.tsx         # Landing page
 ├── components/
 │   ├── ui/              # Reusable UI components
-│   ├── journal/         # Journal-specific components
+│   │   ├── skeleton/    # Loading skeleton components
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── Input.tsx
+│   │   ├── Textarea.tsx
+│   │   └── Toast.tsx
 │   ├── parts/           # Parts-related components
+│   │   └── PartsTreemap.tsx # Recharts treemap visualization
 │   ├── auth/            # Authentication components
-│   └── layout/          # Layout components
+│   │   └── SessionProvider.tsx
+│   ├── providers/       # React context providers
+│   │   └── QueryProvider.tsx # TanStack Query provider
+│   ├── layout/          # Layout components
+│   │   └── Navigation.tsx
+│   └── AppNav.tsx       # Main navigation component
 ├── lib/
-│   ├── ai/              # AI integration utilities
-│   │   ├── openai.ts    # OpenAI API client
-│   │   └── prompt-loader.ts # Prompt template loader
 │   ├── prompts/         # AI System Prompt Templates (Editable)
 │   │   ├── journal-prompt-generation.md
-│   │   ├── parts-analysis.md
+│   │   ├── incremental-entry-analysis.md # Single entry analysis
+│   │   ├── batch-entries-reanalysis.md # Batch reanalysis
 │   │   ├── part-conversation.md
-│   │   ├── parts-reanalysis.md
 │   │   └── writing-tips.md
-│   ├── api.ts           # API client utilities
-│   ├── auth.ts          # Authentication utilities
-│   ├── db.ts            # Database connection
+│   ├── stores/          # Zustand state stores
+│   │   └── analysis-store.ts # Global analysis state
+│   ├── hooks/           # Custom React hooks
+│   │   ├── useMinimumLoadingTime.ts
+│   │   ├── useJournalEntries.ts
+│   │   ├── useParts.ts
+│   │   └── useInvalidateOnAnalysis.ts
+│   ├── auth.ts          # NextAuth.js configuration
+│   ├── auth-types.ts    # Authentication type definitions
+│   ├── db.ts            # Prisma database client
+│   ├── openai.ts        # OpenAI API client
 │   ├── types.ts         # TypeScript type definitions
-│   └── utils.ts         # Utility functions
-├── stores/              # Zustand state stores
-├── hooks/               # Custom React hooks
+│   ├── utils.ts         # Utility functions
+│   ├── constants.ts     # App constants
+│   ├── date-utils.ts    # Date formatting utilities
+│   ├── slug-utils.ts    # URL slug utilities
+│   ├── part-icons.ts    # Part icon utilities
+│   └── query-client.ts  # TanStack Query configuration
+├── prisma/
+│   ├── schema.prisma    # Database schema
+│   ├── seed.ts          # Database seed script
+│   └── migrations/      # Database migrations
 └── public/
-    └── icon.svg         # App icon
+    └── favicon.ico      # App icon
 ```
 
 ### Key Frontend Components
 
-**JournalEditor Component:**
-- Clean text editor with Web Speech API integration for speech-to-text
-- Real-time word count and auto-save with optimistic UI
-- **Optimistic Saving:**
-  - Journal entries save instantly to local state with optimistic UI
-  - Background sync to database without blocking user
-  - Success/error feedback via toast notifications
-  - No loading states that block writing or navigation
-  - Parts analysis triggered asynchronously after save completes
+**JournalEditor Component (journal/page.tsx):**
+- Clean text editor with Web Speech API integration for speech-to-text ✅
+- Real-time word count with visual progress bar (color-coded: red < 100, blue < 250, green ≥ 250) ✅
+- Auto-save draft to localStorage every 1 second ✅
+- **Saving Behavior:**
+  - Journal entries save to database on button click or Cmd/Ctrl+Enter ✅
+  - Success/error feedback via toast notifications ✅
+  - No loading states that block writing or navigation ✅
+  - Parts analysis triggered asynchronously after save completes ✅
+  - Polls for analysis completion status every 2 seconds ✅
+  - Invalidates TanStack Query cache when analysis completes ✅
 - **Writing Tips Sidebar:**
-  - Small tips area displayed next to journal entry area
-  - Toggle button to show/hide tips area
-  - User preference saved to hide permanently if desired
-  - Auto-updates after 3 seconds of typing inactivity
-  - Sends current journal prompt + written text to AI for contextual suggestions
-  - Uses writing-tips.md prompt template for consistent guidance
-- Microphone button for voice input with live visual feedback
+  - ⚠️ NOT IMPLEMENTED (prompt template exists but UI not built)
+- Microphone button for voice input with live visual feedback ✅
+- Confirmation dialog when requesting new prompt with unsaved content ✅
+- Fallback to static prompts when AI generation fails ✅
 
-**PartsVisualization Component:**
-- Grid layout of discovered parts
-- Color-coded part cards with statistics
-- Interactive part management (merge/delete)
-- Reanalyze functionality
+**PartsVisualization Component (parts/page.tsx):**
+- Grid layout of discovered parts with responsive columns ✅
+- Color-coded part cards with icons, names, roles, descriptions ✅
+- Part statistics showing appearance count ✅
+- Slug-based navigation to part detail pages ✅
+- "Reanalyze All Entries" button with confirmation dialog ✅
+- Batch reanalysis deletes all existing parts and reanalyzes from scratch ✅
+- Interactive part management (delete/edit) ⚠️ NOT IMPLEMENTED
+- Loading states with skeleton components ✅
+- Minimum loading time to prevent skeleton flashing ✅
 
-**PartsTreemap Component:**
-- Interactive treemap visualization replacing Activity Overview section
-- Uses third-party React treemap library (recharts or react-d3-tree)
-- Hierarchical display with rectangle size proportional to appearance count
-- Each rectangle colored with part's assigned color
-- Hover tooltips showing part name, role, and appearance count
-- Click navigation to individual part detail pages
-- Responsive sizing within container
-- Hidden when no parts exist (shows empty state instead)
+**PartsTreemap Component (components/parts/PartsTreemap.tsx):**
+- Interactive treemap visualization using Recharts library ✅
+- Hierarchical display with rectangle size proportional to appearance count ✅
+- Each rectangle colored with part's assigned color ✅
+- Hover tooltips showing part name, role, and appearance count ✅
+- Click navigation to individual part detail pages using slug-based URLs ✅
+- Responsive sizing within container (400px desktop, 300px mobile) ✅
+- Hidden when no parts exist (component not rendered) ✅
+- Rounded corners and shadow matching design system ✅
 
-**JournalLog Component:**
-- Chronological entry display with parts highlighting
-- Bar chart visualization showing which days had journal entries
+**JournalLog Component (log/page.tsx):**
+- Reverse chronological entry display with excerpts ✅
+- Color-coded part indicators for each entry ✅
+- Parts highlighting in excerpts when filtering by part ✅
+- Bar chart visualization ⚠️ NOT IMPLEMENTED on log page
 - **Search functionality:**
-  - Text search across all entry content
-  - Real-time filtering as user types
-  - Highlight search terms in results
+  - Text search across all entry content and prompts ✅
+  - Real-time filtering as user types ✅
+  - Search terms not highlighted in results (just filters)
 - **Parts filter:**
-  - Dropdown to filter by specific parts
-  - Show only entries where selected part appears
-  - Multi-select to filter by multiple parts
-- Entry count display when filters active
-- Clear filters button
-- Infinite scroll for performance
+  - Dropdown to filter by specific parts ✅
+  - Show only entries where selected part appears ✅
+  - Single-select filter (not multi-select) ✅
+  - URL parameter support for deep linking (?part=slug) ✅
+  - Part icons displayed in dropdown ✅
+- Entry count display when filters active ✅
+- Clear filters button ✅
+- Standard pagination (not infinite scroll) ✅
+- Contextual excerpts showing relevant quotes when filtering by part ✅
+- Loading states with skeleton components ✅
 
-**PartConversation Component:**
-- Chat interface for part dialogues
-- Message history with session persistence
-- Typing indicators and rate limit feedback
+**PartConversation Component (parts/[id]/page.tsx):**
+- Chat interface for part dialogues ✅
+- Message history persisted in database ✅
+- Chronological display of conversation exchanges ✅
+- Loading states while generating responses ✅
+- Error handling with retry capability ✅
+- Contextual responses based on part's quotes and journal history ✅
+- Typing indicators ⚠️ NOT IMPLEMENTED
+- Rate limit feedback ⚠️ NOT IMPLEMENTED
 
-### API Routes Structure (Next.js App Router)
+### API Routes Structure (ACTUAL IMPLEMENTATION)
 
 ```
-src/app/api/
+frontend/app/api/
 ├── auth/
-│   ├── register/route.ts      # POST /api/auth/register
-│   ├── login/route.ts         # POST /api/auth/login
-│   ├── logout/route.ts        # POST /api/auth/logout
-│   ├── reset-password/route.ts # POST /api/auth/reset-password
-│   └── account/route.ts       # DELETE /api/auth/account
+│   ├── [...nextauth]/route.ts # NextAuth.js handler (GET/POST) ✅
+│   └── register/route.ts      # POST /api/auth/register ✅
 ├── journal/
-│   ├── entries/route.ts       # GET/POST /api/journal/entries
-│   ├── entries/[id]/route.ts  # GET/PUT/DELETE /api/journal/entries/:id
-│   └── entries/[id]/analyze/route.ts # POST /api/journal/entries/:id/analyze (trigger analysis)
+│   └── entries/
+│       ├── route.ts           # GET/POST /api/journal/entries ✅
+│       └── [id]/route.ts      # GET /api/journal/entries/:id ✅
 ├── prompts/
-│   ├── daily/route.ts         # GET /api/prompts/daily
-│   ├── generate/route.ts      # POST /api/prompts/generate
-│   └── writing-tips/route.ts  # POST /api/prompts/writing-tips
+│   └── generate/route.ts      # POST /api/prompts/generate ✅
 ├── parts/
-│   ├── route.ts               # GET /api/parts
-│   ├── [id]/route.ts          # GET/PUT/DELETE /api/parts/:id
-│   ├── reanalyze/route.ts     # POST /api/parts/reanalyze
-│   └── operations/
-│       ├── route.ts           # GET /api/parts/operations (list recent operations)
-│       └── [id]/undo/route.ts # POST /api/parts/operations/:id/undo
+│   ├── route.ts               # GET /api/parts ✅
+│   ├── [id]/route.ts          # GET /api/parts/:id ✅
+│   ├── by-slug/route.ts       # GET /api/parts/by-slug?slug=... ✅
+│   └── batch-reanalysis/route.ts # POST /api/parts/batch-reanalysis ✅
 ├── conversations/
-│   ├── parts/[partId]/route.ts         # GET /api/conversations/parts/:partId
-│   ├── parts/[partId]/messages/route.ts # POST /api/conversations/parts/:partId/messages
-│   └── parts/[partId]/delete/route.ts   # DELETE /api/conversations/parts/:partId
+│   ├── route.ts               # GET /api/conversations (list all) ✅
+│   └── [partId]/route.ts      # GET/POST /api/conversations/:partId ✅
 └── user/
-    ├── profile/route.ts       # GET/PUT /api/user/profile
-    ├── export/route.ts        # GET /api/user/export
-    └── notifications/route.ts # PUT /api/user/notifications
+    ├── account/route.ts       # DELETE /api/user/account ⚠️ (placeholder)
+    └── export/route.ts        # GET /api/user/export ⚠️ (placeholder)
+
+Test/Debug Routes (can be removed in production):
+├── test-db/route.ts           # Database connection test
+├── test-db-detailed/route.ts  # Detailed database query test
+└── migrate/route.ts           # Manual migration trigger
 ```
+
+**Key Differences from Original Design:**
+- NextAuth.js handles login/logout automatically via [...nextauth] route
+- No separate reset-password API route (page exists but not functional)
+- No writing-tips API route (prompt template exists but not used)
+- No parts operations/undo API routes (schema exists but not implemented)
+- Added by-slug route for slug-based part lookups
+- Simplified conversation API (single route per part, not separate messages endpoint)
+- Analysis is triggered automatically on entry save, no separate analyze endpoint
 
 ## Duplicate Detection Algorithm
 
@@ -689,45 +760,54 @@ interface TreemapData {
 - **Version Control:** All prompt iterations tracked in git for experimentation and rollback
 - **Context Variables:** Templates support dynamic user context injection (recent entries, existing parts, etc.)
 
-### Parts Analysis Behavior
-- **Asynchronous Processing:** Parts analysis runs in background after journal entry is saved
-- **Non-Blocking:** Analysis does not block journal saving or user navigation
-- **Simple Async Implementation:** Analysis triggered via Next.js API route with async processing (fire and forget, no polling)
-- **No Polling:** User doesn't wait for analysis to complete, results appear when ready
+### Parts Analysis Behavior (ACTUAL IMPLEMENTATION)
+- **Asynchronous Processing:** Parts analysis runs in background after journal entry is saved ✅
+- **Non-Blocking:** Analysis does not block journal saving or user navigation ✅
+- **Polling Implementation:** Frontend polls analysis status every 2 seconds until completion ✅
+  - Maximum 30 seconds timeout with fallback
+  - Invalidates TanStack Query cache on completion
+- **Global Analysis State:** Zustand store tracks analysis progress across the app ✅
 - **Priority-Based Matching:**
-  - Fetch all existing parts before analysis
-  - Pass existing parts to AI as context (names, roles, descriptions, quotes)
-  - **FIRST:** AI attempts to match each expression to existing parts
-  - **THEN:** Only considers creating new parts if no existing part matches above 75% similarity
-  - Updates existing parts with new quotes when matched
+  - Fetch all existing parts before analysis ✅
+  - Pass existing parts to AI as context (names, roles, descriptions, quotes) ✅
+  - **FIRST:** AI attempts to match each expression to existing parts ✅
+  - **THEN:** Only considers creating new parts if no existing part matches above 75% similarity ✅
+  - Updates existing parts with new quotes when matched ✅
 - **Duplicate Prevention:**
-  - Semantic similarity check with 80% threshold for name matching
-  - Role and description keyword overlap (minimum 2 shared keywords)
-  - Only create new part if no existing part matches above 75% overall similarity
-  - Prevents creating similar parts like "The Critic", "The Judge", "The Perfectionist"
+  - Semantic similarity check with 80% threshold for name matching ✅
+  - Role and description keyword overlap (minimum 2 shared keywords) ✅
+  - Only create new part if no existing part matches above 75% overall similarity ✅
+  - Prevents creating similar parts like "The Critic", "The Judge", "The Perfectionist" ✅
 - **Analysis Limits:**
-  - Maximum 3 new parts per single journal entry
-  - Maximum 5 new parts per batch analysis
-  - Prioritize highest confidence parts when limits are reached
-- **Sentence-Based Quotes:** Parts analysis extracts complete sentences as quotes, not individual words
-- **Meaningful Highlighting:** Journal entries highlight complete sentences or meaningful phrases that express parts
-- **Contextual Analysis:** AI considers full sentence context when attributing expressions to parts
-- **Quote Quality:** Focus on sentences that clearly express a part's voice, concerns, or protective strategies
-- **Status Tracking:** Journal entries have analysis status (pending, processing, completed, failed)
-- **Retry Logic:** Failed analyses can be retried manually with "Analyze" button
-- **10 Parts Maximum:** When 11th part is identified, automatically replace the lowest confidence part
-- **Role-Based Colors:** Parts assigned colors based on role (Protector=red, Manager=amber, Firefighter=orange, Exile=purple)
+  - Maximum 3 new parts per single journal entry ✅
+  - Maximum 5 new parts per batch analysis ✅
+  - Prioritize highest confidence parts when limits are reached ✅
+- **Sentence-Based Quotes:** Parts analysis extracts complete sentences as quotes, not individual words ✅
+- **Meaningful Highlighting:** Journal entries highlight complete sentences or meaningful phrases that express parts ✅
+- **Contextual Analysis:** AI considers full sentence context when attributing expressions to parts ✅
+- **Quote Quality:** Focus on sentences that clearly express a part's voice, concerns, or protective strategies ✅
+- **Status Tracking:** Journal entries have analysis status (pending, processing, completed, failed) ✅
+- **Retry Logic:** Failed analyses can be retried manually ⚠️ NOT IMPLEMENTED
+- **10 Parts Maximum:** When 11th part is identified, automatically replace the lowest confidence part ✅
+- **Role-Based Colors:** Parts assigned colors based on role (Protector=red, Manager=amber, Firefighter=orange, Exile=purple) ✅
+- **Part Icons:** Each part assigned a unique unicode icon for visual identification ✅
+- **Separate Prompts:** Different prompt templates for incremental vs batch analysis ✅
+  - `incremental-entry-analysis.md` for single entries
+  - `batch-entries-reanalysis.md` for full reanalysis
 
 ### Parts Operations Undo System
-- **Operation Tracking:** Delete operations tracked in PartsOperation table
-- **Snapshot Storage:** Complete part state (with quotes and analyses) stored as JSON before deletion
-- **24-Hour Undo Window:** Users can undo delete within 24 hours of execution
-- **Automatic Expiration:** Undo operations expire after 24 hours (cleanup can be manual for MVP)
-- **Single Undo:** Each delete can be undone once
-- **UI Feedback:** Toast notification with "Undo" button appears after delete
-- **State Restoration:** Undo restores deleted part with all its quotes and analyses
+⚠️ **NOT IMPLEMENTED** - Database schema exists but functionality not built
+- **Operation Tracking:** Delete operations would be tracked in PartsOperation table
+- **Snapshot Storage:** Complete part state (with quotes and analyses) would be stored as JSON before deletion
+- **24-Hour Undo Window:** Users would be able to undo delete within 24 hours of execution
+- **Automatic Expiration:** Undo operations would expire after 24 hours
+- **Single Undo:** Each delete could be undone once
+- **UI Feedback:** Toast notification with "Undo" button would appear after delete
+- **State Restoration:** Undo would restore deleted part with all its quotes and analyses
 - **Supported Operations:**
-  - **Delete:** Restore deleted part with all its quotes and analyses
+  - **Delete:** Would restore deleted part with all its quotes and analyses
+
+**Current Workaround:** Batch reanalysis can recreate parts from journal entries
 
 ## Deployment Architecture
 
