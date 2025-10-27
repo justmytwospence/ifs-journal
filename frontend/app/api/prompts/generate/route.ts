@@ -12,24 +12,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get recent entries for context
+    // Get last 3 entries for context
     const recentEntries = await prisma.journalEntry.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 5,
-      select: { prompt: true, content: true },
+      take: 3,
+      select: { 
+        prompt: true, 
+        content: true,
+        createdAt: true,
+      },
     })
 
     // Load prompt template
     const templatePath = join(process.cwd(), 'lib/prompts/journal-prompt-generation.md')
     const template = await readFile(templatePath, 'utf-8')
 
-    // Build context
-    const context = recentEntries.length > 0
-      ? `Recent journal entries:\n${recentEntries.map((e, i) => `${i + 1}. Prompt: ${e.prompt}\nContent: ${e.content.substring(0, 200)}...`).join('\n\n')}`
-      : 'This is the user\'s first journal entry.'
+    // Build context with full entries
+    const recentEntriesText = recentEntries.length > 0
+      ? recentEntries.map((e, i) => {
+          const date = new Date(e.createdAt).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+          })
+          return `Entry ${i + 1} (${date}):\nPrompt: "${e.prompt}"\nResponse: ${e.content}\n`
+        }).join('\n---\n\n')
+      : 'No previous entries. This is the user\'s first journal entry.'
 
-    const systemPrompt = template.replace('{{CONTEXT}}', context)
+    const systemPrompt = template.replace('{{RECENT_ENTRIES}}', recentEntriesText)
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({

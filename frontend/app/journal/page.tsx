@@ -22,21 +22,21 @@ export default function JournalPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const { setAnalyzing } = useAnalysisStore()
   const [isListening, setIsListening] = useState(false)
-  const [recognition, setRecognition] = useState<any>(null)
+  const [recognition, setRecognition] = useState<unknown>(null)
   const [interimTranscript, setInterimTranscript] = useState('')
   const [isInitialized, setIsInitialized] = useState(false)
-  const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+  const wordCount = (content + interimTranscript).trim().split(/\s+/).filter(Boolean).length
 
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const SpeechRecognition = (window as unknown).webkitSpeechRecognition || (window as unknown).SpeechRecognition
       const recognitionInstance = new SpeechRecognition()
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
       recognitionInstance.lang = 'en-US'
 
-      recognitionInstance.onresult = (event: any) => {
+      recognitionInstance.onresult = (event: unknown) => {
         let interim = ''
         let final = ''
 
@@ -57,7 +57,7 @@ export default function JournalPage() {
         }
       }
 
-      recognitionInstance.onerror = (event: any) => {
+      recognitionInstance.onerror = (event: unknown) => {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
         if (event.error === 'not-allowed') {
@@ -231,9 +231,18 @@ export default function JournalPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Journal</h2>
-          <p className="text-gray-600">Write about your thoughts and feelings</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-bold mb-2">Journal</h2>
+            <p className="text-gray-600">Write about your thoughts and feelings</p>
+          </div>
+          <button
+            onClick={handleNewPrompt}
+            disabled={loadingPrompt}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+          >
+            {loadingPrompt ? 'Generating...' : 'New Prompt'}
+          </button>
         </div>
 
         <div>
@@ -243,15 +252,8 @@ export default function JournalPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
-                    <p className="text-blue-700">{prompt || 'Loading...'}</p>
+                    <p className="text-blue-700 font-bold">{prompt || 'Loading...'}</p>
                   </div>
-                  <button
-                    onClick={handleNewPrompt}
-                    disabled={loadingPrompt}
-                    className="px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap border border-blue-200"
-                  >
-                    {loadingPrompt ? 'Generating...' : 'New Prompt'}
-                  </button>
                 </div>
               </div>
             </div>
@@ -277,45 +279,60 @@ export default function JournalPage() {
                   }}
                   placeholder="Start writing your thoughts..."
                   rows={12}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                  className="font-serif w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-600">{wordCount} words</span>
-                  {recognition && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={toggleListening}
-                        className={`p-2 rounded-lg transition cursor-pointer ${isListening
-                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        title={isListening ? 'Stop recording' : 'Start voice input'}
-                      >
-                        {isListening ? (
-                          <svg className="w-5 h-5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                      {isListening && (
-                        <span className="text-xs text-red-600 italic animate-pulse">
-                          Listening...
-                        </span>
-                      )}
-                    </div>
-                  )}
+              <div className="flex items-center gap-3">
+                {/* Progress Bar Container */}
+                <div className="flex-1 relative h-10 bg-gray-200 rounded-lg overflow-hidden">
+                  {/* Progress Fill */}
+                  <div 
+                    className={`absolute inset-y-0 left-0 transition-all duration-300 ease-out ${
+                      wordCount < 100 
+                        ? 'bg-red-500' 
+                        : wordCount < 250 
+                        ? 'bg-blue-500' 
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min((wordCount / 750) * 100, 100)}%` }}
+                  />
+                  {/* Word Count Text Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-between px-4">
+                    <span className="text-sm font-medium text-gray-700 relative z-10">
+                      {wordCount} words
+                    </span>
+                    <span className="text-xs text-gray-500 relative z-10">750</span>
+                  </div>
                 </div>
+
+                {/* Voice Input Button */}
+                {recognition && (
+                  <button
+                    onClick={toggleListening}
+                    className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${isListening
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    title={isListening ? 'Stop recording' : 'Start voice input'}
+                  >
+                    {isListening ? (
+                      <svg className="w-5 h-5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                {/* Save Button */}
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+                  className="h-10 px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 shrink-0"
                 >
                   {saving ? 'Saving...' : 'Save Entry'}
                   {!saving && (

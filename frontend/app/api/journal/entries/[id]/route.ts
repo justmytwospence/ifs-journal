@@ -15,7 +15,7 @@ export async function GET(
     const { id } = await params
 
     const entry = await prisma.journalEntry.findUnique({
-      where: { 
+      where: {
         id,
         userId: session.user.id,
       },

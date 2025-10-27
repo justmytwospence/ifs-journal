@@ -6,11 +6,13 @@ import { signOut, useSession } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
+
 export function AppNav() {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session } = useSession()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { isAnalyzing, analysisType } = useAnalysisStore()
 

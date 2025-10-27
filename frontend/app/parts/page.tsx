@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { AppNav } from '@/components/AppNav'
 import { Toast } from '@/components/ui/Toast'
@@ -27,10 +27,17 @@ export default function PartsPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const { setAnalyzing } = useAnalysisStore()
+  const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchParts()
   }, [])
+
+  useEffect(() => {
+    if (showConfirmDialog && modalRef.current) {
+      modalRef.current.focus()
+    }
+  }, [showConfirmDialog])
 
   const fetchParts = async () => {
     try {
@@ -64,14 +71,12 @@ export default function PartsPage() {
           message: `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`, 
           type: 'success' 
         })
-        // Immediately fetch the new parts
         await fetchParts()
       } else {
         setToast({ 
-          message: data.error || 'Failed to start reanalysis', 
+          message: data.error || 'Failed to reanalyze', 
           type: 'error' 
         })
-        // Reload parts even on error to show current state
         await fetchParts()
       }
     } catch (error) {
@@ -80,7 +85,6 @@ export default function PartsPage() {
         message: 'Failed to start reanalysis', 
         type: 'error' 
       })
-      // Reload parts even on error
       await fetchParts()
     } finally {
       setReanalyzing(false)
@@ -159,7 +163,18 @@ export default function PartsPage() {
 
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          ref={modalRef}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleReanalyze()
+            } else if (e.key === 'Escape') {
+              setShowConfirmDialog(false)
+            }
+          }}
+          tabIndex={-1}
+        >
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4">Reanalyze All Journal Entries?</h3>
             <p className="text-gray-600 mb-6">
@@ -169,15 +184,17 @@ export default function PartsPage() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowConfirmDialog(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
               >
                 Cancel
+                <span className="text-xs opacity-60">Esc</span>
               </button>
               <button
                 onClick={handleReanalyze}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
               >
                 Continue
+                <span className="text-xs opacity-75">↵</span>
               </button>
             </div>
           </div>

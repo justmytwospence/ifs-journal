@@ -249,7 +249,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="prose max-w-none">
-            <div className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
+            <div className="font-serif text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
               {entry.analysisStatus === 'completed' && entry.partAnalyses
                 ? highlightText(entry.content, entry.partAnalyses)
                 : entry.content}

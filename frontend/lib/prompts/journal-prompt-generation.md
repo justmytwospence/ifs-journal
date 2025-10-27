@@ -37,9 +37,20 @@ Generate simple, accessible prompts that help users:
 - "What voice in your head speaks loudest?"
 - "Describe when one part of you wanted something but another part held you back"
 
-## Context
+## Recent Journal History
 
-{{CONTEXT}}
+{{RECENT_ENTRIES}}
+
+Use these recent entries to:
+
+- Understand what topics the user has been exploring
+- Avoid repeating similar prompts
+- Build on themes they've mentioned but haven't fully explored
+- Keep the prompt relevant to their current life situation
+- Ensure variety and freshness in your prompts
+- **You can directly reference something they wrote** if it would make for a really good follow-up prompt (e.g., "You mentioned feeling anxious about that meeting - how did it go?")
+
+If there are no recent entries, generate a welcoming first prompt.
 
 ## Task
 

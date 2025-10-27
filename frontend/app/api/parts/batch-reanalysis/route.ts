@@ -12,7 +12,7 @@ const PART_COLORS = {
   Exile: '#8b5cf6',
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -26,20 +26,16 @@ export async function POST(request: Request) {
     })
 
     if (entries.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'No journal entries to analyze',
-        entriesAnalyzed: 0 
+        entriesAnalyzed: 0
       })
     }
 
     // Delete all existing parts for this user
-    // This will cascade delete:
-    // - All part analyses (due to onDelete: Cascade)
-    // - All part conversations (due to onDelete: Cascade)
     const deletedParts = await prisma.part.deleteMany({
       where: { userId: session.user.id },
     })
-
     console.log(`Deleted ${deletedParts.count} parts for user ${session.user.id}`)
 
     // Reset all entry statuses to processing
@@ -53,7 +49,7 @@ export async function POST(request: Request) {
     const template = await readFile(templatePath, 'utf-8')
 
     // Build entries context for batch analysis
-    const entriesContext = entries.map((entry, index) => 
+    const entriesContext = entries.map((entry, index) =>
       `Entry ${index + 1} (ID: ${entry.id}):\nPrompt: ${entry.prompt}\nContent: ${entry.content}\n`
     ).join('\n---\n\n')
 
@@ -84,9 +80,8 @@ export async function POST(request: Request) {
 
     // Create only the parts that are actually mapped to entries (max 10)
     const createdParts = new Map<string, { id: string; name: string }>()
-    
+
     for (const partData of result.parts.slice(0, 10)) {
-      // Skip parts that aren't mapped to any entries
       if (!usedPartIds.has(partData.tempId)) {
         console.log(`Skipping unmapped part: ${partData.name} (${partData.tempId})`)
         continue
@@ -103,13 +98,13 @@ export async function POST(request: Request) {
           quotes: partData.quotes || [],
         },
       })
-      
+
       createdParts.set(partData.tempId, part)
     }
 
     // Create part analyses for each entry
     const processedEntryIds = new Set<string>()
-    
+
     for (const mapping of result.entryMappings) {
       const entry = entries.find(e => e.id === mapping.entryId)
       if (!entry) continue
@@ -141,7 +136,7 @@ export async function POST(request: Request) {
     const unmappedEntries = entries.filter(e => !processedEntryIds.has(e.id))
     if (unmappedEntries.length > 0) {
       await prisma.journalEntry.updateMany({
-        where: { 
+        where: {
           id: { in: unmappedEntries.map(e => e.id) }
         },
         data: { analysisStatus: 'completed' },
@@ -151,7 +146,7 @@ export async function POST(request: Request) {
 
     console.log(`Batch reanalysis complete: Created ${createdParts.size} parts for ${entries.length} entries`)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: `Reanalysis complete: ${createdParts.size} parts identified`,
       entriesAnalyzed: entries.length,

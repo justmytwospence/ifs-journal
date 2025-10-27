@@ -125,19 +125,19 @@ export default function LogPage() {
     const excerpt = getEntryExcerpt(entry)
     
     if (!selectedPartId || !entry.partAnalyses) {
-      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
 
     const relevantAnalysis = entry.partAnalyses.find(a => a.partId === selectedPartId)
     if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
-      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
 
     const highlight = relevantAnalysis.highlights[0]
     const highlightIndex = excerpt.toLowerCase().indexOf(highlight.toLowerCase())
     
     if (highlightIndex === -1) {
-      return <p className="text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
 
     const before = excerpt.substring(0, highlightIndex)
@@ -145,7 +145,7 @@ export default function LogPage() {
     const after = excerpt.substring(highlightIndex + highlight.length)
 
     return (
-      <p className="text-gray-700 line-clamp-3">
+      <p className="font-serif text-gray-700 line-clamp-3">
         {before}
         <span 
           className="font-bold"
