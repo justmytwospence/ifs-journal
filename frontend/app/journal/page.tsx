@@ -293,32 +293,19 @@ export default function JournalPage() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal</h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleWritingTips}
-              className={`px-4 py-2 rounded-lg font-medium transition shadow-sm cursor-pointer whitespace-nowrap ${
-                showWritingTips
-                  ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-              title="Toggle writing tips"
-            >
-              {showWritingTips ? '💡 Tips On' : '💡 Tips Off'}
-            </button>
-            <button
-              onClick={handleNewPrompt}
-              disabled={loadingPrompt}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
-            >
-              {loadingPrompt ? 'Generating...' : 'New Prompt'}
-            </button>
-          </div>
+          <button
+            onClick={handleNewPrompt}
+            disabled={loadingPrompt}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+          >
+            {loadingPrompt ? 'Generating...' : 'New Prompt'}
+          </button>
         </div>
 
         <div>
           <div className="bg-white rounded-2xl shadow-sm p-8">
             <div className="mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
@@ -326,28 +313,6 @@ export default function JournalPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Writing tips display */}
-              {showWritingTips && (
-                <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl px-4 py-3 mb-4">
-                  {loadingTip ? (
-                    <div className="space-y-2">
-                      <div className="h-3 bg-purple-200 rounded animate-pulse" />
-                      <div className="h-3 bg-purple-200 rounded animate-pulse w-5/6" />
-                    </div>
-                  ) : writingTip ? (
-                    <p className="text-sm text-gray-700 leading-relaxed">{writingTip}</p>
-                  ) : content.trim().length < 50 ? (
-                    <p className="text-sm text-gray-500 italic">
-                      Start writing to receive personalized tips...
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-500 italic">
-                      Keep writing to receive tips...
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
@@ -374,6 +339,28 @@ export default function JournalPage() {
                   className="font-serif w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                 />
               </div>
+
+              {/* Writing tips display - below text window, above controls */}
+              {showWritingTips && (
+                <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl px-4 py-3">
+                  {loadingTip ? (
+                    <div className="space-y-2">
+                      <div className="h-3 bg-purple-200 rounded animate-pulse" />
+                      <div className="h-3 bg-purple-200 rounded animate-pulse w-5/6" />
+                    </div>
+                  ) : writingTip ? (
+                    <p className="text-sm text-gray-700 leading-relaxed">{writingTip}</p>
+                  ) : content.trim().length < 50 ? (
+                    <p className="text-sm text-gray-500 italic">
+                      Start writing to receive personalized tips...
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      Keep writing to receive tips...
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 {/* Progress Bar Container */}
@@ -419,6 +406,19 @@ export default function JournalPage() {
                     )}
                   </button>
                 )}
+
+                {/* Writing Tips Toggle */}
+                <button
+                  onClick={toggleWritingTips}
+                  className={`h-10 px-4 rounded-lg font-medium transition shadow-sm cursor-pointer shrink-0 ${
+                    showWritingTips
+                      ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  title="Toggle writing tips"
+                >
+                  {showWritingTips ? '💡' : '💡'}
+                </button>
 
                 {/* Save Button */}
                 <button
