@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Generate PWA Icons</title>
+  </head>
+  <body>
+    <h2>Click the buttons to download PWA icons</h2>
+    <button onclick="createIcon(192)">Download 192x192 Icon</button>
+    <button onclick="createIcon(512)">Download 512x512 Icon</button>
+    <br /><br />
+    <canvas id="canvas" style="border: 1px solid #ccc"></canvas>
+    <script>
+      function createIcon(size) {
+        const canvas = document.getElementById("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+
+        // Gradient background
+        const gradient = ctx.createLinearGradient(0, 0, size, size);
+        gradient.addColorStop(0, "#2563eb");
+        gradient.addColorStop(1, "#9333ea");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
+
+        // Add text
+        ctx.fillStyle = "white";
+        ctx.font = `bold ${size * 0.3}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("IFS", size / 2, size / 2);
+
+        // Download
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `icon-${size}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+    </script>
+  </body>
+</html>

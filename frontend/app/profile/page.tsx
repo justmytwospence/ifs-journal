@@ -68,7 +68,7 @@ export default function ProfilePage() {
       <AppNav />
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Profile</h2>
           <p className="text-gray-600">Manage your account settings</p>

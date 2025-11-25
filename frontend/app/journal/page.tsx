@@ -377,7 +377,7 @@ export default function JournalPage() {
     <div className="min-h-screen bg-gray-50">
       <AppNav />
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal</h2>
@@ -390,20 +390,15 @@ export default function JournalPage() {
           </button>
         </div>
 
-        <div>
-          <div className="bg-white rounded-2xl shadow-sm p-8">
-            <div className="mb-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
-                    <p className="text-blue-700 font-bold">{prompt || 'Loading...'}</p>
-                  </div>
-                </div>
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-900 mb-1">Today&apos;s Prompt</p>
+                <p className="text-blue-700 font-bold">{prompt || 'Loading...'}</p>
               </div>
             </div>
-
-            <div className="space-y-4">
+          </div>
               <div className="relative">
                 <textarea
                   value={content + interimTranscript}
@@ -525,8 +520,6 @@ export default function JournalPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
       </main>
 
       {toast && (

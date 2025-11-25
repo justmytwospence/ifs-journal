@@ -260,7 +260,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
             <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               ← Back to Journal Log
@@ -281,7 +281,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">Entry not found</p>
             <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -297,7 +297,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
             <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               ← Back to Journal Log
@@ -318,7 +318,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     <div className="min-h-screen bg-gray-50">
       <AppNav />
       
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
             ← Back to Journal Log

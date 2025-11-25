@@ -125,13 +125,15 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] 
     const data = payload[0].payload
     // Use displayName if available (for parts), otherwise use name (for role groups)
     const displayText = data.displayName || data.name
+    // Use actual appearances count if available, otherwise fall back to size
+    const count = data.appearances ?? data.size
     return (
       <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
         <p className="font-semibold text-gray-900">{displayText}</p>
         {data.role && <p className="text-sm text-gray-600">{data.role}</p>}
-        {data.size && (
+        {count !== undefined && (
           <p className="text-sm text-gray-500 mt-1">
-            {data.size} {data.size === 1 ? 'appearance' : 'appearances'}
+            {count} {count === 1 ? 'appearance' : 'appearances'}
           </p>
         )}
       </div>
@@ -154,12 +156,14 @@ export function PartsTreemap({ parts }: PartsTreemapProps) {
 
   // Transform into hierarchical treemap format
   // Use part ID in the name to ensure uniqueness for Recharts key generation
+  // Use Math.max(appearances, 1) to ensure parts with 0 appearances still render in the treemap
   const treemapData = Object.entries(groupedByRole).map(([role, roleParts]) => ({
     name: role,
     children: roleParts.map((part) => ({
       name: `${part.name}-${part.id}`, // Include ID to ensure unique keys
       displayName: part.name, // Keep original name for display
-      size: part.appearances,
+      size: Math.max(part.appearances, 1), // Minimum size of 1 to ensure visibility
+      appearances: part.appearances, // Keep actual count for tooltip
       color: part.color,
       partId: part.id,
       partSlug: slugify(part.name),

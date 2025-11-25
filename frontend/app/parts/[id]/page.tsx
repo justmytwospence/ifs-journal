@@ -210,7 +210,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
             <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               ← Back to Parts
@@ -226,7 +226,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">Part not found</p>
             <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -242,7 +242,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
             <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
               ← Back to Parts
@@ -258,7 +258,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     <div className="min-h-screen bg-gray-50">
       <AppNav />
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
             ← Back to Parts

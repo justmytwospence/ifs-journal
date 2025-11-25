@@ -132,6 +132,19 @@ function LogPageContent() {
     }
   }, [isLoadingMore, entriesFetching, entriesData, filteredEntries.length])
 
+  // Auto-load more weeks on initial load if no entries in current week range but there are entries total
+  useEffect(() => {
+    if (!entriesLoading && !entriesFetching && entriesData && !isLoadingMore) {
+      const currentEntryCount = entriesData.entries?.length || 0
+      const totalCount = entriesData.totalCount || 0
+      
+      // If there are no entries loaded but there are entries in the database, load more weeks
+      if (currentEntryCount === 0 && totalCount > 0) {
+        setWeeksToLoad(prev => prev + 4) // Load 4 more weeks at a time to find older entries faster
+      }
+    }
+  }, [entriesLoading, entriesFetching, entriesData, isLoadingMore])
+
   // Only show loading skeleton on initial load, not when loading more weeks
   const isInitialLoading = (entriesLoading || partsLoading) && entries.length === 0
 
@@ -298,7 +311,7 @@ function LogPageContent() {
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <LogPageSkeleton />
         </main>
       </div>
@@ -308,7 +321,7 @@ function LogPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <AppNav />
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal Log</h2>
@@ -566,7 +579,7 @@ export default function LogPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50">
         <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <LogPageSkeleton />
         </main>
       </div>
