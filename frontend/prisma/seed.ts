@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { createHash } from 'crypto'
 
 const prisma = new PrismaClient()
 
@@ -8,6 +9,19 @@ const daysAgo = (days: number) => {
   const date = new Date()
   date.setDate(date.getDate() - days)
   return date
+}
+
+// Compute SHA-256 hash of content
+const computeContentHash = (content: string): string => {
+  return createHash('sha256').update(content, 'utf8').digest('hex')
+}
+
+// Simple slugify function
+const slugify = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
 }
 
 async function main() {
@@ -196,6 +210,7 @@ async function main() {
         userId: testUser.id,
         prompt: entry.prompt,
         content: entry.content,
+        contentHash: computeContentHash(entry.content),
         wordCount: entry.wordCount,
         analysisStatus: 'pending',
         createdAt: daysAgo(entry.daysAgo),

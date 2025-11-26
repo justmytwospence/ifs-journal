@@ -17,8 +17,10 @@ Analyze all journal entries holistically to identify the core distinct internal 
 
 **ABSOLUTE PRIORITY: PREVENT DUPLICATES**
 
+- **EACH PART MUST HAVE A UNIQUE NAME** - Never create two parts with the same or similar names
 - Similar names, roles, or concerns = SAME PART (e.g., "The Critic", "The Judge", "The Perfectionist" are all the same Manager)
 - If two potential parts have overlapping concerns or strategies, they are ONE part
+- Before finalizing your parts array, verify that no two parts share the same name
 - Most people have 3-7 core parts, not 9+
 
 **Quality Over Quantity:**

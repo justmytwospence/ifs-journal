@@ -4,161 +4,15 @@ import { openai } from '@/lib/openai'
 import prisma from '@/lib/db'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { computeSelector } from '@/lib/anchoring'
+import { slugify } from '@/lib/slug-utils'
+import { findSimilarPart } from '@/lib/part-similarity'
 
 const PART_COLORS = {
   Protector: '#ef4444',
   Manager: '#f59e0b',
   Firefighter: '#f97316',
   Exile: '#8b5cf6',
-}
-
-// Calculate Levenshtein distance for string similarity
-function levenshteinDistance(str1: string, str2: string): number {
-  const matrix: number[][] = []
-
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i]
-  }
-
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j
-  }
-
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        )
-      }
-    }
-  }
-
-  return matrix[str2.length][str1.length]
-}
-
-// Calculate name similarity (0-1 score)
-function calculateNameSimilarity(name1: string, name2: string): number {
-  // Normalize: lowercase, remove articles, and common suffixes
-  const normalize = (name: string) =>
-    name.toLowerCase()
-      .replace(/^(the|a|an)\s+/, '')
-      .replace(/\s+(part|one|self)$/i, '')
-      .trim()
-
-  const n1 = normalize(name1)
-  const n2 = normalize(name2)
-
-  // Exact match after normalization
-  if (n1 === n2) return 1.0
-
-  // Check if one name contains the other (high similarity)
-  if (n1.includes(n2) || n2.includes(n1)) {
-    const shorter = Math.min(n1.length, n2.length)
-    const longer = Math.max(n1.length, n2.length)
-    return shorter / longer
-  }
-
-  // Calculate Levenshtein distance
-  const distance = levenshteinDistance(n1, n2)
-  const maxLength = Math.max(n1.length, n2.length)
-
-  // Convert distance to similarity score (0-1)
-  return 1 - distance / maxLength
-}
-
-// Calculate keyword overlap score (0-1)
-function calculateKeywordOverlap(desc1: string, desc2: string): number {
-  const keywords = [
-    'critic',
-    'judge',
-    'perfectionist',
-    'worrier',
-    'anxious',
-    'fear',
-    'avoider',
-    'procrastinator',
-    'escape',
-    'hurt',
-    'abandoned',
-    'lonely',
-    'angry',
-    'protector',
-    'guardian',
-    'shield',
-    'control',
-    'plan',
-    'prevent',
-    'distract',
-    'numb',
-    'shame',
-    'vulnerable',
-    'compassion',
-    'observer',
-    'witness',
-    'watcher',
-    'kind',
-    'gentle',
-    'caring',
-    'understanding',
-  ]
-
-  const d1Lower = desc1.toLowerCase()
-  const d2Lower = desc2.toLowerCase()
-
-  let sharedCount = 0
-  let totalCount = 0
-
-  for (const keyword of keywords) {
-    const in1 = d1Lower.includes(keyword)
-    const in2 = d2Lower.includes(keyword)
-
-    if (in1 || in2) totalCount++
-    if (in1 && in2) sharedCount++
-  }
-
-  return totalCount > 0 ? sharedCount / totalCount : 0
-}
-
-// Helper function to check if a new part is too similar to existing parts
-// Returns the ID of the most similar existing part if similarity > 75%, otherwise null
-function findSimilarPart(
-  newPartData: { name: string; role: string; description: string },
-  existingParts: Array<{
-    id: string
-    name: string
-    role: string
-    description: string
-  }>
-): string | null {
-  let bestMatch: { id: string; score: number } | null = null
-
-  for (const existing of existingParts) {
-    // Calculate similarity scores
-    const nameScore = calculateNameSimilarity(newPartData.name, existing.name)
-    const roleMatch = newPartData.role === existing.role ? 1.0 : 0.0
-    const keywordScore = calculateKeywordOverlap(
-      newPartData.description,
-      existing.description
-    )
-
-    // Weighted overall similarity: name (50%), role (25%), keywords (25%)
-    const overallScore = nameScore * 0.5 + roleMatch * 0.25 + keywordScore * 0.25
-
-    // Track best match (lowered threshold to 65% to catch more duplicates)
-    if (overallScore > 0.65 && (!bestMatch || overallScore > bestMatch.score)) {
-      bestMatch = {
-        id: existing.id,
-        score: overallScore,
-      }
-    }
-  }
-
-  return bestMatch?.id || null
 }
 
 export async function POST(
@@ -215,7 +69,7 @@ export async function POST(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: 'Analyze this journal entry for parts.' },
       ],
-      temperature: 0.7,
+      temperature: 0.3,
       response_format: { type: 'json_object' },
     })
 
@@ -239,24 +93,8 @@ export async function POST(
       }
 
       if (matchedPartId) {
-        // Update existing part with new quotes (avoid duplicates)
-        const existingPart = existingParts.find(p => p.id === matchedPartId)
-        const newQuotes = partData.quotes.filter(
-          (q: string) => !existingPart?.quotes.includes(q)
-        )
-
-        if (newQuotes.length > 0) {
-          part = await prisma.part.update({
-            where: { id: matchedPartId },
-            data: {
-              quotes: {
-                push: newQuotes,
-              },
-            },
-          })
-        } else {
-          part = existingPart
-        }
+        // Use existing part
+        part = existingParts.find(p => p.id === matchedPartId)
       } else {
         // Check if we need to enforce 9-part maximum
         if (existingParts.length >= 9) {
@@ -279,6 +117,9 @@ export async function POST(
           )
 
           // Delete the lowest confidence part and its analyses
+          await prisma.highlight.deleteMany({
+            where: { partAnalysis: { partId: lowestConfidencePart.part.id } },
+          })
           await prisma.partAnalysis.deleteMany({
             where: { partId: lowestConfidencePart.part.id },
           })
@@ -291,15 +132,25 @@ export async function POST(
           if (index > -1) existingParts.splice(index, 1)
         }
 
-        // Create new part
-        part = await prisma.part.create({
-          data: {
+        // Create new part using upsert to handle race conditions
+        const partSlug = slugify(partData.name)
+        part = await prisma.part.upsert({
+          where: {
+            userId_name: {
+              userId: session.user.id,
+              name: partData.name,
+            },
+          },
+          update: {
+            // If part was created by a concurrent request, no update needed
+          },
+          create: {
             userId: session.user.id,
             name: partData.name,
+            slug: partSlug,
             description: partData.description,
             role: partData.role,
             color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
-            quotes: partData.quotes,
           },
           include: { partAnalyses: true },
         })
@@ -307,17 +158,56 @@ export async function POST(
         existingParts.push(part)
       }
 
-      // Create part analysis linking entry to part
+      // Create or update PartAnalysis and Highlights
       if (part) {
-        await prisma.partAnalysis.create({
-          data: {
+        // Upsert PartAnalysis (one per entry+part combination)
+        const partAnalysis = await prisma.partAnalysis.upsert({
+          where: {
+            entryId_partId: {
+              entryId: entry.id,
+              partId: part.id,
+            },
+          },
+          update: {
+            confidence: partData.confidence,
+          },
+          create: {
             entryId: entry.id,
             partId: part.id,
-            highlights: partData.quotes,
-            reasoning: partData.reasoning || {},
             confidence: partData.confidence,
           },
         })
+
+        // Delete existing highlights for this analysis (if re-analyzing)
+        await prisma.highlight.deleteMany({
+          where: { partAnalysisId: partAnalysis.id },
+        })
+
+        // Create Highlight records with computed selectors
+        const quotes: string[] = partData.quotes || []
+        const reasoning: Record<string, string> = partData.reasoning || {}
+
+        for (const quote of quotes) {
+          const selector = computeSelector(entry.content, quote)
+          
+          if (selector) {
+            await prisma.highlight.create({
+              data: {
+                entryId: entry.id,
+                partAnalysisId: partAnalysis.id,
+                startOffset: selector.startOffset,
+                endOffset: selector.endOffset,
+                exact: selector.exact,
+                prefix: selector.prefix,
+                suffix: selector.suffix,
+                reasoning: reasoning[quote] || null,
+                isStale: false,
+              },
+            })
+          } else {
+            console.warn(`Could not compute selector for quote: "${quote.substring(0, 50)}..."`)
+          }
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 // IFS Journal App - Prisma Schema
-// Based on the design document ERD
+// Data model with W3C-standard text anchoring (TextPositionSelector + TextQuoteSelector)
 
 generator client {
   provider = "prisma-client-js"
@@ -20,10 +20,10 @@ model User {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  journalEntries   JournalEntry[]
-  parts            Part[]
+  journalEntries    JournalEntry[]
+  parts             Part[]
   partConversations PartConversation[]
-  partsOperations  PartsOperation[]
+  partsOperations   PartsOperation[]
 
   @@map("users")
 }
@@ -34,14 +34,16 @@ model JournalEntry {
   userId         String
   prompt         String   @db.Text
   content        String   @db.Text
+  contentHash    String   // SHA-256 hash for change detection
   wordCount      Int      @default(0)
   analysisStatus String   @default("pending") // pending, processing, completed, failed
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partAnalyses  PartAnalysis[]
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partAnalyses PartAnalysis[]
+  highlights   Highlight[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("journal_entries")
@@ -52,39 +54,71 @@ model Part {
   id          String   @id @default(cuid())
   userId      String
   name        String
+  slug        String   // Pre-computed slugified name for O(1) lookup
   description String   @db.Text
   role        String   // Protector, Manager, Firefighter, Exile
   color       String   // Hex color for UI consistency
   icon        String   @default("●") // Simple unicode symbol for visual identification
-  quotes      String[] // Array of complete sentences expressing this part's voice
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  partAnalyses     PartAnalysis[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partAnalyses      PartAnalysis[]
   partConversations PartConversation[]
 
+  @@unique([userId, name])
+  @@unique([userId, slug])
   @@index([userId])
   @@map("parts")
 }
 
+// Links a Part to a JournalEntry with overall confidence
 model PartAnalysis {
   id         String   @id @default(cuid())
   entryId    String
   partId     String
-  highlights String[] // Array of complete sentences or meaningful phrases to highlight
-  reasoning  Json     // Map of highlight text to reasoning (why this quote belongs to this part)
-  confidence Float    // AI confidence score
+  confidence Float    // AI confidence score for this part appearing in this entry
   createdAt  DateTime @default(now())
 
   // Relations
-  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  part  Part         @relation(fields: [partId], references: [id], onDelete: Cascade)
+  entry      JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  part       Part         @relation(fields: [partId], references: [id], onDelete: Cascade)
+  highlights Highlight[]
 
+  @@unique([entryId, partId]) // One analysis per part per entry
   @@index([entryId])
   @@index([partId])
   @@map("part_analyses")
+}
+
+// W3C Web Annotation Data Model - TextPositionSelector + TextQuoteSelector
+// Stores highlighted text with both offset-based (fast) and quote-based (resilient) anchors
+model Highlight {
+  id             String @id @default(cuid())
+  entryId        String
+  partAnalysisId String
+
+  // TextPositionSelector (W3C) - O(1) lookup via string slicing
+  startOffset Int
+  endOffset   Int
+
+  // TextQuoteSelector (W3C) - fuzzy fallback when content changes
+  exact  String @db.Text          // The highlighted text itself
+  prefix String @db.VarChar(32)   // Up to 32 chars before for disambiguation
+  suffix String @db.VarChar(32)   // Up to 32 chars after for disambiguation
+
+  reasoning String?  @db.Text     // Why this text belongs to this part
+  isStale   Boolean  @default(false) // True if contentHash changed since creation
+  createdAt DateTime @default(now())
+
+  // Relations
+  entry        JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  partAnalysis PartAnalysis @relation(fields: [partAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([partAnalysisId])
+  @@map("highlights")
 }
 
 // Conversations - Simple exchange storage
@@ -106,13 +140,13 @@ model PartConversation {
 
 // Parts Operations (for delete undo functionality)
 model PartsOperation {
-  id              String   @id @default(cuid())
-  userId          String
-  operationType   String   // delete
-  snapshotBefore  Json     // Deleted part with all data
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime // Undo expires after 24 hours
-  undone          Boolean  @default(false)
+  id             String   @id @default(cuid())
+  userId         String
+  operationType  String   // delete
+  snapshotBefore Json     // Deleted part with all data
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime // Undo expires after 24 hours
+  undone         Boolean  @default(false)
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

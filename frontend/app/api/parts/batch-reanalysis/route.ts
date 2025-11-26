@@ -4,6 +4,9 @@ import { openai } from '@/lib/openai'
 import prisma from '@/lib/db'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { computeSelector } from '@/lib/anchoring'
+import { slugify } from '@/lib/slug-utils'
+import { deduplicateParts, normalizeName } from '@/lib/part-similarity'
 
 const PART_COLORS = {
   Protector: '#ef4444',
@@ -32,7 +35,13 @@ export async function POST() {
       })
     }
 
-    // Delete all existing parts for this user
+    // Delete all existing highlights, analyses, and parts for this user
+    await prisma.highlight.deleteMany({
+      where: { entry: { userId: session.user.id } },
+    })
+    await prisma.partAnalysis.deleteMany({
+      where: { entry: { userId: session.user.id } },
+    })
     const deletedParts = await prisma.part.deleteMany({
       where: { userId: session.user.id },
     })
@@ -64,7 +73,7 @@ export async function POST() {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: 'Analyze all these journal entries together and identify up to 9 distinct parts.' },
       ],
-      temperature: 0.7,
+      temperature: 0.3,
       response_format: { type: 'json_object' },
     })
 
@@ -80,34 +89,69 @@ export async function POST() {
       }
     }
 
-    // Filter to only parts that are used, then enforce max 10
+    // Filter to only parts that are used, then enforce max 9
     const usedParts = result.parts.filter((p: { tempId: string }) => usedPartIds.has(p.tempId))
     
     if (usedParts.length > 9) {
       console.log(`AI returned ${usedParts.length} used parts, limiting to 9`)
     }
 
+    // Deduplicate parts using semantic similarity (handles variations like "People Pleaser" vs "People-Pleaser")
+    const tempIdToCanonical = deduplicateParts(usedParts)
+    
+    // Also do exact normalized name deduplication as a fallback
+    const seenNormalizedNames = new Set<string>()
+    const deduplicatedParts = usedParts.filter((p: { tempId: string; name: string }) => {
+      // Skip if this part was merged into another
+      if (tempIdToCanonical.get(p.tempId) !== p.tempId) {
+        console.log(`Skipping "${p.name}" - merged via similarity`)
+        return false
+      }
+      
+      const normalizedName = normalizeName(p.name)
+      if (seenNormalizedNames.has(normalizedName)) {
+        console.log(`Skipping duplicate normalized name: ${p.name} -> ${normalizedName}`)
+        return false
+      }
+      seenNormalizedNames.add(normalizedName)
+      return true
+    })
+
     // Create only the parts that are actually mapped to entries (max 9)
     const createdParts = new Map<string, { id: string; name: string }>()
 
-    for (const partData of usedParts.slice(0, 9)) {
+    for (const partData of deduplicatedParts.slice(0, 9)) {
+      const partSlug = slugify(partData.name)
 
-      const part = await prisma.part.create({
-        data: {
-          userId: session.user.id,
-          name: partData.name,
+      // Use upsert to handle any edge cases where a part might still exist
+      const part = await prisma.part.upsert({
+        where: {
+          userId_name: {
+            userId: session.user.id,
+            name: partData.name,
+          },
+        },
+        update: {
           description: partData.description,
           role: partData.role,
           color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
           icon: partData.icon || '●',
-          quotes: partData.quotes || [],
+        },
+        create: {
+          userId: session.user.id,
+          name: partData.name,
+          slug: partSlug,
+          description: partData.description,
+          role: partData.role,
+          color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
+          icon: partData.icon || '●',
         },
       })
 
       createdParts.set(partData.tempId, part)
     }
 
-    // Create part analyses for each entry
+    // Create part analyses and highlights for each entry
     const processedEntryIds = new Set<string>()
 
     for (const mapping of result.entryMappings) {
@@ -117,21 +161,58 @@ export async function POST() {
       processedEntryIds.add(entry.id)
 
       for (const partRef of mapping.parts) {
-        const part = createdParts.get(partRef.tempId)
+        // Map to canonical tempId if this part was merged
+        const canonicalTempId = tempIdToCanonical.get(partRef.tempId) || partRef.tempId
+        const part = createdParts.get(canonicalTempId)
         if (!part) {
-          console.log(`Warning: Part with tempId ${partRef.tempId} not found in createdParts`)
+          console.log(`Warning: Part with tempId ${partRef.tempId} (canonical: ${canonicalTempId}) not found in createdParts`)
           continue
         }
 
-        const analysis = await prisma.partAnalysis.create({
-          data: {
+        // Upsert PartAnalysis to handle merged parts that might create duplicate entry+part combinations
+        const analysis = await prisma.partAnalysis.upsert({
+          where: {
+            entryId_partId: {
+              entryId: entry.id,
+              partId: part.id,
+            },
+          },
+          update: {
+            confidence: Math.max(partRef.confidence || 0.8, 0.8), // Keep higher confidence
+          },
+          create: {
             entryId: entry.id,
             partId: part.id,
-            highlights: partRef.highlights || [],
-            reasoning: partRef.reasoning || {},
             confidence: partRef.confidence || 0.8,
           },
         })
+
+        // Create Highlights with computed selectors
+        const highlights: string[] = partRef.highlights || []
+        const reasoning: Record<string, string> = partRef.reasoning || {}
+
+        for (const quote of highlights) {
+          const selector = computeSelector(entry.content, quote)
+          
+          if (selector) {
+            await prisma.highlight.create({
+              data: {
+                entryId: entry.id,
+                partAnalysisId: analysis.id,
+                startOffset: selector.startOffset,
+                endOffset: selector.endOffset,
+                exact: selector.exact,
+                prefix: selector.prefix,
+                suffix: selector.suffix,
+                reasoning: reasoning[quote] || null,
+                isStale: false,
+              },
+            })
+          } else {
+            console.warn(`Could not compute selector for quote: "${quote.substring(0, 50)}..."`)
+          }
+        }
+
         console.log(`Created analysis ${analysis.id} for part ${part.name} in entry ${entry.id}`)
       }
 
@@ -158,14 +239,17 @@ export async function POST() {
     const verifyParts = await prisma.part.findMany({
       where: { userId: session.user.id },
       include: {
-        partAnalyses: true,
+        partAnalyses: {
+          include: { highlights: true },
+        },
       },
     })
 
     console.log(`Batch reanalysis complete: Created ${createdParts.size} parts for ${entries.length} entries`)
     console.log(`Verification: Found ${verifyParts.length} parts in database`)
     verifyParts.forEach(p => {
-      console.log(`  - ${p.name}: ${p.partAnalyses.length} analyses`)
+      const highlightCount = p.partAnalyses.reduce((sum, a) => sum + a.highlights.length, 0)
+      console.log(`  - ${p.name}: ${p.partAnalyses.length} analyses, ${highlightCount} highlights`)
     })
 
     return NextResponse.json({

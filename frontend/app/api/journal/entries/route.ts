@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { z } from 'zod'
 import { demoGuard } from '@/lib/demo-guard'
+import { computeContentHash } from '@/lib/anchoring'
 
 const createEntrySchema = z.object({
   prompt: z.string(),
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         prompt,
         content,
+        contentHash: computeContentHash(content),
         wordCount,
         analysisStatus: 'pending',
       },
@@ -100,6 +102,18 @@ export async function GET(request: Request) {
                     role: true,
                     color: true,
                     icon: true,
+                  },
+                },
+                highlights: {
+                  select: {
+                    id: true,
+                    startOffset: true,
+                    endOffset: true,
+                    exact: true,
+                    prefix: true,
+                    suffix: true,
+                    reasoning: true,
+                    isStale: true,
                   },
                 },
               },

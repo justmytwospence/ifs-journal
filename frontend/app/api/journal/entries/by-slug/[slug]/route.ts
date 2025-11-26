@@ -24,6 +24,7 @@ export async function GET(
         partAnalyses: {
           include: {
             part: true,
+            highlights: true,
           },
         },
       },
@@ -41,14 +42,23 @@ export async function GET(
         id: entry.id,
         prompt: entry.prompt,
         content: entry.content,
+        contentHash: entry.contentHash,
         wordCount: entry.wordCount,
         analysisStatus: entry.analysisStatus,
         createdAt: entry.createdAt,
         partAnalyses: entry.partAnalyses.map(analysis => ({
           id: analysis.id,
           partId: analysis.partId,
-          highlights: analysis.highlights,
-          reasoning: analysis.reasoning,
+          highlights: analysis.highlights.map(h => ({
+            id: h.id,
+            startOffset: h.startOffset,
+            endOffset: h.endOffset,
+            exact: h.exact,
+            prefix: h.prefix,
+            suffix: h.suffix,
+            reasoning: h.reasoning,
+            isStale: h.isStale,
+          })),
           part: {
             id: analysis.part.id,
             name: analysis.part.name,

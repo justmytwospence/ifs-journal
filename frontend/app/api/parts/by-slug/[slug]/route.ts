@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { slugify } from '@/lib/slug-utils'
 
 export async function GET(
   request: Request,
@@ -15,24 +14,29 @@ export async function GET(
 
     const { slug } = await params
     
-    // Get all parts for this user
-    const parts = await prisma.part.findMany({
+    // O(1) lookup using indexed slug field
+    const part = await prisma.part.findUnique({
       where: { 
-        userId: session.user.id,
+        userId_slug: {
+          userId: session.user.id,
+          slug: slug,
+        },
       },
       include: {
         partAnalyses: {
           select: { 
             id: true,
-            highlights: true,
             entryId: true,
+            highlights: {
+              select: {
+                exact: true,
+                reasoning: true,
+              },
+            },
           },
         },
       },
     })
-
-    // Find the part whose slugified name matches the slug
-    const part = parts.find(p => slugify(p.name) === slug)
 
     if (!part) {
       return NextResponse.json({ error: 'Part not found' }, { status: 404 })
@@ -56,7 +60,8 @@ export async function GET(
     // Extract all highlights with their entry IDs and dates
     const quotesWithEntries = part.partAnalyses.flatMap(analysis => 
       analysis.highlights.map(highlight => ({
-        text: highlight,
+        text: highlight.exact,
+        reasoning: highlight.reasoning,
         entryId: analysis.entryId,
         entryCreatedAt: entryDateMap.get(analysis.entryId),
       }))
@@ -84,15 +89,21 @@ export async function GET(
       weeklyActivity.push(activityByDay[dateKey] || 0)
     }
 
+    // Derive unique quotes from highlights
+    const quotes = quotesWithEntries
+      .map(q => q.text)
+      .filter((q, i, arr) => arr.indexOf(q) === i)
+
     return NextResponse.json({ 
       part: {
         id: part.id,
         name: part.name,
+        slug: part.slug,
         role: part.role,
         color: part.color,
         icon: part.icon,
         description: part.description,
-        quotes: part.quotes,
+        quotes,
         quotesWithEntries,
         appearances: part.partAnalyses.length,
         weeklyActivity,

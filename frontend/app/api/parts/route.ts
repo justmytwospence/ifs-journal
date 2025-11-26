@@ -16,6 +16,9 @@ export async function GET() {
           select: { 
             id: true,
             createdAt: true,
+            highlights: {
+              select: { exact: true },
+            },
           },
         },
       },
@@ -47,14 +50,21 @@ export async function GET() {
         activityTrend.push(activityByDay[dateKey] || 0)
       }
 
+      // Derive quotes from highlights (first 5 unique quotes)
+      const quotes = part.partAnalyses
+        .flatMap(a => a.highlights.map(h => h.exact))
+        .filter((q, i, arr) => arr.indexOf(q) === i)
+        .slice(0, 5)
+
       return {
         id: part.id,
         name: part.name,
+        slug: part.slug,
         role: part.role,
         color: part.color,
         icon: part.icon,
         description: part.description,
-        quotes: part.quotes,
+        quotes,
         appearances: part.partAnalyses.length,
         activityTrend,
         createdAt: part.createdAt,

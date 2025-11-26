@@ -19,11 +19,21 @@ interface Part {
   color: string
 }
 
+interface Highlight {
+  id: string
+  startOffset: number
+  endOffset: number
+  exact: string
+  prefix: string
+  suffix: string
+  reasoning: string | null
+  isStale: boolean
+}
+
 interface PartAnalysis {
   id: string
   partId: string
-  highlights: string[]
-  reasoning: Record<string, string>
+  highlights: Highlight[]
   part: Part
 }
 
@@ -31,6 +41,7 @@ interface JournalEntry {
   id: string
   prompt: string
   content: string
+  contentHash: string
   wordCount: number
   analysisStatus: string
   createdAt: string
@@ -165,38 +176,43 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   const highlightText = (text: string, analyses: PartAnalysis[] = []) => {
     if (!analyses || analyses.length === 0) return text
 
-    const highlights: { start: number; end: number; part: Part; text: string; reasoning: string }[] = []
+    // Build highlight objects using stored offsets (O(1) per highlight)
+    const highlights: { start: number; end: number; part: Part; text: string; reasoning: string; isStale: boolean }[] = []
 
     analyses.forEach((analysis) => {
       analysis.highlights.forEach((highlight) => {
-        // Try exact match first
-        let index = text.indexOf(highlight)
+        // Use stored offsets directly - O(1) lookup via slicing
+        const actualText = text.slice(highlight.startOffset, highlight.endOffset)
         
-        // If no exact match, try case-insensitive
-        if (index === -1) {
-          const lowerText = text.toLowerCase()
-          const lowerHighlight = highlight.toLowerCase()
-          index = lowerText.indexOf(lowerHighlight)
-          
-          // If found with case-insensitive, use the actual text from the entry
-          if (index !== -1) {
-            const actualText = text.substring(index, index + highlight.length)
+        // Verify the stored text matches (detect stale highlights)
+        const isMatch = actualText === highlight.exact
+        
+        if (isMatch) {
+          highlights.push({
+            start: highlight.startOffset,
+            end: highlight.endOffset,
+            part: analysis.part,
+            text: actualText,
+            reasoning: highlight.reasoning || '',
+            isStale: false,
+          })
+        } else if (highlight.isStale) {
+          // TODO: Could implement fuzzy re-anchoring here using matchQuote
+          // For now, skip stale highlights that don't match
+          console.warn(`Stale highlight doesn't match: "${highlight.exact.substring(0, 30)}..."`)
+        } else {
+          // Content may have changed - try exact match as fallback
+          const fallbackIndex = text.indexOf(highlight.exact)
+          if (fallbackIndex !== -1) {
             highlights.push({
-              start: index,
-              end: index + highlight.length,
+              start: fallbackIndex,
+              end: fallbackIndex + highlight.exact.length,
               part: analysis.part,
-              text: actualText,
-              reasoning: analysis.reasoning?.[highlight] || '',
+              text: highlight.exact,
+              reasoning: highlight.reasoning || '',
+              isStale: true, // Mark as potentially stale
             })
           }
-        } else {
-          highlights.push({
-            start: index,
-            end: index + highlight.length,
-            part: analysis.part,
-            text: highlight,
-            reasoning: analysis.reasoning?.[highlight] || '',
-          })
         }
       })
     })
@@ -227,7 +243,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       parts.push(
         <span
           key={`highlight-${i}`}
-          className="relative group cursor-pointer rounded px-1 transition-all"
+          className={`relative group cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-gray-400' : ''}`}
           style={{ backgroundColor: `${highlight.part.color}20` }}
           onClick={() => (window.location.href = `/parts/${slugify(highlight.part.name)}`)}
           data-quote={highlightedText}
