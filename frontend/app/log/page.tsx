@@ -18,10 +18,21 @@ interface Part {
   icon?: string
 }
 
+interface Highlight {
+  id: string
+  startOffset: number
+  endOffset: number
+  exact: string
+  prefix: string
+  suffix: string
+  reasoning: string | null
+  isStale: boolean
+}
+
 interface PartAnalysis {
   id: string
   partId: string
-  highlights: string[]
+  highlights: Highlight[]
   part: Part
 }
 
@@ -249,7 +260,8 @@ function LogPageContent() {
 
     // Get the first highlight
     const highlight = relevantAnalysis.highlights[0]
-    const highlightIndex = entry.content.toLowerCase().indexOf(highlight.toLowerCase())
+    const highlightText = highlight.exact
+    const highlightIndex = entry.content.toLowerCase().indexOf(highlightText.toLowerCase())
 
     if (highlightIndex === -1) {
       return entry.content
@@ -258,7 +270,7 @@ function LogPageContent() {
     // Extract context around the highlight (about 150 chars before and after)
     const contextLength = 150
     const start = Math.max(0, highlightIndex - contextLength)
-    const end = Math.min(entry.content.length, highlightIndex + highlight.length + contextLength)
+    const end = Math.min(entry.content.length, highlightIndex + highlightText.length + contextLength)
 
     let excerpt = entry.content.substring(start, end)
 
@@ -283,15 +295,16 @@ function LogPageContent() {
     }
 
     const highlight = relevantAnalysis.highlights[0]
-    const highlightIndex = excerpt.toLowerCase().indexOf(highlight.toLowerCase())
+    const highlightText = highlight.exact
+    const highlightIndex = excerpt.toLowerCase().indexOf(highlightText.toLowerCase())
 
     if (highlightIndex === -1) {
       return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
 
     const before = excerpt.substring(0, highlightIndex)
-    const highlighted = excerpt.substring(highlightIndex, highlightIndex + highlight.length)
-    const after = excerpt.substring(highlightIndex + highlight.length)
+    const highlighted = excerpt.substring(highlightIndex, highlightIndex + highlightText.length)
+    const after = excerpt.substring(highlightIndex + highlightText.length)
 
     return (
       <p className="font-serif text-gray-700 line-clamp-3">

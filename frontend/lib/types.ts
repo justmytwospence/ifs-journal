@@ -31,16 +31,31 @@ export interface Part {
   description: string
   role: PartRole
   color: string
-  quotes: string[]
+  icon?: string
+  slug?: string
   createdAt: Date
   updatedAt: Date
+}
+
+export interface Highlight {
+  id: string
+  entryId: string
+  partAnalysisId: string
+  startOffset: number
+  endOffset: number
+  exact: string
+  prefix: string
+  suffix: string
+  reasoning: string | null
+  isStale: boolean
+  createdAt: Date
 }
 
 export interface PartAnalysis {
   id: string
   entryId: string
   partId: string
-  highlights: string[]
+  highlights: Highlight[]
   confidence: number
   createdAt: Date
 }
