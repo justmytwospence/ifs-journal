@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
                 createdAt: true,
               },
             },
+            highlights: {
+              select: {
+                exact: true,
+                reasoning: true,
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -56,8 +62,10 @@ export async function POST(request: NextRequest) {
     const promptPath = join(process.cwd(), 'lib', 'prompts', 'part-conversation.md')
     let promptTemplate = await readFile(promptPath, 'utf-8')
 
-    // Prepare part quotes
-    const allQuotes = part.partAnalyses.flatMap(analysis => analysis.highlights)
+    // Prepare part quotes from highlights
+    const allQuotes = part.partAnalyses.flatMap(analysis => 
+      analysis.highlights.map(h => h.exact)
+    )
     const uniqueQuotes = [...new Set(allQuotes)].slice(0, 10) // Limit to 10 most relevant
     const quotesText = uniqueQuotes.map((quote, i) => `${i + 1}. "${quote}"`).join('\n')
 
@@ -67,10 +75,11 @@ export async function POST(request: NextRequest) {
       .map((analysis, i) => {
         const entry = analysis.entry
         const date = new Date(entry.createdAt).toLocaleDateString()
+        const highlightTexts = analysis.highlights.map(h => h.exact)
         return `### Entry ${i + 1} (${date})
 **Prompt:** ${entry.prompt}
 **Content:** ${entry.content.substring(0, 500)}${entry.content.length > 500 ? '...' : ''}
-**Highlighted expressions:** ${analysis.highlights.join('; ')}`
+**Highlighted expressions:** ${highlightTexts.join('; ') || 'None'}`
       })
       .join('\n\n')
 
