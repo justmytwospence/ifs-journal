@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { createHash } from 'crypto'
+import { runBatchAnalysis } from '../lib/batch-analysis'
 
 const prisma = new PrismaClient()
 
@@ -238,9 +239,14 @@ async function main() {
   }
 
   console.log(`✅ Created ${entries.length} journal entries`)
+
+  console.log('\n🧠 Running batch parts analysis...')
+  const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, testUser.id)
+  console.log(`✅ Analyzed ${entriesAnalyzed} entries, identified ${partsCreated} parts`)
+
   console.log('\n🎉 Database seeding completed successfully!')
   console.log('\nTest account:')
-  console.log(`  📧 demo@ifsjournal.me / password123 (with ${entries.length} journal entries)`)
+  console.log(`  📧 demo@ifsjournal.me / password123 (with ${entries.length} journal entries and ${partsCreated} parts)`)
 }
 
 main()
