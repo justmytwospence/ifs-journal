@@ -9,14 +9,14 @@
  * 4. Role matching as a signal
  */
 
-// Common words to strip from part names for normalization
+// Common words to strip from part names for normalization.
+// Keep this list tight: distinctive descriptors (wounded, vulnerable, child, etc.)
+// stay so that getCanonicalSynonym can still match them against synonym groups.
 const STRIP_WORDS = [
   // Articles
   'the', 'a', 'an',
-  // Common suffixes that indicate the same concept
-  'part', 'one', 'self', 'child', 'inner', 'voice', 'side',
-  // Synonyms that might appear
-  'wounded', 'hurt', 'vulnerable', 'scared', 'frightened',
+  // Structural suffixes that don't carry identity
+  'part', 'one', 'self', 'inner', 'voice', 'side',
 ]
 
 // Synonym groups - any name containing words from the same group should match
@@ -26,7 +26,7 @@ const SYNONYM_GROUPS = [
   ['anxious', 'worrier', 'worried', 'anxiety', 'nervous'],
   ['avoider', 'avoidant', 'escape', 'escaper', 'procrastinator'],
   ['pleaser', 'people-pleaser', 'peoplepleaser', 'fixer', 'caretaker'],
-  ['wounded', 'hurt', 'vulnerable', 'child', 'inner child', 'exile'],
+  ['wounded', 'hurt', 'vulnerable', 'child', 'inner child', 'exile', 'small', 'little', 'young', 'tender'],
   ['angry', 'rage', 'furious', 'frustrated'],
   ['lonely', 'abandoned', 'isolated', 'alone'],
   ['hopeful', 'optimist', 'optimistic', 'hope'],
