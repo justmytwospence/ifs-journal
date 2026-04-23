@@ -48,7 +48,9 @@ export async function POST() {
       citations: { enabled: true },
     }))
 
-    const response = await anthropic.messages.create({
+    // Streaming is required for long-running calls (max_tokens this large
+    // would otherwise trip the SDK's >10 min HTTP-timeout guard).
+    const stream = anthropic.messages.stream({
       model: ANALYSIS_MODEL,
       max_tokens: 32000,
       thinking: { type: 'adaptive' },
@@ -71,6 +73,7 @@ export async function POST() {
         },
       ],
     })
+    const response = await stream.finalMessage()
 
     const rawParts = parseCitationsResponse(response.content)
     console.log(`Claude returned ${rawParts.length} parts across ${entries.length} entries`)
