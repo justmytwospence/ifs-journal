@@ -1,4 +1,4 @@
 .vercel
 .claude/
 .playwright-mcp/
-/entry-highlights.png
+/*.png
