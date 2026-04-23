@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { openai } from '@/lib/openai'
+import { anthropic, ANALYSIS_MODEL } from '@/lib/anthropic'
 import prisma from '@/lib/db'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { computeSelector } from '@/lib/anchoring'
 import { slugify } from '@/lib/slug-utils'
 import { findSimilarPart } from '@/lib/part-similarity'
+import { parseCitationsResponse, type ParsedPart } from '@/lib/citation-parser'
 
 const PART_COLORS = {
   Protector: '#ef4444',
@@ -15,8 +15,21 @@ const PART_COLORS = {
   Exile: '#8b5cf6',
 }
 
+const CONTEXT_LENGTH = 32
+
+function buildSelector(text: string, citation: ParsedPart['instances'][number]['citations'][number]) {
+  const { startOffset, endOffset, citedText } = citation
+  return {
+    startOffset,
+    endOffset,
+    exact: citedText,
+    prefix: text.slice(Math.max(0, startOffset - CONTEXT_LENGTH), startOffset),
+    suffix: text.slice(endOffset, Math.min(text.length, endOffset + CONTEXT_LENGTH)),
+  }
+}
+
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -27,7 +40,6 @@ export async function POST(
 
     const { id: entryId } = await params
 
-    // Get the journal entry
     const entry = await prisma.journalEntry.findUnique({
       where: { id: entryId, userId: session.user.id },
     })
@@ -36,69 +48,73 @@ export async function POST(
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    // Update status to processing
     await prisma.journalEntry.update({
       where: { id: entryId },
       data: { analysisStatus: 'processing' },
     })
 
-    // Get existing parts for this user
     const existingParts = await prisma.part.findMany({
       where: { userId: session.user.id },
       include: { partAnalyses: true },
     })
 
-    // Load prompt template for incremental entry analysis
     const templatePath = join(process.cwd(), 'lib/prompts/incremental-entry-analysis.md')
     const template = await readFile(templatePath, 'utf-8')
 
-    // Build existing parts context
     const partsContext = existingParts.length > 0
       ? existingParts.map(p => `- ${p.name} (${p.role}): ${p.description}`).join('\n')
       : 'No existing parts yet.'
 
-    const systemPrompt = template
-      .replace('{{EXISTING_PARTS}}', partsContext)
-      .replace('{{PROMPT}}', entry.prompt)
-      .replace('{{CONTENT}}', entry.content)
+    const systemPrompt = template.replace('{{EXISTING_PARTS}}', partsContext)
 
-    // Call OpenAI
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const response = await anthropic.messages.create({
+      model: ANALYSIS_MODEL,
+      max_tokens: 16000,
+      thinking: { type: 'adaptive' },
+      system: systemPrompt,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Analyze this journal entry for parts.' },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Journal prompt shown to the writer: ${entry.prompt}`,
+            },
+            {
+              type: 'document',
+              source: { type: 'text', data: entry.content, media_type: 'text/plain' },
+              title: 'Journal Entry',
+              citations: { enabled: true },
+            },
+            {
+              type: 'text',
+              text: 'Analyze this journal entry for internal parts. Cite passages that evidence each part.',
+            },
+          ],
+        },
       ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
     })
 
-    const result = JSON.parse(completion.choices[0]?.message?.content || '{"parts":[]}')
+    const parsedParts = parseCitationsResponse(response.content)
+    console.log(`Claude returned ${parsedParts.length} parts for entry ${entry.id}`)
 
-    // Process each identified part
-    for (const partData of result.parts) {
-      let part
-
-      // Check if AI matched an existing part
-      let matchedPartId = partData.id && existingParts.find(p => p.id === partData.id) ? partData.id : null
-
-      // If AI didn't match, do our own similarity check
-      if (!matchedPartId) {
-        matchedPartId = findSimilarPart(partData, existingParts)
-        if (matchedPartId) {
-          console.log(`Similarity check matched "${partData.name}" to existing part ID: ${matchedPartId}`)
-        } else {
-          console.log(`No similar part found for "${partData.name}", creating new part`)
-        }
+    for (const partData of parsedParts) {
+      const partDataForMatch = {
+        name: partData.name,
+        role: partData.role,
+        description: partData.description ?? '',
       }
 
+      let matchedPartId = findSimilarPart(
+        partDataForMatch,
+        existingParts.map(p => ({ id: p.id, name: p.name, role: p.role, description: p.description }))
+      )
+
+      let part
       if (matchedPartId) {
-        // Use existing part
         part = existingParts.find(p => p.id === matchedPartId)
       } else {
-        // Check if we need to enforce 9-part maximum
         if (existingParts.length >= 9) {
-          // Find the part with lowest confidence across all analyses
           const partsWithConfidence = await Promise.all(
             existingParts.map(async (p) => {
               const analyses = await prisma.partAnalysis.findMany({
@@ -116,7 +132,6 @@ export async function POST(
             curr.avgConfidence < min.avgConfidence ? curr : min
           )
 
-          // Delete the lowest confidence part and its analyses
           await prisma.highlight.deleteMany({
             where: { partAnalysis: { partId: lowestConfidencePart.part.id } },
           })
@@ -127,13 +142,10 @@ export async function POST(
             where: { id: lowestConfidencePart.part.id },
           })
 
-          // Remove from existingParts array
           const index = existingParts.findIndex(p => p.id === lowestConfidencePart.part.id)
           if (index > -1) existingParts.splice(index, 1)
         }
 
-        // Create new part using upsert to handle race conditions
-        const partSlug = slugify(partData.name)
         part = await prisma.part.upsert({
           where: {
             userId_name: {
@@ -141,16 +153,15 @@ export async function POST(
               name: partData.name,
             },
           },
-          update: {
-            // If part was created by a concurrent request, no update needed
-          },
+          update: {},
           create: {
             userId: session.user.id,
             name: partData.name,
-            slug: partSlug,
-            description: partData.description,
+            slug: slugify(partData.name),
+            description: partData.description ?? '',
             role: partData.role,
             color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
+            icon: partData.icon ?? '●',
           },
           include: { partAnalyses: true },
         })
@@ -158,77 +169,57 @@ export async function POST(
         existingParts.push(part)
       }
 
-      // Create or update PartAnalysis and Highlights
-      if (part) {
-        // Upsert PartAnalysis (one per entry+part combination)
-        const partAnalysis = await prisma.partAnalysis.upsert({
-          where: {
-            entryId_partId: {
-              entryId: entry.id,
-              partId: part.id,
+      if (!part) continue
+
+      const partAnalysis = await prisma.partAnalysis.upsert({
+        where: {
+          entryId_partId: { entryId: entry.id, partId: part.id },
+        },
+        update: { confidence: partData.confidence },
+        create: {
+          entryId: entry.id,
+          partId: part.id,
+          confidence: partData.confidence,
+        },
+      })
+
+      await prisma.highlight.deleteMany({
+        where: { partAnalysisId: partAnalysis.id },
+      })
+
+      for (const instance of partData.instances) {
+        for (const citation of instance.citations) {
+          if (citation.documentIndex !== 0) continue
+          const selector = buildSelector(entry.content, citation)
+          await prisma.highlight.create({
+            data: {
+              partAnalysisId: partAnalysis.id,
+              startOffset: selector.startOffset,
+              endOffset: selector.endOffset,
+              exact: selector.exact,
+              prefix: selector.prefix,
+              suffix: selector.suffix,
+              reasoning: instance.reasoning,
+              isStale: false,
             },
-          },
-          update: {
-            confidence: partData.confidence,
-          },
-          create: {
-            entryId: entry.id,
-            partId: part.id,
-            confidence: partData.confidence,
-          },
-        })
-
-        // Delete existing highlights for this analysis (if re-analyzing)
-        await prisma.highlight.deleteMany({
-          where: { partAnalysisId: partAnalysis.id },
-        })
-
-        // Create Highlight records with computed selectors
-        const quotes: string[] = partData.quotes || []
-        const reasoning: Record<string, string> = partData.reasoning || {}
-
-        for (const quote of quotes) {
-          const selector = computeSelector(entry.content, quote)
-          
-          if (selector) {
-            await prisma.highlight.create({
-              data: {
-                entryId: entry.id,
-                partAnalysisId: partAnalysis.id,
-                startOffset: selector.startOffset,
-                endOffset: selector.endOffset,
-                exact: selector.exact,
-                prefix: selector.prefix,
-                suffix: selector.suffix,
-                reasoning: reasoning[quote] || null,
-                isStale: false,
-              },
-            })
-          } else {
-            console.warn(`Could not compute selector for quote: "${quote.substring(0, 50)}..."`)
-          }
+          })
         }
       }
     }
 
-    // Update entry status to completed
     await prisma.journalEntry.update({
       where: { id: entryId },
       data: { analysisStatus: 'completed' },
     })
 
-    return NextResponse.json({ success: true, partsFound: result.parts.length })
+    return NextResponse.json({ success: true, partsFound: parsedParts.length })
   } catch (error) {
     console.error('Parts analysis error:', error)
-
     const { id: entryId } = await params
-
-    // Update entry status to failed
     await prisma.journalEntry.update({
       where: { id: entryId },
       data: { analysisStatus: 'failed' },
     })
-
     return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
   }
 }

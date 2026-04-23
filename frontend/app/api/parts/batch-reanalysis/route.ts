@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { openai } from '@/lib/openai'
+import { anthropic, ANALYSIS_MODEL } from '@/lib/anthropic'
 import prisma from '@/lib/db'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { computeSelector } from '@/lib/anchoring'
 import { slugify } from '@/lib/slug-utils'
 import { deduplicateParts, normalizeName } from '@/lib/part-similarity'
+import { parseCitationsResponse, type ParsedPart } from '@/lib/citation-parser'
 
 const PART_COLORS = {
   Protector: '#ef4444',
@@ -15,6 +15,8 @@ const PART_COLORS = {
   Exile: '#8b5cf6',
 }
 
+const CONTEXT_LENGTH = 32
+
 export async function POST() {
   try {
     const session = await auth()
@@ -22,231 +24,192 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all journal entries for this user
+    const userId = session.user.id
+
     const entries = await prisma.journalEntry.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { createdAt: 'asc' },
     })
 
     if (entries.length === 0) {
       return NextResponse.json({
         message: 'No journal entries to analyze',
-        entriesAnalyzed: 0
+        entriesAnalyzed: 0,
       })
     }
 
-    // Delete all existing highlights, analyses, and parts for this user
-    await prisma.highlight.deleteMany({
-      where: { entry: { userId: session.user.id } },
-    })
-    await prisma.partAnalysis.deleteMany({
-      where: { entry: { userId: session.user.id } },
-    })
-    const deletedParts = await prisma.part.deleteMany({
-      where: { userId: session.user.id },
-    })
-    console.log(`Deleted ${deletedParts.count} parts for user ${session.user.id}`)
-
-    // Reset all entry statuses to processing
-    await prisma.journalEntry.updateMany({
-      where: { userId: session.user.id },
-      data: { analysisStatus: 'processing' },
-    })
-
-    // Load prompt template for batch entries reanalysis
     const templatePath = join(process.cwd(), 'lib/prompts/batch-entries-reanalysis.md')
-    const template = await readFile(templatePath, 'utf-8')
+    const systemPrompt = await readFile(templatePath, 'utf-8')
 
-    // Build entries context for batch analysis
-    const entriesContext = entries.map((entry, index) =>
-      `Entry ${index + 1} (ID: ${entry.id}):\nPrompt: ${entry.prompt}\nContent: ${entry.content}\n`
-    ).join('\n---\n\n')
+    const documentBlocks = entries.map((entry, i) => ({
+      type: 'document' as const,
+      source: { type: 'text' as const, data: entry.content, media_type: 'text/plain' as const },
+      title: `Entry ${i + 1} — ${entry.createdAt.toISOString().split('T')[0]}`,
+      citations: { enabled: true },
+    }))
 
-    const systemPrompt = template
-      .replace('{{ENTRIES_CONTEXT}}', entriesContext)
-      .replace('{{ENTRY_COUNT}}', entries.length.toString())
-
-    // Call OpenAI for batch analysis
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const response = await anthropic.messages.create({
+      model: ANALYSIS_MODEL,
+      max_tokens: 32000,
+      thinking: { type: 'adaptive' },
+      system: systemPrompt,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Analyze all these journal entries together and identify up to 9 distinct parts.' },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Below are ${entries.length} journal entries by this user, in chronological order. Each has a prompt shown to the writer:\n\n` +
+                entries.map((e, i) => `Entry ${i + 1} prompt: ${e.prompt}`).join('\n'),
+            },
+            ...documentBlocks,
+            {
+              type: 'text',
+              text: 'Analyze all entries holistically and identify up to 9 distinct parts. Cite passages from across the entries that evidence each part.',
+            },
+          ],
+        },
       ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
     })
 
-    const result = JSON.parse(completion.choices[0]?.message?.content || '{"parts":[],"entryMappings":[]}')
+    const rawParts = parseCitationsResponse(response.content)
+    console.log(`Claude returned ${rawParts.length} parts across ${entries.length} entries`)
 
-    console.log(`AI returned ${result.parts?.length || 0} parts and ${result.entryMappings?.length || 0} entry mappings`)
+    const partsWithTempId = rawParts.map((p, i) => ({
+      ...p,
+      tempId: `p${i}`,
+    }))
 
-    // Find which parts are actually used in entry mappings
-    const usedPartIds = new Set<string>()
-    for (const mapping of result.entryMappings) {
-      for (const partRef of mapping.parts) {
-        usedPartIds.add(partRef.tempId)
-      }
-    }
+    const tempIdToCanonical = deduplicateParts(
+      partsWithTempId.map(p => ({
+        tempId: p.tempId,
+        name: p.name,
+        role: p.role,
+        description: p.description ?? '',
+      }))
+    )
 
-    // Filter to only parts that are used, then enforce max 9
-    const usedParts = result.parts.filter((p: { tempId: string }) => usedPartIds.has(p.tempId))
-    
-    if (usedParts.length > 9) {
-      console.log(`AI returned ${usedParts.length} used parts, limiting to 9`)
-    }
-
-    // Deduplicate parts using semantic similarity (handles variations like "People Pleaser" vs "People-Pleaser")
-    const tempIdToCanonical = deduplicateParts(usedParts)
-    
-    // Also do exact normalized name deduplication as a fallback
     const seenNormalizedNames = new Set<string>()
-    const deduplicatedParts = usedParts.filter((p: { tempId: string; name: string }) => {
-      // Skip if this part was merged into another
+    const deduplicatedParts = partsWithTempId.filter(p => {
       if (tempIdToCanonical.get(p.tempId) !== p.tempId) {
-        console.log(`Skipping "${p.name}" - merged via similarity`)
+        console.log(`Skipping "${p.name}" — merged via similarity`)
         return false
       }
-      
-      const normalizedName = normalizeName(p.name)
-      if (seenNormalizedNames.has(normalizedName)) {
-        console.log(`Skipping duplicate normalized name: ${p.name} -> ${normalizedName}`)
+      const normalized = normalizeName(p.name)
+      if (seenNormalizedNames.has(normalized)) {
+        console.log(`Skipping duplicate normalized name: ${p.name} → ${normalized}`)
         return false
       }
-      seenNormalizedNames.add(normalizedName)
+      seenNormalizedNames.add(normalized)
       return true
     })
 
-    // Create only the parts that are actually mapped to entries (max 9)
-    const createdParts = new Map<string, { id: string; name: string }>()
-
-    for (const partData of deduplicatedParts.slice(0, 9)) {
-      const partSlug = slugify(partData.name)
-
-      // Use upsert to handle any edge cases where a part might still exist
-      const part = await prisma.part.upsert({
-        where: {
-          userId_name: {
-            userId: session.user.id,
-            name: partData.name,
-          },
-        },
-        update: {
-          description: partData.description,
-          role: partData.role,
-          color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
-          icon: partData.icon || '●',
-        },
-        create: {
-          userId: session.user.id,
-          name: partData.name,
-          slug: partSlug,
-          description: partData.description,
-          role: partData.role,
-          color: PART_COLORS[partData.role as keyof typeof PART_COLORS] || '#6366f1',
-          icon: partData.icon || '●',
-        },
-      })
-
-      createdParts.set(partData.tempId, part)
+    const finalParts = deduplicatedParts.slice(0, 9)
+    if (deduplicatedParts.length > 9) {
+      console.log(`Trimmed ${deduplicatedParts.length} parts down to 9`)
     }
 
-    // Create part analyses and highlights for each entry
-    const processedEntryIds = new Set<string>()
+    const createdParts = await prisma.$transaction(async (tx) => {
+      await tx.highlight.deleteMany({
+        where: { partAnalysis: { entry: { userId } } },
+      })
+      await tx.partAnalysis.deleteMany({
+        where: { entry: { userId } },
+      })
+      await tx.part.deleteMany({ where: { userId } })
 
-    for (const mapping of result.entryMappings) {
-      const entry = entries.find(e => e.id === mapping.entryId)
-      if (!entry) continue
+      await tx.journalEntry.updateMany({
+        where: { userId },
+        data: { analysisStatus: 'processing' },
+      })
 
-      processedEntryIds.add(entry.id)
+      const partsMap = new Map<string, { id: string; name: string }>()
 
-      for (const partRef of mapping.parts) {
-        // Map to canonical tempId if this part was merged
-        const canonicalTempId = tempIdToCanonical.get(partRef.tempId) || partRef.tempId
-        const part = createdParts.get(canonicalTempId)
-        if (!part) {
-          console.log(`Warning: Part with tempId ${partRef.tempId} (canonical: ${canonicalTempId}) not found in createdParts`)
-          continue
-        }
-
-        // Upsert PartAnalysis to handle merged parts that might create duplicate entry+part combinations
-        const analysis = await prisma.partAnalysis.upsert({
-          where: {
-            entryId_partId: {
-              entryId: entry.id,
-              partId: part.id,
-            },
-          },
-          update: {
-            confidence: Math.max(partRef.confidence || 0.8, 0.8), // Keep higher confidence
-          },
-          create: {
-            entryId: entry.id,
-            partId: part.id,
-            confidence: partRef.confidence || 0.8,
+      for (const part of finalParts) {
+        const created = await tx.part.create({
+          data: {
+            userId,
+            name: part.name,
+            slug: slugify(part.name),
+            description: part.description ?? '',
+            role: part.role,
+            color: PART_COLORS[part.role as keyof typeof PART_COLORS] || '#6366f1',
+            icon: part.icon ?? '●',
           },
         })
+        partsMap.set(part.tempId, created)
+      }
 
-        // Create Highlights with computed selectors
-        const highlights: string[] = partRef.highlights || []
-        const reasoning: Record<string, string> = partRef.reasoning || {}
+      type InstanceWithCitations = ParsedPart['instances'][number]
+      const analysisCache = new Map<string, string>()
+      const processedEntryIds = new Set<string>()
 
-        for (const quote of highlights) {
-          const selector = computeSelector(entry.content, quote)
-          
-          if (selector) {
-            await prisma.highlight.create({
+      async function ensureAnalysis(partDbId: string, entryId: string, confidence: number) {
+        const key = `${entryId}:${partDbId}`
+        const cached = analysisCache.get(key)
+        if (cached) return cached
+        const analysis = await tx.partAnalysis.create({
+          data: { entryId, partId: partDbId, confidence },
+        })
+        analysisCache.set(key, analysis.id)
+        processedEntryIds.add(entryId)
+        return analysis.id
+      }
+
+      for (const part of finalParts) {
+        const dbPart = partsMap.get(part.tempId)
+        if (!dbPart) continue
+
+        for (const instance of part.instances as InstanceWithCitations[]) {
+          for (const citation of instance.citations) {
+            const entry = entries[citation.documentIndex]
+            if (!entry) continue
+
+            const analysisId = await ensureAnalysis(dbPart.id, entry.id, part.confidence)
+
+            await tx.highlight.create({
               data: {
-                entryId: entry.id,
-                partAnalysisId: analysis.id,
-                startOffset: selector.startOffset,
-                endOffset: selector.endOffset,
-                exact: selector.exact,
-                prefix: selector.prefix,
-                suffix: selector.suffix,
-                reasoning: reasoning[quote] || null,
+                partAnalysisId: analysisId,
+                startOffset: citation.startOffset,
+                endOffset: citation.endOffset,
+                exact: citation.citedText,
+                prefix: entry.content.slice(
+                  Math.max(0, citation.startOffset - CONTEXT_LENGTH),
+                  citation.startOffset
+                ),
+                suffix: entry.content.slice(
+                  citation.endOffset,
+                  Math.min(entry.content.length, citation.endOffset + CONTEXT_LENGTH)
+                ),
+                reasoning: instance.reasoning,
                 isStale: false,
               },
             })
-          } else {
-            console.warn(`Could not compute selector for quote: "${quote.substring(0, 50)}..."`)
           }
         }
-
-        console.log(`Created analysis ${analysis.id} for part ${part.name} in entry ${entry.id}`)
       }
 
-      // Update entry status to completed
-      await prisma.journalEntry.update({
-        where: { id: entry.id },
+      await tx.journalEntry.updateMany({
+        where: { userId },
         data: { analysisStatus: 'completed' },
       })
-    }
 
-    // Update any entries that weren't mapped to completed status as well
-    const unmappedEntries = entries.filter(e => !processedEntryIds.has(e.id))
-    if (unmappedEntries.length > 0) {
-      await prisma.journalEntry.updateMany({
-        where: {
-          id: { in: unmappedEntries.map(e => e.id) }
-        },
-        data: { analysisStatus: 'completed' },
-      })
-      console.log(`Updated ${unmappedEntries.length} unmapped entries to completed status`)
-    }
+      const unmapped = entries.filter(e => !processedEntryIds.has(e.id))
+      if (unmapped.length > 0) {
+        console.log(`${unmapped.length} entries had no part citations`)
+      }
 
-    // Verify parts were created with analyses
+      return partsMap
+    }, {
+      timeout: 120000,
+    })
+
     const verifyParts = await prisma.part.findMany({
-      where: { userId: session.user.id },
-      include: {
-        partAnalyses: {
-          include: { highlights: true },
-        },
-      },
+      where: { userId },
+      include: { partAnalyses: { include: { highlights: true } } },
     })
 
     console.log(`Batch reanalysis complete: Created ${createdParts.size} parts for ${entries.length} entries`)
-    console.log(`Verification: Found ${verifyParts.length} parts in database`)
     verifyParts.forEach(p => {
       const highlightCount = p.partAnalyses.reduce((sum, a) => sum + a.highlights.length, 0)
       console.log(`  - ${p.name}: ${p.partAnalyses.length} analyses, ${highlightCount} highlights`)
@@ -256,7 +219,7 @@ export async function POST() {
       success: true,
       message: `Reanalysis complete: ${createdParts.size} parts identified`,
       entriesAnalyzed: entries.length,
-      partsCreated: createdParts.size
+      partsCreated: createdParts.size,
     })
   } catch (error) {
     console.error('Reanalyze error:', error)
