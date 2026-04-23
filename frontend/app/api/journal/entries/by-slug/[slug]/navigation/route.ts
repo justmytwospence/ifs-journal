@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { createEntrySlug } from '@/lib/slug-utils'
 
 export async function GET(
   request: Request,
@@ -15,52 +14,53 @@ export async function GET(
 
     const { slug } = await params
     
-    // Get all entries for this user, ordered by date
-    const entries = await prisma.journalEntry.findMany({
+    // Get current entry to find its position
+    const currentEntry = await prisma.journalEntry.findUnique({
       where: { 
-        userId: session.user.id,
+        userId_slug: {
+          userId: session.user.id,
+          slug,
+        },
       },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        createdAt: true,
-      },
+      select: { id: true, createdAt: true },
     })
 
-    // Find the current entry index
-    const currentIndex = entries.findIndex(e => createEntrySlug(e.createdAt) === slug)
-
-    if (currentIndex === -1) {
+    if (!currentEntry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    // Get previous (older) and next (newer) entries
-    const previousEntry = currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null
-    const nextEntry = currentIndex > 0 ? entries[currentIndex - 1] : null
+    // Get previous (older) entry
+    const previousEntry = await prisma.journalEntry.findFirst({
+      where: { 
+        userId: session.user.id,
+        createdAt: { lt: currentEntry.createdAt },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, slug: true, createdAt: true, prompt: true },
+    })
 
-    // Get full entry details for navigation entries to include prompt
-    const previousEntryDetails = previousEntry ? await prisma.journalEntry.findUnique({
-      where: { id: previousEntry.id },
-      select: { id: true, createdAt: true, prompt: true },
-    }) : null
-
-    const nextEntryDetails = nextEntry ? await prisma.journalEntry.findUnique({
-      where: { id: nextEntry.id },
-      select: { id: true, createdAt: true, prompt: true },
-    }) : null
+    // Get next (newer) entry
+    const nextEntry = await prisma.journalEntry.findFirst({
+      where: { 
+        userId: session.user.id,
+        createdAt: { gt: currentEntry.createdAt },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, slug: true, createdAt: true, prompt: true },
+    })
 
     return NextResponse.json({ 
-      previous: previousEntryDetails ? {
-        id: previousEntryDetails.id,
-        slug: createEntrySlug(previousEntryDetails.createdAt),
-        createdAt: previousEntryDetails.createdAt,
-        prompt: previousEntryDetails.prompt,
+      previous: previousEntry ? {
+        id: previousEntry.id,
+        slug: previousEntry.slug,
+        createdAt: previousEntry.createdAt,
+        prompt: previousEntry.prompt,
       } : null,
-      next: nextEntryDetails ? {
-        id: nextEntryDetails.id,
-        slug: createEntrySlug(nextEntryDetails.createdAt),
-        createdAt: nextEntryDetails.createdAt,
-        prompt: nextEntryDetails.prompt,
+      next: nextEntry ? {
+        id: nextEntry.id,
+        slug: nextEntry.slug,
+        createdAt: nextEntry.createdAt,
+        prompt: nextEntry.prompt,
       } : null,
     })
   } catch (error) {

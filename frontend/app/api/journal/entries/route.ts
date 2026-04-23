@@ -4,6 +4,7 @@ import prisma from '@/lib/db'
 import { z } from 'zod'
 import { demoGuard } from '@/lib/demo-guard'
 import { computeContentHash } from '@/lib/anchoring'
+import { createEntrySlug } from '@/lib/slug-utils'
 
 const createEntrySchema = z.object({
   prompt: z.string(),
@@ -25,14 +26,18 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { prompt, content, wordCount } = createEntrySchema.parse(body)
 
+    // Create entry with pre-computed slug for O(1) lookup
+    const createdAt = new Date()
     const entry = await prisma.journalEntry.create({
       data: {
         userId: session.user.id,
+        slug: createEntrySlug(createdAt),
         prompt,
         content,
         contentHash: computeContentHash(content),
         wordCount,
         analysisStatus: 'pending',
+        createdAt,
       },
     })
 

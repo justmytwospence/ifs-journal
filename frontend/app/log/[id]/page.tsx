@@ -11,6 +11,7 @@ import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkele
 import { useRouter } from 'next/navigation'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { DemoToast } from '@/components/ui/DemoToast'
+import { reanchorHighlight } from '@/lib/anchoring'
 
 interface Part {
   id: string
@@ -196,22 +197,40 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             reasoning: highlight.reasoning || '',
             isStale: false,
           })
-        } else if (highlight.isStale) {
-          // TODO: Could implement fuzzy re-anchoring here using matchQuote
-          // For now, skip stale highlights that don't match
-          console.warn(`Stale highlight doesn't match: "${highlight.exact.substring(0, 30)}..."`)
         } else {
-          // Content may have changed - try exact match as fallback
-          const fallbackIndex = text.indexOf(highlight.exact)
-          if (fallbackIndex !== -1) {
+          // Content has changed - try fuzzy re-anchoring using W3C TextQuoteSelector
+          const reanchored = reanchorHighlight(text, {
+            exact: highlight.exact,
+            prefix: highlight.prefix,
+            suffix: highlight.suffix,
+            startOffset: highlight.startOffset,
+          })
+          
+          if (reanchored) {
+            const reanchoredText = text.slice(reanchored.startOffset, reanchored.endOffset)
             highlights.push({
-              start: fallbackIndex,
-              end: fallbackIndex + highlight.exact.length,
+              start: reanchored.startOffset,
+              end: reanchored.endOffset,
               part: analysis.part,
-              text: highlight.exact,
+              text: reanchoredText,
               reasoning: highlight.reasoning || '',
-              isStale: true, // Mark as potentially stale
+              isStale: true, // Mark as re-anchored (positions may have shifted)
             })
+          } else {
+            // Fuzzy match failed - try exact substring match as last resort
+            const fallbackIndex = text.indexOf(highlight.exact)
+            if (fallbackIndex !== -1) {
+              highlights.push({
+                start: fallbackIndex,
+                end: fallbackIndex + highlight.exact.length,
+                part: analysis.part,
+                text: highlight.exact,
+                reasoning: highlight.reasoning || '',
+                isStale: true,
+              })
+            } else {
+              console.warn(`Could not re-anchor highlight: "${highlight.exact.substring(0, 30)}..."`)
+            }
           }
         }
       })

@@ -24,6 +24,22 @@ const slugify = (name: string): string => {
     .replace(/(^-|-$)/g, '')
 }
 
+// Create entry slug from date (same logic as lib/slug-utils.ts)
+const createEntrySlug = (createdAt: Date): string => {
+  const year = createdAt.getUTCFullYear()
+  const month = String(createdAt.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(createdAt.getUTCDate()).padStart(2, '0')
+  const weekday = createdAt.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase()
+  
+  let hours = createdAt.getUTCHours()
+  const minutes = String(createdAt.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(createdAt.getUTCSeconds()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'pm' : 'am'
+  hours = hours % 12 || 12
+  
+  return `${year}-${month}-${day}-${weekday}-${hours}-${minutes}-${seconds}${ampm}`
+}
+
 async function main() {
   console.log('🌱 Starting database seed...')
 
@@ -205,16 +221,18 @@ async function main() {
 
   // Create all journal entries
   for (const entry of entries) {
+    const createdAt = daysAgo(entry.daysAgo)
     await prisma.journalEntry.create({
       data: {
         userId: testUser.id,
+        slug: createEntrySlug(createdAt),
         prompt: entry.prompt,
         content: entry.content,
         contentHash: computeContentHash(entry.content),
         wordCount: entry.wordCount,
         analysisStatus: 'pending',
-        createdAt: daysAgo(entry.daysAgo),
-        updatedAt: daysAgo(entry.daysAgo),
+        createdAt,
+        updatedAt: createdAt,
       },
     })
   }

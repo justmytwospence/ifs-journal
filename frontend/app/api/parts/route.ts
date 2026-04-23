@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { transformPartWithStats } from '@/lib/part-utils'
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
         partAnalyses: {
           select: { 
             id: true,
-            createdAt: true,
+            entryId: true,
             highlights: {
               select: { exact: true },
             },
@@ -25,51 +26,15 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    // Calculate activity over last 30 days for sparklines
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-    const partsWithStats = parts.map(part => {
-      // Group analyses by day for the last 30 days
-      const activityByDay: Record<string, number> = {}
-      
-      part.partAnalyses.forEach(analysis => {
-        const date = new Date(analysis.createdAt)
-        if (date >= thirtyDaysAgo) {
-          const dateKey = date.toISOString().split('T')[0]
-          activityByDay[dateKey] = (activityByDay[dateKey] || 0) + 1
-        }
-      })
-
-      // Create array of daily counts for last 30 days
-      const activityTrend: number[] = []
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date()
-        date.setDate(date.getDate() - i)
-        const dateKey = date.toISOString().split('T')[0]
-        activityTrend.push(activityByDay[dateKey] || 0)
-      }
-
-      // Derive quotes from highlights (first 5 unique quotes)
-      const quotes = part.partAnalyses
-        .flatMap(a => a.highlights.map(h => h.exact))
-        .filter((q, i, arr) => arr.indexOf(q) === i)
-        .slice(0, 5)
-
-      return {
-        id: part.id,
-        name: part.name,
-        slug: part.slug,
-        role: part.role,
-        color: part.color,
-        icon: part.icon,
-        description: part.description,
-        quotes,
-        appearances: part.partAnalyses.length,
-        activityTrend,
-        createdAt: part.createdAt,
-      }
+    // Get all entry dates for activity calculation (using entry dates, not analysis dates)
+    const allEntryIds = [...new Set(parts.flatMap(p => p.partAnalyses.map(a => a.entryId)))]
+    const entries = await prisma.journalEntry.findMany({
+      where: { id: { in: allEntryIds } },
+      select: { id: true, createdAt: true },
     })
+    const entryDateMap = new Map(entries.map(e => [e.id, e.createdAt]))
+
+    const partsWithStats = parts.map(part => transformPartWithStats(part, entryDateMap))
 
     return NextResponse.json({ parts: partsWithStats })
   } catch (error) {
