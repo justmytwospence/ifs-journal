@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { createEntrySlug } from '@/lib/slug-utils'
 
 export async function GET(
   request: Request,
@@ -15,10 +14,13 @@ export async function GET(
 
     const { slug } = await params
     
-    // Get all entries for this user
-    const entries = await prisma.journalEntry.findMany({
+    // O(1) lookup using indexed slug field
+    const entry = await prisma.journalEntry.findUnique({
       where: { 
-        userId: session.user.id,
+        userId_slug: {
+          userId: session.user.id,
+          slug,
+        },
       },
       include: {
         partAnalyses: {
@@ -29,9 +31,6 @@ export async function GET(
         },
       },
     })
-
-    // Find the entry whose slugified date matches the slug
-    const entry = entries.find(e => createEntrySlug(e.createdAt) === slug)
 
     if (!entry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })

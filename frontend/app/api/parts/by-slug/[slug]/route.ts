@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { deriveQuotes, deriveQuotesWithEntries, calculateActivityTrend, getActivityDates } from '@/lib/part-utils'
 
 export async function GET(
   request: Request,
@@ -42,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: 'Part not found' }, { status: 404 })
     }
 
-    // Get entry dates for slug generation
+    // Get entry dates for activity calculation and quote linking
     const entryIds = [...new Set(part.partAnalyses.map(a => a.entryId))]
     const entries = await prisma.journalEntry.findMany({
       where: {
@@ -57,42 +58,10 @@ export async function GET(
     
     const entryDateMap = new Map(entries.map(e => [e.id, e.createdAt]))
     
-    // Extract all highlights with their entry IDs and dates
-    const quotesWithEntries = part.partAnalyses.flatMap(analysis => 
-      analysis.highlights.map(highlight => ({
-        text: highlight.exact,
-        reasoning: highlight.reasoning,
-        entryId: analysis.entryId,
-        entryCreatedAt: entryDateMap.get(analysis.entryId),
-      }))
-    )
-
-    // Calculate activity over last 30 days
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    
-    const activityByDay: Record<string, number> = {}
-    part.partAnalyses.forEach(analysis => {
-      const entryDate = entryDateMap.get(analysis.entryId)
-      if (entryDate && entryDate >= thirtyDaysAgo) {
-        const dateKey = entryDate.toISOString().split('T')[0]
-        activityByDay[dateKey] = (activityByDay[dateKey] || 0) + 1
-      }
-    })
-    
-    // Create array of daily counts for last 30 days
-    const weeklyActivity: number[] = []
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      const dateKey = date.toISOString().split('T')[0]
-      weeklyActivity.push(activityByDay[dateKey] || 0)
-    }
-
-    // Derive unique quotes from highlights
-    const quotes = quotesWithEntries
-      .map(q => q.text)
-      .filter((q, i, arr) => arr.indexOf(q) === i)
+    // Use centralized utilities for derivation
+    const quotesWithEntries = deriveQuotesWithEntries(part.partAnalyses, entryDateMap)
+    const activityDates = getActivityDates(part.partAnalyses, entryDateMap)
+    const weeklyActivity = calculateActivityTrend(activityDates)
 
     return NextResponse.json({ 
       part: {
@@ -103,7 +72,7 @@ export async function GET(
         color: part.color,
         icon: part.icon,
         description: part.description,
-        quotes,
+        quotes: deriveQuotes(part.partAnalyses),
         quotesWithEntries,
         appearances: part.partAnalyses.length,
         weeklyActivity,

@@ -32,6 +32,7 @@ model User {
 model JournalEntry {
   id             String   @id @default(cuid())
   userId         String
+  slug           String   // Pre-computed date-based slug for O(1) lookup
   prompt         String   @db.Text
   content        String   @db.Text
   contentHash    String   // SHA-256 hash for change detection
@@ -43,8 +44,9 @@ model JournalEntry {
   // Relations
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   partAnalyses PartAnalysis[]
-  highlights   Highlight[]
+  // Note: highlights are now accessed via partAnalyses.highlights to avoid redundant entryId FK
 
+  @@unique([userId, slug])
   @@index([userId, createdAt(sort: Desc)])
   @@map("journal_entries")
 }
@@ -96,7 +98,6 @@ model PartAnalysis {
 // Stores highlighted text with both offset-based (fast) and quote-based (resilient) anchors
 model Highlight {
   id             String @id @default(cuid())
-  entryId        String
   partAnalysisId String
 
   // TextPositionSelector (W3C) - O(1) lookup via string slicing
@@ -113,10 +114,9 @@ model Highlight {
   createdAt DateTime @default(now())
 
   // Relations
-  entry        JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  // Note: entryId is derived via partAnalysis.entryId to avoid data drift
   partAnalysis PartAnalysis @relation(fields: [partAnalysisId], references: [id], onDelete: Cascade)
 
-  @@index([entryId])
   @@index([partAnalysisId])
   @@map("highlights")
 }

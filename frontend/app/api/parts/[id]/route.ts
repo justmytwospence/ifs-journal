@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { deriveQuotes } from '@/lib/part-utils'
 
 export async function GET(
   request: Request,
@@ -35,11 +36,6 @@ export async function GET(
       return NextResponse.json({ error: 'Part not found' }, { status: 404 })
     }
 
-    // Derive quotes from highlights
-    const quotes = part.partAnalyses
-      .flatMap(a => a.highlights.map(h => h.exact))
-      .filter((q, i, arr) => arr.indexOf(q) === i)
-
     return NextResponse.json({ 
       part: {
         id: part.id,
@@ -48,7 +44,7 @@ export async function GET(
         role: part.role,
         color: part.color,
         description: part.description,
-        quotes,
+        quotes: deriveQuotes(part.partAnalyses),
         appearances: part.partAnalyses.length,
       }
     })
