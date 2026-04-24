@@ -11,16 +11,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
   }
 
-  // CSRF: Origin must match the request's own Host. On Vercel each preview
-  // deployment has its own host, so comparing against a configured
-  // NEXTAUTH_URL would break previews; comparing to the host Vercel actually
-  // routed this request through is both simpler and more correct. NextAuth
-  // has its own CSRF token on the callback endpoint — this is defense in
-  // depth, not the primary guard.
+  // CSRF: Origin must match the host Vercel actually routed this request
+  // through. Using new URL(request.url).host (rather than the raw Host
+  // header) reflects x-forwarded-host on Vercel's proxy and normalizes
+  // casing/port handling. NextAuth has its own CSRF token on the callback
+  // endpoint — this is defense in depth, not the primary guard.
   const origin = request.headers.get('origin')
-  const host = request.headers.get('host')
   try {
-    if (!origin || !host || new URL(origin).host !== host) {
+    const expectedHost = new URL(request.url).host
+    if (!origin || new URL(origin).host !== expectedHost) {
       return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
     }
   } catch {
