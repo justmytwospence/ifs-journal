@@ -7,10 +7,7 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith('/login') ||
     req.nextUrl.pathname.startsWith('/register') ||
     req.nextUrl.pathname.startsWith('/reset-password')
-  const isPublicPage =
-    req.nextUrl.pathname === '/' ||
-    req.nextUrl.pathname === '/demo' ||
-    req.nextUrl.pathname.startsWith('/api/auth')
+  const isPublicPage = req.nextUrl.pathname === '/' || req.nextUrl.pathname === '/demo'
 
   // Redirect logged-in users away from auth pages
   if (isLoggedIn && isAuthPage) {
@@ -26,5 +23,5 @@ export default auth((req) => {
 })
 
 export const config = {
-  matcher: ['/((?!api/test|_next/static|_next/image|favicon.ico|.*\\.svg).*)'],
+  matcher: ['/((?!api/|_next/static|_next/image|favicon.ico|.*\\.svg).*)'],
 }
