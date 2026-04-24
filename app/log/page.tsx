@@ -46,6 +46,17 @@ interface JournalEntry {
   partAnalyses?: PartAnalysis[]
 }
 
+// Module-level so it's a stable reference across renders — avoids
+// re-triggering the useMemo below on every render of LogPageContent.
+function getWeekStart(date: Date): Date {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  const day = d.getDay()
+  const weekStart = new Date(d)
+  weekStart.setDate(d.getDate() - day)
+  return weekStart
+}
+
 function LogPageContent() {
   const searchParams = useSearchParams()
   const partSlugFromUrl = searchParams.get('part')
@@ -199,17 +210,6 @@ function LogPageContent() {
     }
   }, [partSlugFromUrl, parts, partsLoading])
 
-  // Helper function to get the start of the week (Sunday) at midnight
-  const getWeekStart = (date: Date) => {
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
-    const day = d.getDay()
-    const diff = -day // Go back to Sunday
-    const weekStart = new Date(d)
-    weekStart.setDate(d.getDate() + diff)
-    return weekStart
-  }
-
   // Helper function to format week range
   const formatWeekRange = (weekStart: Date) => {
     const weekEnd = new Date(weekStart)
@@ -250,7 +250,7 @@ function LogPageContent() {
       weekStart: new Date(weekKey),
       entries,
     }))
-  }, [filteredEntries, getWeekStart])
+  }, [filteredEntries])
 
   // Function to get excerpt with highlighted quote for selected part
   const getEntryExcerpt = (entry: JournalEntry) => {
