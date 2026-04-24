@@ -2,15 +2,14 @@
 
 import { signOut, useSession } from 'next-auth/react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { AppNav } from '@/components/AppNav'
-import { Toast } from '@/components/ui/Toast'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const handleExportData = async () => {
     setExporting(true)
@@ -32,10 +31,10 @@ export default function ProfilePage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      setToast({ message: 'Data exported successfully', type: 'success' })
+      toast.success('Data exported successfully')
     } catch (error) {
       console.error('Export error:', error)
-      setToast({ message: 'Failed to export data', type: 'error' })
+      toast.error('Failed to export data')
     } finally {
       setExporting(false)
     }
@@ -58,7 +57,7 @@ export default function ProfilePage() {
       await signOut({ callbackUrl: '/' })
     } catch (error) {
       console.error('Delete account error:', error)
-      setToast({ message: 'Failed to delete account', type: 'error' })
+      toast.error('Failed to delete account')
       setDeleting(false)
     }
   }
@@ -144,8 +143,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
 }

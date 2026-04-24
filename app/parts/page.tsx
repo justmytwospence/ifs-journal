@@ -7,7 +7,7 @@ import { AppNav } from '@/components/AppNav'
 import { PartsTreemap } from '@/components/parts/PartsTreemap'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PartsPageSkeleton } from '@/components/ui/skeleton/PartsPageSkeleton'
-import { Toast } from '@/components/ui/Toast'
+import { toast } from 'sonner'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 import { getPartIcon } from '@/lib/part-icons'
 import { slugify } from '@/lib/slug-utils'
@@ -27,7 +27,6 @@ interface Part {
 export default function PartsPage() {
   const [reanalyzing, setReanalyzing] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const { isAnalyzing, analysisType, setAnalyzing } = useAnalysisStore()
   const queryClient = useQueryClient()
 
@@ -87,29 +86,22 @@ export default function PartsPage() {
       const data = await response.json()
 
       if (response.ok) {
-        setToast({
-          message: `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`,
-          type: 'success',
-        })
+        toast.success(
+          `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`
+        )
         // Invalidate all queries that depend on analysis results
         await queryClient.invalidateQueries({ queryKey: ['parts'] })
         await queryClient.invalidateQueries({ queryKey: ['part'] })
         await queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
         await queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
       } else {
-        setToast({
-          message: data.error || 'Failed to reanalyze',
-          type: 'error',
-        })
+        toast.error(data.error || 'Failed to reanalyze')
         // Refetch parts data even on error to restore previous state
         await queryClient.invalidateQueries({ queryKey: ['parts'] })
       }
     } catch (error) {
       console.error('Failed to reanalyze:', error)
-      setToast({
-        message: 'Failed to start reanalysis',
-        type: 'error',
-      })
+      toast.error('Failed to start reanalysis')
       // Refetch parts data even on error to restore previous state
       await queryClient.invalidateQueries({ queryKey: ['parts'] })
     } finally {
@@ -233,7 +225,6 @@ export default function PartsPage() {
       />
 
       {/* Toast Notification */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
 }

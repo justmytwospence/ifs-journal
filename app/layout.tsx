@@ -3,6 +3,7 @@ import { Inter, Lora } from 'next/font/google'
 import { SessionProvider } from '@/components/auth/SessionProvider'
 import { QueryProvider } from '@/components/providers/QueryProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { Toaster } from '@/components/ui/sonner'
 import { auth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import './globals.css'
@@ -43,6 +44,7 @@ export default async function RootLayout({
           <QueryProvider>
             <SessionProvider session={session}>{children}</SessionProvider>
           </QueryProvider>
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

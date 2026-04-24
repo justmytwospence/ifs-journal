@@ -5,8 +5,8 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { AppNav } from '@/components/AppNav'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { toast } from 'sonner'
 import { DemoToast } from '@/components/ui/DemoToast'
-import { Toast } from '@/components/ui/Toast'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 // Type declarations for Web Speech API
@@ -46,7 +46,6 @@ export default function JournalPage() {
   const [saving, setSaving] = useState(false)
   const [loadingPrompt, setLoadingPrompt] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showDemoToast, setShowDemoToast] = useState(false)
   const { setAnalyzing } = useAnalysisStore()
   const [isListening, setIsListening] = useState(false)
@@ -147,7 +146,7 @@ export default function JournalPage() {
         console.error('Speech recognition error:', event.error)
         setIsListening(false)
         if (event.error === 'not-allowed') {
-          setToast({ message: 'Microphone access denied', type: 'error' })
+          toast.error('Microphone access denied')
         }
       }
 
@@ -161,7 +160,7 @@ export default function JournalPage() {
 
   const toggleListening = () => {
     if (!recognition) {
-      setToast({ message: 'Speech recognition not supported', type: 'error' })
+      toast.error('Speech recognition not supported')
       return
     }
 
@@ -174,7 +173,7 @@ export default function JournalPage() {
         recognition.start()
         setIsListening(true)
       } catch {
-        setToast({ message: 'Failed to start voice input', type: 'error' })
+        toast.error('Failed to start voice input')
       }
     }
   }
@@ -318,7 +317,7 @@ export default function JournalPage() {
     }
 
     if (!content.trim()) {
-      setToast({ message: 'Please write something first', type: 'error' })
+      toast.error('Please write something first')
       return
     }
 
@@ -337,7 +336,7 @@ export default function JournalPage() {
 
       if (response.status === 403) {
         const errorData = await response.json()
-        setToast({ message: errorData.error || 'Demo users cannot save entries', type: 'error' })
+        toast.error(errorData.error || 'Demo users cannot save entries')
         setSaving(false)
         return
       }
@@ -349,7 +348,7 @@ export default function JournalPage() {
       const data = await response.json()
       const entryId = data.entry.id
 
-      setToast({ message: 'Entry saved successfully!', type: 'success' })
+      toast.success('Entry saved successfully!')
       setContent('')
       localStorage.removeItem('journal-draft')
 
@@ -393,7 +392,7 @@ export default function JournalPage() {
         queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
       }, 30000)
     } catch {
-      setToast({ message: 'Failed to save entry', type: 'error' })
+      toast.error('Failed to save entry')
     } finally {
       setSaving(false)
     }
@@ -554,7 +553,6 @@ export default function JournalPage() {
         </div>
       </main>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {showDemoToast && <DemoToast onClose={() => setShowDemoToast(false)} />}
 
