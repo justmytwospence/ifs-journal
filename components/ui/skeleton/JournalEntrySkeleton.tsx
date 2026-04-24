@@ -6,7 +6,7 @@ export function JournalEntrySkeleton() {
     <div role="status" aria-busy="true" aria-label="Loading journal entry">
       <span className="sr-only">Loading journal entry...</span>
 
-      <div className="bg-card rounded-2xl shadow-sm p-8">
+      <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-8">
         <div className="mb-6">
           {/* Header with date and word count */}
           <div className="flex items-center justify-between mb-4">
@@ -15,7 +15,7 @@ export function JournalEntrySkeleton() {
           </div>
 
           {/* Prompt box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+          <div className="bg-muted border border-border rounded-xl p-4 mb-4">
             <Skeleton height={16} width={60} className="mb-1" />
             <Skeleton height={20} width="85%" />
           </div>

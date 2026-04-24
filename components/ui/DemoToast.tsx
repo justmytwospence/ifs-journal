@@ -39,12 +39,14 @@ export function DemoToast({ onClose }: DemoToastProps) {
             handleClick()
           }
         }}
-        className="bg-blue-600 text-white rounded-xl shadow-2xl p-4 max-w-md hover:bg-blue-700 transition-colors cursor-pointer"
+        className="bg-primary text-primary-foreground rounded-xl ring-1 ring-foreground/10 p-4 max-w-md hover:bg-primary/90 transition-colors cursor-pointer"
       >
         <div className="flex items-start gap-3">
           <div className="flex-1">
             <p className="font-semibold mb-1">This is a demo</p>
-            <p className="text-sm text-blue-100">Click here to create your own account →</p>
+            <p className="text-sm text-primary-foreground/80">
+              Click here to create your own account →
+            </p>
           </div>
           <button
             type="button"
@@ -53,7 +55,7 @@ export function DemoToast({ onClose }: DemoToastProps) {
               e.stopPropagation()
               onClose()
             }}
-            className="text-white hover:text-blue-100 transition-colors"
+            className="text-primary-foreground/80 hover:text-primary-foreground transition-colors"
             aria-label="Close"
           >
             <svg

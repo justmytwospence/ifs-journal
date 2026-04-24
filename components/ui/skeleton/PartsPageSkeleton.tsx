@@ -18,6 +18,9 @@ export function PartsPageSkeleton({ reanalyzing = false }: { reanalyzing?: boole
         )}
       </div>
 
+      {/* Timeline Skeleton */}
+      <Skeleton width="100%" height={260} className="rounded-2xl mb-6" />
+
       {/* "All Parts" Section Header */}
       <Skeleton width={100} height={24} className="mb-4" />
 

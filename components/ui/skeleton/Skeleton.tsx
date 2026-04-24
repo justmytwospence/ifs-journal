@@ -29,7 +29,7 @@ export function Skeleton({
       className={cn(
         'bg-muted',
         circle ? 'rounded-full' : 'rounded-lg',
-        animate && 'skeleton-shimmer',
+        animate && 'animate-pulse',
         className
       )}
       style={style}

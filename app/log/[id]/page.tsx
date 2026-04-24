@@ -169,9 +169,9 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' })
             // Add a temporary highlight effect
-            element.classList.add('ring-4', 'ring-yellow-300')
+            element.classList.add('ring-4', 'ring-primary/40')
             setTimeout(() => {
-              element.classList.remove('ring-4', 'ring-yellow-300')
+              element.classList.remove('ring-4', 'ring-primary/40')
             }, 2000)
           }
         }, 100)
@@ -325,17 +325,17 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
-            <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+            <Link href="/log" className="text-primary hover:text-primary/80 font-medium text-sm">
               ← Back to Journal Log
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-16 h-8 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="w-24 h-8 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="w-16 h-8 bg-muted rounded-lg animate-pulse" />
+              <div className="w-24 h-8 bg-muted rounded-lg animate-pulse" />
+              <div className="w-20 h-8 bg-muted rounded-lg animate-pulse" />
             </div>
           </div>
           <JournalEntrySkeleton />
@@ -346,12 +346,12 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (isError && !loading) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">Entry not found</p>
-            <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/log" className="text-primary hover:text-primary/80 font-medium">
               ← Back to Journal Log
             </Link>
           </div>
@@ -362,17 +362,17 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
-            <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+            <Link href="/log" className="text-primary hover:text-primary/80 font-medium text-sm">
               ← Back to Journal Log
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-16 h-8 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="w-24 h-8 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="w-16 h-8 bg-muted rounded-lg animate-pulse" />
+              <div className="w-24 h-8 bg-muted rounded-lg animate-pulse" />
+              <div className="w-20 h-8 bg-muted rounded-lg animate-pulse" />
             </div>
           </div>
           <JournalEntrySkeleton />
@@ -382,12 +382,12 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-background">
       <AppNav />
 
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-6 flex items-center justify-between">
-          <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+          <Link href="/log" className="text-primary hover:text-primary/80 font-medium text-sm">
             ← Back to Journal Log
           </Link>
 
@@ -399,7 +399,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
                 isDemo
                   ? 'text-muted-foreground border-input opacity-50 cursor-pointer'
-                  : 'text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300'
+                  : 'text-destructive hover:text-destructive/80 hover:bg-destructive/10 border-destructive/30'
               }`}
             >
               Delete
@@ -474,15 +474,19 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl shadow-sm p-8">
+        <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-8">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold">{formatFullEntryDate(entry.createdAt)}</h1>
+              <h1 className="font-heading text-3xl tracking-tight text-foreground">
+                {formatFullEntryDate(entry.createdAt)}
+              </h1>
               <span className="text-sm text-muted-foreground">{entry.wordCount} words</span>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-              <p className="text-sm font-medium text-blue-900 mb-1">Prompt:</p>
-              <p className="text-blue-700 font-semibold">{entry.prompt}</p>
+            <div className="bg-muted border border-border rounded-xl p-4 mb-4">
+              <p className="text-xs uppercase tracking-wide font-medium text-muted-foreground mb-1">
+                Prompt
+              </p>
+              <p className="text-foreground font-serif text-lg leading-snug">{entry.prompt}</p>
             </div>
 
             {/* Parts in this entry - moved above content */}
@@ -529,13 +533,13 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
 
           {entry.analysisStatus === 'pending' && (
-            <div className="mt-6 text-sm text-muted-foreground italic">Analysis pending...</div>
+            <div className="mt-6 text-sm text-muted-foreground italic">Analysis pending…</div>
           )}
           {entry.analysisStatus === 'processing' && (
-            <div className="mt-6 text-sm text-blue-600 italic">Analyzing parts...</div>
+            <div className="mt-6 text-sm text-primary italic">Analyzing parts…</div>
           )}
           {entry.analysisStatus === 'failed' && (
-            <div className="mt-6 text-sm text-red-600 italic">Analysis failed</div>
+            <div className="mt-6 text-sm text-destructive italic">Analysis failed</div>
           )}
         </div>
 

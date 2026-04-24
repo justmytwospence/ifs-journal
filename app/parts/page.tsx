@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { AppNav } from '@/components/AppNav'
+import { PartsTimeline } from '@/components/parts/PartsTimeline'
 import { PartsTreemap } from '@/components/parts/PartsTreemap'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PartsPageSkeleton } from '@/components/ui/skeleton/PartsPageSkeleton'
@@ -112,20 +113,20 @@ export default function PartsPage() {
   // Show error state without skeleton
   if (isError && !isBatchAnalyzing) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
-            <p className="text-red-600 mb-4">Failed to load parts</p>
+            <p className="text-destructive mb-4">Failed to load parts</p>
             <p className="text-muted-foreground mb-4">
               {error instanceof Error ? error.message : 'An error occurred'}
             </p>
             <button
               type="button"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['parts'] })}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
             >
-              Try Again
+              Try again
             </button>
           </div>
         </main>
@@ -134,7 +135,7 @@ export default function PartsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-background">
       <AppNav />
 
       {/* Main Content */}
@@ -142,12 +143,12 @@ export default function PartsPage() {
         {showLoading || isBatchAnalyzing ? (
           <>
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
-              <h2 className="text-3xl font-bold">Your Parts</h2>
+              <h2 className="font-heading text-3xl tracking-tight text-foreground">Your parts</h2>
               <button
                 type="button"
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={true}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
               >
                 {isBatchAnalyzing ? 'Reanalyzing...' : 'Reanalyze All Entries'}
               </button>
@@ -157,37 +158,54 @@ export default function PartsPage() {
         ) : (
           <>
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
-              <h2 className="text-3xl font-bold">Your Parts</h2>
+              <h2 className="font-heading text-3xl tracking-tight text-foreground">Your parts</h2>
               <button
                 type="button"
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={isBatchAnalyzing}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
               >
                 {isBatchAnalyzing ? 'Reanalyzing...' : 'Reanalyze All Entries'}
               </button>
             </div>
 
             {parts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">No parts discovered yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Write journal entries to discover your internal parts
-                </p>
+              <div className="max-w-xl mx-auto text-center py-12 space-y-6">
+                <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-6 text-left space-y-3">
+                  <h3 className="font-heading text-lg text-foreground">How parts get here</h3>
+                  <p className="text-sm text-muted-foreground">
+                    IFS treats the mind as a system of "parts" — Managers that plan, Firefighters
+                    that distract from pain, Protectors that guard you, and Exiles that carry old
+                    wounds. When you write a journal entry, Claude reads it and identifies parts
+                    with direct quotes from your own words.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Write your first entry to see this page come alive.
+                  </p>
+                </div>
+                <Link
+                  href="/journal"
+                  className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition"
+                >
+                  Write your first entry
+                </Link>
               </div>
             ) : (
               <>
                 {/* Parts Treemap Visualization */}
                 <PartsTreemap parts={parts} />
 
+                {/* Activity Timeline */}
+                <PartsTimeline parts={parts} />
+
                 {/* Parts Grid */}
-                <h3 className="text-lg font-semibold mb-4">All Parts</h3>
+                <h3 className="font-heading text-lg text-foreground mb-4">All parts</h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {parts.map((part) => (
                     <Link
                       key={part.id}
                       href={`/parts/${slugify(part.name)}`}
-                      className="bg-card rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col"
+                      className="bg-card rounded-2xl ring-1 ring-foreground/10 hover:ring-foreground/20 p-6 transition-all flex flex-col"
                     >
                       <div className="flex items-start gap-4 mb-3">
                         <div
@@ -197,7 +215,9 @@ export default function PartsPage() {
                           {getPartIcon(part.icon)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold mb-0.5">{part.name}</h3>
+                          <h3 className="font-heading text-lg text-foreground mb-0.5">
+                            {part.name}
+                          </h3>
                           <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
                             {part.role}
                           </span>

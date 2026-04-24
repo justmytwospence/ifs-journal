@@ -91,21 +91,24 @@ export function AppNav() {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
+      <nav className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4 md:gap-8">
-              <h1 className="text-xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent shrink-0">
+              <Link
+                href="/"
+                className="font-heading text-xl tracking-tight text-foreground shrink-0"
+              >
                 IFS Journal
-              </h1>
+              </Link>
               {/* Desktop nav links - hidden on mobile */}
               <div className="hidden md:flex gap-1">
                 <Link
                   href="/journal"
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/journal')
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-muted-foreground hover:bg-muted'
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Journal
@@ -114,8 +117,8 @@ export function AppNav() {
                   href="/log"
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/log')
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-muted-foreground hover:bg-muted'
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Log
@@ -124,8 +127,8 @@ export function AppNav() {
                   href="/parts"
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/parts')
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-muted-foreground hover:bg-muted'
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   }`}
                 >
                   Parts
@@ -135,17 +138,17 @@ export function AppNav() {
             <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
               {session?.user?.isDemo && (
-                <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-purple-50 border border-purple-200 rounded-lg shrink-0">
-                  <span className="text-xs md:text-sm font-medium text-purple-700 whitespace-nowrap">
-                    👁️ Demo
+                <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-muted border border-border rounded-lg shrink-0">
+                  <span className="text-xs md:text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    <span aria-hidden="true">👁️</span> Demo
                     <span className="hidden md:inline"> (Read-Only)</span>
                   </span>
                 </div>
               )}
               {isAnalyzing && (
-                <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-blue-50 border border-blue-200 rounded-lg shrink-0">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                  <span className="text-xs md:text-sm font-medium text-blue-700 whitespace-nowrap">
+                <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-primary/10 border border-primary/20 rounded-lg shrink-0">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  <span className="text-xs md:text-sm font-medium text-primary whitespace-nowrap">
                     <span className="hidden sm:inline">
                       {analysisType === 'batch' ? 'Batch analyzing...' : 'Analyzing...'}
                     </span>
@@ -156,7 +159,7 @@ export function AppNav() {
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label="Account menu"
-                  className="size-10 shrink-0 rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold flex items-center justify-center hover:shadow-lg transition-shadow focus-visible:ring-2 focus-visible:ring-ring outline-none"
+                  className="size-10 shrink-0 rounded-full bg-foreground text-background text-sm font-semibold flex items-center justify-center transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 >
                   {getInitials()}
                 </DropdownMenuTrigger>
@@ -171,12 +174,12 @@ export function AppNav() {
       </nav>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-sm border-t border-border pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border pb-safe">
         <div className="flex items-center justify-around h-16">
           <Link
             href="/journal"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/journal') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
+              isActive('/journal') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <JournalIcon className="w-6 h-6 mb-1" />
@@ -185,7 +188,7 @@ export function AppNav() {
           <Link
             href="/log"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/log') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
+              isActive('/log') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <LogIcon className="w-6 h-6 mb-1" />
@@ -194,7 +197,7 @@ export function AppNav() {
           <Link
             href="/parts"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/parts') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
+              isActive('/parts') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <PartsIcon className="w-6 h-6 mb-1" />
