@@ -5,7 +5,6 @@ import { z } from 'zod'
 import { anthropic, CONVERSATION_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { demoGuard } from '@/lib/demo-guard'
 import { captureException } from '@/lib/logger'
 import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
@@ -29,8 +28,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const demoCheck = await demoGuard()
-    if (demoCheck) return demoCheck
+    // Demo users can chat — conversation is the signature UX — but their
+    // responses aren't persisted (see partConversation.create below).
+    const isDemo = session.user.isDemo === true
 
     const limited = await enforceRateLimit({
       subjectKey: `user:${session.user.id}`,
@@ -186,14 +186,16 @@ export async function POST(request: NextRequest) {
 
           await stream.finalMessage()
 
-          await prisma.partConversation.create({
-            data: {
-              partId: part.id,
-              userId: session.user.id,
-              userMessage: message,
-              partResponse: fullResponse || 'I need a moment to think about that.',
-            },
-          })
+          if (!isDemo) {
+            await prisma.partConversation.create({
+              data: {
+                partId: part.id,
+                userId: session.user.id,
+                userMessage: message,
+                partResponse: fullResponse || 'I need a moment to think about that.',
+              },
+            })
+          }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
