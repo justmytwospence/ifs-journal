@@ -1,6 +1,6 @@
-import { HTMLAttributes } from 'react'
-import { Skeleton } from './Skeleton'
+import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
+import { Skeleton } from './Skeleton'
 
 interface SkeletonTextProps extends HTMLAttributes<HTMLDivElement> {
   lines?: number
@@ -23,12 +23,7 @@ export function SkeletonText({
   return (
     <div className={cn('space-y-2', className)} {...props}>
       {lineWidths.map((width, index) => (
-        <Skeleton
-          key={index}
-          height={8}
-          width={width}
-          animate={animate}
-        />
+        <Skeleton key={index} height={8} width={width} animate={animate} />
       ))}
     </div>
   )

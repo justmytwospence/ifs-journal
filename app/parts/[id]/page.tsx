@@ -1,13 +1,13 @@
 'use client'
 
-import { AppNav } from '@/components/AppNav'
-import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { createEntrySlug } from '@/lib/slug-utils'
-import { getPartIcon } from '@/lib/part-icons'
+import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { AppNav } from '@/components/AppNav'
 import { PartDetailSkeleton } from '@/components/ui/skeleton/PartDetailSkeleton'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
+import { getPartIcon } from '@/lib/part-icons'
+import { createEntrySlug } from '@/lib/slug-utils'
 
 interface QuoteWithEntry {
   text: string
@@ -45,11 +45,15 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   // Unwrap params
   useEffect(() => {
-    params.then(p => setSlug(p.id))
+    params.then((p) => setSlug(p.id))
   }, [params])
 
   // Fetch part details using React Query
-  const { data: partData, isLoading: partLoading, isError: partError } = useQuery({
+  const {
+    data: partData,
+    isLoading: partLoading,
+    isError: partError,
+  } = useQuery({
     queryKey: ['part', slug],
     queryFn: async () => {
       if (!slug) throw new Error('No slug provided')
@@ -75,20 +79,22 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
       const messages: ConversationMessage[] = []
       if (data.conversations) {
-        data.conversations.forEach((conv: { id: string; userMessage: string; partResponse: string; createdAt: string }) => {
-          messages.push({
-            id: conv.id,
-            role: 'user',
-            content: conv.userMessage,
-            createdAt: conv.createdAt,
-          })
-          messages.push({
-            id: conv.id,
-            role: 'part',
-            content: conv.partResponse,
-            createdAt: conv.createdAt,
-          })
-        })
+        data.conversations.forEach(
+          (conv: { id: string; userMessage: string; partResponse: string; createdAt: string }) => {
+            messages.push({
+              id: conv.id,
+              role: 'user',
+              content: conv.userMessage,
+              createdAt: conv.createdAt,
+            })
+            messages.push({
+              id: conv.id,
+              role: 'part',
+              content: conv.partResponse,
+              createdAt: conv.createdAt,
+            })
+          }
+        )
       }
       return messages
     },
@@ -120,11 +126,11 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
       role: 'user',
       content: userMessage,
     }
-    setConversation(prev => [...prev, newUserMessage])
+    setConversation((prev) => [...prev, newUserMessage])
 
     // Add empty part message that will be filled with streaming content
     const partMessageIndex = conversation.length + 1
-    setConversation(prev => [...prev, { role: 'part', content: '' }])
+    setConversation((prev) => [...prev, { role: 'part', content: '' }])
 
     try {
       const response = await fetch('/api/conversations', {
@@ -169,7 +175,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               if (parsed.content) {
                 streamedContent += parsed.content
                 // Update the part message with streaming content
-                setConversation(prev => {
+                setConversation((prev) => {
                   const updated = [...prev]
                   updated[partMessageIndex] = {
                     role: 'part',
@@ -188,7 +194,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
       console.error('Failed to send message:', error)
       setError(error instanceof Error ? error.message : 'Failed to send message')
       // Remove the optimistic messages on error
-      setConversation(prev => prev.slice(0, -2))
+      setConversation((prev) => prev.slice(0, -2))
     } finally {
       setSending(false)
     }
@@ -270,9 +276,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
             >
               View Related Entries
             </Link>
-            <button
-              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition text-sm whitespace-nowrap"
-            >
+            <button className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition text-sm whitespace-nowrap">
               Delete Part
             </button>
           </div>
@@ -336,36 +340,38 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
             <ul className="space-y-3">
-              {part.quotesWithEntries && part.quotesWithEntries.length > 0 ? (
-                (showAllQuotes ? part.quotesWithEntries : part.quotesWithEntries.slice(0, 3)).map((quote, i) => (
-                  <li key={i}>
-                    <Link
-                      href={`/log/${quote.entryCreatedAt ? createEntrySlug(quote.entryCreatedAt) : quote.entryId}#quote-${encodeURIComponent(quote.text)}`}
-                      className="block text-gray-700 italic border-l-4 pl-4 py-2 hover:bg-gray-50 transition-colors rounded-r"
+              {part.quotesWithEntries && part.quotesWithEntries.length > 0
+                ? (showAllQuotes ? part.quotesWithEntries : part.quotesWithEntries.slice(0, 3)).map(
+                    (quote, i) => (
+                      <li key={i}>
+                        <Link
+                          href={`/log/${quote.entryCreatedAt ? createEntrySlug(quote.entryCreatedAt) : quote.entryId}#quote-${encodeURIComponent(quote.text)}`}
+                          className="block text-gray-700 italic border-l-4 pl-4 py-2 hover:bg-gray-50 transition-colors rounded-r"
+                          style={{ borderColor: part.color }}
+                        >
+                          &ldquo;{quote.text}&rdquo;
+                        </Link>
+                      </li>
+                    )
+                  )
+                : part.quotes.slice(0, showAllQuotes ? undefined : 3).map((quote, i) => (
+                    <li
+                      key={i}
+                      className="text-gray-700 italic border-l-4 pl-4 py-2"
                       style={{ borderColor: part.color }}
                     >
-                      &ldquo;{quote.text}&rdquo;
-                    </Link>
-                  </li>
-                ))
-              ) : (
-                part.quotes.slice(0, showAllQuotes ? undefined : 3).map((quote, i) => (
-                  <li
-                    key={i}
-                    className="text-gray-700 italic border-l-4 pl-4 py-2"
-                    style={{ borderColor: part.color }}
-                  >
-                    &ldquo;{quote}&rdquo;
-                  </li>
-                ))
-              )}
+                      &ldquo;{quote}&rdquo;
+                    </li>
+                  ))}
             </ul>
           </div>
 
           {/* Conversation */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-2">Conversation with {part.name}</h2>
-            <p className="text-sm text-gray-600 mb-6">Have a dialogue to understand this part better</p>
+            <p className="text-sm text-gray-600 mb-6">
+              Have a dialogue to understand this part better
+            </p>
 
             {error && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -390,18 +396,20 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                   {conversation.map((msg, i) => (
                     <div
                       key={i}
-                      className={`p-4 rounded-xl ${msg.role === 'user'
-                        ? 'bg-blue-50 ml-8'
-                        : 'bg-gray-50 mr-8'
-                        }`}
+                      className={`p-4 rounded-xl ${
+                        msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-gray-50 mr-8'
+                      }`}
                     >
                       <p className="text-sm font-medium mb-1 text-gray-700">
                         {msg.role === 'user' ? 'You' : part.name}
                       </p>
                       <p className="text-gray-700">
-                        {msg.content || (sending && msg.role === 'part' ? (
-                          <span className="text-gray-500 italic">Thinking...</span>
-                        ) : '')}
+                        {msg.content ||
+                          (sending && msg.role === 'part' ? (
+                            <span className="text-gray-500 italic">Thinking...</span>
+                          ) : (
+                            ''
+                          ))}
                       </p>
                     </div>
                   ))}

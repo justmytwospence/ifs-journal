@@ -18,9 +18,7 @@ export function Toast({ message, type = 'success', onClose }: ToastProps) {
     <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom">
       <div
         className={`px-6 py-4 rounded-xl shadow-lg ${
-          type === 'success'
-            ? 'bg-green-600 text-white'
-            : 'bg-red-600 text-white'
+          type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
         }`}
       >
         {message}

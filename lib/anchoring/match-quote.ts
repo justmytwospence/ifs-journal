@@ -1,14 +1,14 @@
 /**
  * Text anchoring utilities based on W3C Web Annotation Data Model
  * Adapted from Hypothesis client (https://github.com/hypothesis/client)
- * 
+ *
  * Provides:
  * - computeSelector: Create TextPositionSelector + TextQuoteSelector from quote text
  * - matchQuote: Fuzzy re-anchor a quote when content has changed
  */
 
-import approxSearch from 'approx-string-match'
 import type { Match as StringMatch } from 'approx-string-match'
+import approxSearch from 'approx-string-match'
 
 /** Context length for prefix/suffix (W3C convention) */
 const CONTEXT_LENGTH = 32
@@ -83,13 +83,13 @@ export interface MatchContext {
 
 /**
  * Find the best approximate match for a quote in text.
- * 
+ *
  * Uses the approx-string-match algorithm with weighted scoring based on:
  * - Quote similarity (50%)
  * - Prefix context match (20%)
  * - Suffix context match (20%)
  * - Position hint proximity (10%)
- * 
+ *
  * @param text - The full document text to search in
  * @param quote - The quote text to find
  * @param context - Optional prefix, suffix, and position hint
@@ -128,10 +128,7 @@ export function matchQuote(
       : 1.0
 
     const suffixScore = context.suffix
-      ? textMatchScore(
-          text.slice(match.end, match.end + context.suffix.length),
-          context.suffix
-        )
+      ? textMatchScore(text.slice(match.end, match.end + context.suffix.length), context.suffix)
       : 1.0
 
     let posScore = 1.0
@@ -170,10 +167,10 @@ export function matchQuote(
 
 /**
  * Compute a complete text selector (position + quote) for a quote in text.
- * 
+ *
  * This creates both a TextPositionSelector (offsets) and TextQuoteSelector
  * (exact text + prefix/suffix context) following W3C Web Annotation Data Model.
- * 
+ *
  * @param text - The full document text
  * @param quote - The exact quote text to find
  * @param startHint - Optional hint for where the quote should be (for disambiguation)
@@ -226,10 +223,10 @@ export function computeSelector(
 
 /**
  * Re-anchor a stale highlight using fuzzy matching.
- * 
+ *
  * When content has changed and stored offsets are invalid, this function
  * attempts to find the original quote using the TextQuoteSelector fields.
- * 
+ *
  * @param text - The current document text
  * @param selector - The stored selector with exact, prefix, suffix
  * @returns Updated offsets, or null if re-anchoring failed

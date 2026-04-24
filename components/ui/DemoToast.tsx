@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
+import { useEffect } from 'react'
 
 interface DemoToastProps {
   onClose: () => void
@@ -28,16 +28,14 @@ export function DemoToast({ onClose }: DemoToastProps) {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
-      <div 
+      <div
         onClick={handleClick}
         className="bg-blue-600 text-white rounded-xl shadow-2xl p-4 max-w-md hover:bg-blue-700 transition-colors cursor-pointer"
       >
         <div className="flex items-start gap-3">
           <div className="flex-1">
             <p className="font-semibold mb-1">This is a demo</p>
-            <p className="text-sm text-blue-100">
-              Click here to create your own account →
-            </p>
+            <p className="text-sm text-blue-100">Click here to create your own account →</p>
           </div>
           <button
             onClick={(e) => {
@@ -49,7 +47,12 @@ export function DemoToast({ onClose }: DemoToastProps) {
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>

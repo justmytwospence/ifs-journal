@@ -28,10 +28,7 @@ export function LogPageSkeleton() {
       {/* Entry Cards List Skeleton */}
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100"
-          >
+          <div key={index} className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
             {/* Entry Header with Date and Metadata */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">

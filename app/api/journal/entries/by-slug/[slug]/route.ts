@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -13,10 +10,10 @@ export async function GET(
     }
 
     const { slug } = await params
-    
+
     // O(1) lookup using indexed slug field
     const entry = await prisma.journalEntry.findUnique({
-      where: { 
+      where: {
         userId_slug: {
           userId: session.user.id,
           slug,
@@ -36,7 +33,7 @@ export async function GET(
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       entry: {
         id: entry.id,
         prompt: entry.prompt,
@@ -45,10 +42,10 @@ export async function GET(
         wordCount: entry.wordCount,
         analysisStatus: entry.analysisStatus,
         createdAt: entry.createdAt,
-        partAnalyses: entry.partAnalyses.map(analysis => ({
+        partAnalyses: entry.partAnalyses.map((analysis) => ({
           id: analysis.id,
           partId: analysis.partId,
-          highlights: analysis.highlights.map(h => ({
+          highlights: analysis.highlights.map((h) => ({
             id: h.id,
             startOffset: h.startOffset,
             endOffset: h.endOffset,
@@ -65,7 +62,7 @@ export async function GET(
             color: analysis.part.color,
           },
         })),
-      }
+      },
     })
   } catch (error) {
     console.error('Get entry by slug error:', error)

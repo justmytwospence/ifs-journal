@@ -28,7 +28,7 @@ export function useJournalEntries(includeAnalyses = false) {
   return useQuery({
     queryKey: ['journal-entries', { includeAnalyses }],
     queryFn: async () => {
-      const url = includeAnalyses 
+      const url = includeAnalyses
         ? '/api/journal/entries?includeAnalyses=true'
         : '/api/journal/entries'
       const response = await fetch(url)

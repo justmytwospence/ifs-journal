@@ -1,5 +1,5 @@
-import { SkeletonCard } from './SkeletonCard'
 import { Skeleton } from './Skeleton'
+import { SkeletonCard } from './SkeletonCard'
 
 export function PartsPageSkeleton({ reanalyzing = false }: { reanalyzing?: boolean }) {
   return (

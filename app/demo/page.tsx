@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 
 export default function DemoPage() {
   const router = useRouter()

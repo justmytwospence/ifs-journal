@@ -1,6 +1,6 @@
 /**
  * Part Similarity Detection
- * 
+ *
  * Prevents duplicate parts by detecting semantic similarity in names,
  * roles, and descriptions. Uses multiple strategies:
  * 1. Aggressive name normalization (handles hyphens, common words, etc.)
@@ -14,9 +14,16 @@
 // stay so that getCanonicalSynonym can still match them against synonym groups.
 const STRIP_WORDS = [
   // Articles
-  'the', 'a', 'an',
+  'the',
+  'a',
+  'an',
   // Structural suffixes that don't carry identity
-  'part', 'one', 'self', 'inner', 'voice', 'side',
+  'part',
+  'one',
+  'self',
+  'inner',
+  'voice',
+  'side',
 ]
 
 // Synonym groups - any name containing words from the same group should match
@@ -26,7 +33,18 @@ const SYNONYM_GROUPS = [
   ['anxious', 'worrier', 'worried', 'anxiety', 'nervous'],
   ['avoider', 'avoidant', 'escape', 'escaper', 'procrastinator'],
   ['pleaser', 'people-pleaser', 'peoplepleaser', 'fixer', 'caretaker'],
-  ['wounded', 'hurt', 'vulnerable', 'child', 'inner child', 'exile', 'small', 'little', 'young', 'tender'],
+  [
+    'wounded',
+    'hurt',
+    'vulnerable',
+    'child',
+    'inner child',
+    'exile',
+    'small',
+    'little',
+    'young',
+    'tender',
+  ],
   ['angry', 'rage', 'furious', 'frustrated'],
   ['lonely', 'abandoned', 'isolated', 'alone'],
   ['hopeful', 'optimist', 'optimistic', 'hope'],
@@ -125,7 +143,7 @@ export function calculateNameSimilarity(name1: string, name2: string): number {
   if (n1.includes(n2) || n2.includes(n1)) {
     const shorter = Math.min(n1.length, n2.length)
     const longer = Math.max(n1.length, n2.length)
-    return 0.8 + (0.2 * shorter / longer)
+    return 0.8 + (0.2 * shorter) / longer
   }
 
   // Calculate Levenshtein distance
@@ -138,13 +156,50 @@ export function calculateNameSimilarity(name1: string, name2: string): number {
 
 // Keywords for description similarity
 const DESCRIPTION_KEYWORDS = [
-  'critic', 'judge', 'perfectionist', 'worrier', 'anxious', 'fear',
-  'avoider', 'procrastinator', 'escape', 'hurt', 'abandoned', 'lonely',
-  'angry', 'protector', 'guardian', 'shield', 'control', 'plan', 'prevent',
-  'distract', 'numb', 'shame', 'vulnerable', 'compassion', 'observer',
-  'witness', 'watcher', 'kind', 'gentle', 'caring', 'understanding',
-  'achieve', 'succeed', 'perform', 'please', 'fix', 'help', 'save',
-  'hide', 'withdraw', 'isolate', 'rage', 'fury', 'frustrat',
+  'critic',
+  'judge',
+  'perfectionist',
+  'worrier',
+  'anxious',
+  'fear',
+  'avoider',
+  'procrastinator',
+  'escape',
+  'hurt',
+  'abandoned',
+  'lonely',
+  'angry',
+  'protector',
+  'guardian',
+  'shield',
+  'control',
+  'plan',
+  'prevent',
+  'distract',
+  'numb',
+  'shame',
+  'vulnerable',
+  'compassion',
+  'observer',
+  'witness',
+  'watcher',
+  'kind',
+  'gentle',
+  'caring',
+  'understanding',
+  'achieve',
+  'succeed',
+  'perform',
+  'please',
+  'fix',
+  'help',
+  'save',
+  'hide',
+  'withdraw',
+  'isolate',
+  'rage',
+  'fury',
+  'frustrat',
 ]
 
 /**
@@ -181,7 +236,7 @@ export interface PartData {
 /**
  * Find the most similar existing part to a new part
  * Returns the ID of the match if similarity > threshold, otherwise null
- * 
+ *
  * @param newPart - The new part to check
  * @param existingParts - List of existing parts to compare against
  * @param threshold - Minimum similarity score to consider a match (default 0.6)
@@ -199,10 +254,7 @@ export function findSimilarPart(
     // Calculate similarity scores
     const nameScore = calculateNameSimilarity(newPart.name, existing.name)
     const roleMatch = newPart.role === existing.role ? 1.0 : 0.3
-    const keywordScore = calculateKeywordOverlap(
-      newPart.description,
-      existing.description
-    )
+    const keywordScore = calculateKeywordOverlap(newPart.description, existing.description)
 
     // Weighted overall similarity: name (60%), role (20%), keywords (20%)
     // Name is most important - if names match strongly, it's likely a duplicate
@@ -216,7 +268,7 @@ export function findSimilarPart(
       }
       console.log(
         `Similarity match: "${newPart.name}" → "${existing.name}" (score: ${overallScore.toFixed(2)}, ` +
-        `name: ${nameScore.toFixed(2)}, role: ${roleMatch.toFixed(2)}, keywords: ${keywordScore.toFixed(2)})`
+          `name: ${nameScore.toFixed(2)}, role: ${roleMatch.toFixed(2)}, keywords: ${keywordScore.toFixed(2)})`
       )
     }
   }
@@ -241,7 +293,9 @@ export function deduplicateParts(
       const nameScore = calculateNameSimilarity(part.name, canonical.name)
       if (nameScore > 0.7) {
         matchId = canonical.tempId
-        console.log(`Dedup: "${part.name}" merged into "${canonical.name}" (score: ${nameScore.toFixed(2)})`)
+        console.log(
+          `Dedup: "${part.name}" merged into "${canonical.name}" (score: ${nameScore.toFixed(2)})`
+        )
         break
       }
     }

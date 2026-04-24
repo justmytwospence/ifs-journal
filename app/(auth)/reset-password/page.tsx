@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { Button, Input, Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
+import { useState } from 'react'
+import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { openai } from '@/lib/openai'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { type NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { openai } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +14,7 @@ export async function POST(request: NextRequest) {
     const { prompt, content } = await request.json()
 
     if (!content || content.trim().length < 50) {
-      return NextResponse.json(
-        { error: 'Content too short for tips' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Content too short for tips' }, { status: 400 })
     }
 
     // Load the writing tips prompt template
@@ -51,9 +48,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ tip })
   } catch (error) {
     console.error('Writing tips generation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate writing tip' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to generate writing tip' }, { status: 500 })
   }
 }

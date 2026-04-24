@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
-import prisma from '@/lib/db'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import prisma from '@/lib/db'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,10 +19,7 @@ export async function POST(request: Request) {
     })
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 })
     }
 
     // Hash password
@@ -49,16 +46,10 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
     }
 
     console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create account' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
   }
 }

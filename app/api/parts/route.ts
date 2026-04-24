@@ -14,7 +14,7 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         partAnalyses: {
-          select: { 
+          select: {
             id: true,
             entryId: true,
             highlights: {
@@ -27,14 +27,14 @@ export async function GET() {
     })
 
     // Get all entry dates for activity calculation (using entry dates, not analysis dates)
-    const allEntryIds = [...new Set(parts.flatMap(p => p.partAnalyses.map(a => a.entryId)))]
+    const allEntryIds = [...new Set(parts.flatMap((p) => p.partAnalyses.map((a) => a.entryId)))]
     const entries = await prisma.journalEntry.findMany({
       where: { id: { in: allEntryIds } },
       select: { id: true, createdAt: true },
     })
-    const entryDateMap = new Map(entries.map(e => [e.id, e.createdAt]))
+    const entryDateMap = new Map(entries.map((e) => [e.id, e.createdAt]))
 
-    const partsWithStats = parts.map(part => transformPartWithStats(part, entryDateMap))
+    const partsWithStats = parts.map((part) => transformPartWithStats(part, entryDateMap))
 
     return NextResponse.json({ parts: partsWithStats })
   } catch (error) {

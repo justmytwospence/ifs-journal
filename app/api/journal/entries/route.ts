@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { computeContentHash } from '@/lib/anchoring'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { z } from 'zod'
 import { demoGuard } from '@/lib/demo-guard'
-import { computeContentHash } from '@/lib/anchoring'
 import { createEntrySlug } from '@/lib/slug-utils'
 
 const createEntrySchema = z.object({
@@ -42,17 +42,17 @@ export async function POST(request: Request) {
     })
 
     // Trigger incremental analysis asynchronously (fire and forget)
-    const baseUrl = request.headers.get('host') 
+    const baseUrl = request.headers.get('host')
       ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
       : process.env.NEXTAUTH_URL || 'http://localhost:3000'
-    
+
     fetch(`${baseUrl}/api/journal/entries/${entry.id}/incremental-analysis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': request.headers.get('cookie') || '',
+        Cookie: request.headers.get('cookie') || '',
       },
-    }).catch(err => {
+    }).catch((err) => {
       console.error('Failed to trigger incremental analysis:', err)
     })
 
@@ -77,10 +77,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const includeAnalyses = searchParams.get('includeAnalyses') === 'true'
     const weeks = parseInt(searchParams.get('weeks') || '1', 10)
-    
+
     // Calculate date for N weeks ago
     const weeksAgo = new Date()
-    weeksAgo.setDate(weeksAgo.getDate() - (weeks * 7))
+    weeksAgo.setDate(weeksAgo.getDate() - weeks * 7)
 
     const where = { userId: session.user.id }
 

@@ -42,9 +42,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Database error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Database query failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Database query failed' }, { status: 500 })
   }
 }

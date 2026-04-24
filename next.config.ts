@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // Include markdown prompt files in serverless function bundles
@@ -9,6 +9,6 @@ const nextConfig: NextConfig = {
     '/api/prompts/writing-tips': ['./lib/prompts/**/*'],
     '/api/conversations': ['./lib/prompts/**/*'],
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

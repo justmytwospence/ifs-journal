@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
@@ -37,9 +37,6 @@ export async function GET(
     })
   } catch (error) {
     console.error('Failed to fetch conversations:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 })
   }
 }

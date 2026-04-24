@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import prisma from '@/lib/db'
 import { runBatchAnalysis } from '@/lib/batch-analysis'
+import prisma from '@/lib/db'
 
 export async function POST() {
   try {

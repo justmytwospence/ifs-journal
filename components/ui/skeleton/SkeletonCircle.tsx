@@ -1,6 +1,6 @@
-import { HTMLAttributes } from 'react'
-import { Skeleton } from './Skeleton'
+import type { HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
+import { Skeleton } from './Skeleton'
 
 interface SkeletonCircleProps extends HTMLAttributes<HTMLDivElement> {
   size?: number

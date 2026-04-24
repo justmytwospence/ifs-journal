@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
+import { ResponsiveContainer, Tooltip, Treemap } from 'recharts'
 import { slugify } from '@/lib/slug-utils'
 
 interface Part {
@@ -35,14 +35,14 @@ const getFittedText = (text: string, width: number, maxFontSize: number) => {
   const charWidthRatio = 0.6 // characters are roughly 60% of font size in width
   const padding = 16 // padding on both sides
   const availableWidth = width - padding
-  
+
   // Calculate how many characters can fit at max font size
   const maxCharsAtMaxSize = Math.floor(availableWidth / (maxFontSize * charWidthRatio))
-  
+
   if (text.length <= maxCharsAtMaxSize) {
     return { text, fontSize: maxFontSize }
   }
-  
+
   // Try smaller font sizes
   for (let fontSize = maxFontSize - 1; fontSize >= 10; fontSize--) {
     const maxChars = Math.floor(availableWidth / (fontSize * charWidthRatio))
@@ -50,38 +50,38 @@ const getFittedText = (text: string, width: number, maxFontSize: number) => {
       return { text, fontSize }
     }
   }
-  
+
   // If still too long, truncate with ellipsis
   const minFontSize = 10
   const maxChars = Math.floor(availableWidth / (minFontSize * charWidthRatio)) - 1 // -1 for ellipsis
   if (maxChars > 3) {
     return { text: text.substring(0, maxChars) + '…', fontSize: minFontSize }
   }
-  
+
   return { text: '', fontSize: minFontSize } // Too small to show anything
 }
 
 // Custom content component for treemap cells
 const CustomizedContent = (props: TreemapCellProps) => {
   const { x, y, width, height, name, displayName, color, depth } = props
-  
+
   // Depth 1 = role groups, depth 2 = individual parts
   const isRoleGroup = depth === 1
-  
+
   // Use displayName for parts (to show clean name without ID), name for role groups
-  const textToDisplay = isRoleGroup ? name : (displayName || name)
-  
+  const textToDisplay = isRoleGroup ? name : displayName || name
+
   // Calculate minimum dimensions to show text
   const minWidth = isRoleGroup ? 80 : 50
   const minHeight = isRoleGroup ? 35 : 25
   const showName = width > minWidth && height > minHeight
-  
+
   // Calculate fitted text and font size
   const maxFontSize = isRoleGroup ? 12 : 14
-  const { text: fittedText, fontSize } = showName 
+  const { text: fittedText, fontSize } = showName
     ? getFittedText(textToDisplay, width, maxFontSize)
     : { text: '', fontSize: maxFontSize }
-  
+
   return (
     <g>
       <rect
@@ -105,7 +105,7 @@ const CustomizedContent = (props: TreemapCellProps) => {
           fill={isRoleGroup ? '#64748b' : '#fff'}
           fontSize={fontSize}
           fontWeight={isRoleGroup ? '500' : '600'}
-          style={{ 
+          style={{
             pointerEvents: 'none',
             textRendering: 'geometricPrecision',
             shapeRendering: 'crispEdges',
@@ -146,13 +146,16 @@ export function PartsTreemap({ parts }: PartsTreemapProps) {
   const router = useRouter()
 
   // Group parts by role
-  const groupedByRole = parts.reduce((acc, part) => {
-    if (!acc[part.role]) {
-      acc[part.role] = []
-    }
-    acc[part.role].push(part)
-    return acc
-  }, {} as Record<string, Part[]>)
+  const groupedByRole = parts.reduce(
+    (acc, part) => {
+      if (!acc[part.role]) {
+        acc[part.role] = []
+      }
+      acc[part.role].push(part)
+      return acc
+    },
+    {} as Record<string, Part[]>
+  )
 
   // Transform into hierarchical treemap format
   // Use part ID in the name to ensure uniqueness for Recharts key generation

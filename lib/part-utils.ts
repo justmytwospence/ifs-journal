@@ -13,9 +13,9 @@ export function deriveQuotes(
   limit?: number
 ): string[] {
   const quotes = partAnalyses
-    .flatMap(a => a.highlights.map(h => h.exact))
+    .flatMap((a) => a.highlights.map((h) => h.exact))
     .filter((q, i, arr) => arr.indexOf(q) === i) // Deduplicate
-  
+
   return limit ? quotes.slice(0, limit) : quotes
 }
 
@@ -25,14 +25,14 @@ export function deriveQuotes(
  * @param entryDateMap - Map of entryId to createdAt date
  */
 export function deriveQuotesWithEntries(
-  partAnalyses: { 
+  partAnalyses: {
     entryId: string
-    highlights: { exact: string; reasoning: string | null }[] 
+    highlights: { exact: string; reasoning: string | null }[]
   }[],
   entryDateMap: Map<string, Date>
 ): { text: string; reasoning: string | null; entryId: string; entryCreatedAt: Date | undefined }[] {
-  return partAnalyses.flatMap(analysis => 
-    analysis.highlights.map(highlight => ({
+  return partAnalyses.flatMap((analysis) =>
+    analysis.highlights.map((highlight) => ({
       text: highlight.exact,
       reasoning: highlight.reasoning,
       entryId: analysis.entryId,
@@ -44,23 +44,23 @@ export function deriveQuotesWithEntries(
 /**
  * Calculate activity trend over last N days
  * Returns an array of daily counts for sparkline visualization
- * 
+ *
  * @param dates - Array of dates when activity occurred
  * @param days - Number of days to calculate (default: 30)
  */
 export function calculateActivityTrend(dates: Date[], days: number = 30): number[] {
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - days)
-  
+
   // Group activity by day
   const activityByDay: Record<string, number> = {}
-  dates.forEach(date => {
+  dates.forEach((date) => {
     if (date >= cutoffDate) {
       const dateKey = date.toISOString().split('T')[0]
       activityByDay[dateKey] = (activityByDay[dateKey] || 0) + 1
     }
   })
-  
+
   // Create array of daily counts for last N days
   const trend: number[] = []
   for (let i = days - 1; i >= 0; i--) {
@@ -69,14 +69,14 @@ export function calculateActivityTrend(dates: Date[], days: number = 30): number
     const dateKey = date.toISOString().split('T')[0]
     trend.push(activityByDay[dateKey] || 0)
   }
-  
+
   return trend
 }
 
 /**
  * Get activity dates from part analyses using entry dates
  * This uses entry.createdAt (not analysis.createdAt) for accurate activity tracking
- * 
+ *
  * @param partAnalyses - Array of analyses with entryId
  * @param entryDateMap - Map of entryId to entry createdAt date
  */
@@ -85,7 +85,7 @@ export function getActivityDates(
   entryDateMap: Map<string, Date>
 ): Date[] {
   return partAnalyses
-    .map(a => entryDateMap.get(a.entryId))
+    .map((a) => entryDateMap.get(a.entryId))
     .filter((date): date is Date => date !== undefined)
 }
 
@@ -117,17 +117,17 @@ export function transformPartWithStats(
     icon: string
     description: string
     createdAt: Date
-    partAnalyses: { 
+    partAnalyses: {
       id: string
       entryId: string
-      highlights: { exact: string }[] 
+      highlights: { exact: string }[]
     }[]
   },
   entryDateMap: Map<string, Date>,
   quoteLimit: number = 5
 ): PartWithStats {
   const activityDates = getActivityDates(part.partAnalyses, entryDateMap)
-  
+
   return {
     id: part.id,
     name: part.name,

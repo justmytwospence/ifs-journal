@@ -1,17 +1,17 @@
 'use client'
 
-import { AppNav } from '@/components/AppNav'
-import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSession } from 'next-auth/react'
-import { slugify } from '@/lib/slug-utils'
-import { formatFullEntryDate } from '@/lib/date-utils'
-import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
+import { AppNav } from '@/components/AppNav'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { DemoToast } from '@/components/ui/DemoToast'
+import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
 import { reanchorHighlight } from '@/lib/anchoring'
+import { formatFullEntryDate } from '@/lib/date-utils'
+import { slugify } from '@/lib/slug-utils'
 
 interface Part {
   id: string
@@ -71,13 +71,17 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   const isDemo = session?.user?.isDemo
 
   useEffect(() => {
-    params.then(p => {
+    params.then((p) => {
       setEntryId(p.id)
     })
   }, [params])
 
   // Fetch entry using React Query
-  const { data: entry, isLoading: loading, isError } = useQuery({
+  const {
+    data: entry,
+    isLoading: loading,
+    isError,
+  } = useQuery({
     queryKey: ['journal-entry', entryId],
     queryFn: async () => {
       if (!entryId) throw new Error('No entry ID')
@@ -121,9 +125,9 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   // Prefetch part pages for parts in this entry
   useEffect(() => {
     if (entry?.partAnalyses) {
-      const uniqueParts = Array.from(
-        new Set(entry.partAnalyses.map(a => a.part.id))
-      ).map(partId => entry.partAnalyses!.find(a => a.part.id === partId)!.part)
+      const uniqueParts = Array.from(new Set(entry.partAnalyses.map((a) => a.part.id))).map(
+        (partId) => entry.partAnalyses!.find((a) => a.part.id === partId)!.part
+      )
 
       uniqueParts.forEach((part) => {
         const slug = slugify(part.name)
@@ -146,7 +150,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       setShowDeleteConfirm(false)
       return
     }
-    
+
     if (entry) {
       deleteMutation.mutate(entry.id)
     }
@@ -178,16 +182,23 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     if (!analyses || analyses.length === 0) return text
 
     // Build highlight objects using stored offsets (O(1) per highlight)
-    const highlights: { start: number; end: number; part: Part; text: string; reasoning: string; isStale: boolean }[] = []
+    const highlights: {
+      start: number
+      end: number
+      part: Part
+      text: string
+      reasoning: string
+      isStale: boolean
+    }[] = []
 
     analyses.forEach((analysis) => {
       analysis.highlights.forEach((highlight) => {
         // Use stored offsets directly - O(1) lookup via slicing
         const actualText = text.slice(highlight.startOffset, highlight.endOffset)
-        
+
         // Verify the stored text matches (detect stale highlights)
         const isMatch = actualText === highlight.exact
-        
+
         if (isMatch) {
           highlights.push({
             start: highlight.startOffset,
@@ -205,7 +216,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             suffix: highlight.suffix,
             startOffset: highlight.startOffset,
           })
-          
+
           if (reanchored) {
             const reanchoredText = text.slice(reanchored.startOffset, reanchored.endOffset)
             highlights.push({
@@ -229,7 +240,9 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                 isStale: true,
               })
             } else {
-              console.warn(`Could not re-anchor highlight: "${highlight.exact.substring(0, 30)}..."`)
+              console.warn(
+                `Could not re-anchor highlight: "${highlight.exact.substring(0, 30)}..."`
+              )
             }
           }
         }
@@ -258,7 +271,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       }
 
       const highlightedText = highlight.text
-      
+
       parts.push(
         <span
           key={`highlight-${i}`}
@@ -269,7 +282,9 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
         >
           {highlightedText}
           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-80 shadow-2xl border border-gray-700 font-sans">
-            <div className="font-bold text-base mb-2" style={{ color: highlight.part.color }}>{highlight.part.name}</div>
+            <div className="font-bold text-base mb-2" style={{ color: highlight.part.color }}>
+              {highlight.part.name}
+            </div>
             {highlight.reasoning && (
               <div className="text-gray-200 text-left leading-relaxed">{highlight.reasoning}</div>
             )}
@@ -352,13 +367,13 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-gray-50">
       <AppNav />
-      
+
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
             ← Back to Journal Log
           </Link>
-          
+
           {/* Navigation and action buttons */}
           <div className="flex items-center gap-2">
             <button
@@ -405,7 +420,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                 Previous
               </div>
             )}
-            
+
             {navigation?.next ? (
               <div className="relative group">
                 <Link
@@ -446,9 +461,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
         <div className="bg-white rounded-2xl shadow-sm p-8">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold">
-                {formatFullEntryDate(entry.createdAt)}
-              </h1>
+              <h1 className="text-3xl font-bold">{formatFullEntryDate(entry.createdAt)}</h1>
               <span className="text-sm text-gray-500">{entry.wordCount} words</span>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
@@ -459,20 +472,22 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             {/* Parts in this entry - moved above content */}
             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Parts in this entry</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                  Parts in this entry
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {Array.from(new Set(entry.partAnalyses.map(a => a.part.id))).map(partId => {
-                    const part = entry.partAnalyses!.find(a => a.part.id === partId)!.part
+                  {Array.from(new Set(entry.partAnalyses.map((a) => a.part.id))).map((partId) => {
+                    const part = entry.partAnalyses!.find((a) => a.part.id === partId)!.part
                     return (
                       <Link
                         key={part.id}
                         href={`/parts/${slugify(part.name)}`}
                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full hover:shadow-md transition-all text-sm font-medium"
-                        style={{ 
-                          backgroundColor: `${part.color}15`, 
-                          borderColor: part.color, 
+                        style={{
+                          backgroundColor: `${part.color}15`,
+                          borderColor: part.color,
                           borderWidth: '1.5px',
-                          color: part.color
+                          color: part.color,
                         }}
                       >
                         <div
@@ -519,9 +534,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           isLoading={deleteMutation.isPending}
         />
 
-        {showDemoToast && (
-          <DemoToast onClose={() => setShowDemoToast(false)} />
-        )}
+        {showDemoToast && <DemoToast onClose={() => setShowDemoToast(false)} />}
       </main>
     </div>
   )

@@ -1,15 +1,15 @@
-import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 
 export default async function Home() {
   const session = await auth()
-  
+
   // If user is logged in, redirect based on today's entry
   if (session?.user?.id) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const todayEntry = await prisma.journalEntry.findFirst({
       where: {
         userId: session.user.id,
@@ -18,14 +18,14 @@ export default async function Home() {
         },
       },
     })
-    
+
     if (todayEntry) {
       redirect('/log')
     } else {
       redirect('/journal')
     }
   }
-  
+
   // Show landing page for non-logged-in users
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -93,9 +93,7 @@ export default async function Home() {
                 <span className="text-3xl">💬</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Part Conversations</h3>
-              <p className="text-gray-600">
-                Engage in therapeutic dialogues with your parts
-              </p>
+              <p className="text-gray-600">Engage in therapeutic dialogues with your parts</p>
             </div>
           </div>
         </div>

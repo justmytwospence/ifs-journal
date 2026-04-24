@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { deriveQuotes, deriveQuotesWithEntries, calculateActivityTrend, getActivityDates } from '@/lib/part-utils'
+import {
+  calculateActivityTrend,
+  deriveQuotes,
+  deriveQuotesWithEntries,
+  getActivityDates,
+} from '@/lib/part-utils'
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -14,10 +16,10 @@ export async function GET(
     }
 
     const { slug } = await params
-    
+
     // O(1) lookup using indexed slug field
     const part = await prisma.part.findUnique({
-      where: { 
+      where: {
         userId_slug: {
           userId: session.user.id,
           slug: slug,
@@ -25,7 +27,7 @@ export async function GET(
       },
       include: {
         partAnalyses: {
-          select: { 
+          select: {
             id: true,
             entryId: true,
             highlights: {
@@ -44,7 +46,7 @@ export async function GET(
     }
 
     // Get entry dates for activity calculation and quote linking
-    const entryIds = [...new Set(part.partAnalyses.map(a => a.entryId))]
+    const entryIds = [...new Set(part.partAnalyses.map((a) => a.entryId))]
     const entries = await prisma.journalEntry.findMany({
       where: {
         id: { in: entryIds },
@@ -55,15 +57,15 @@ export async function GET(
         createdAt: true,
       },
     })
-    
-    const entryDateMap = new Map(entries.map(e => [e.id, e.createdAt]))
-    
+
+    const entryDateMap = new Map(entries.map((e) => [e.id, e.createdAt]))
+
     // Use centralized utilities for derivation
     const quotesWithEntries = deriveQuotesWithEntries(part.partAnalyses, entryDateMap)
     const activityDates = getActivityDates(part.partAnalyses, entryDateMap)
     const weeklyActivity = calculateActivityTrend(activityDates)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       part: {
         id: part.id,
         name: part.name,
@@ -76,7 +78,7 @@ export async function GET(
         quotesWithEntries,
         appearances: part.partAnalyses.length,
         weeklyActivity,
-      }
+      },
     })
   } catch (error) {
     console.error('Get part by slug error:', error)

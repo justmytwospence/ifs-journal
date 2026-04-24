@@ -1,27 +1,42 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 // SVG Icons for bottom nav
 const JournalIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
   </svg>
 )
 
 const LogIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+    />
   </svg>
 )
 
 const PartsIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"
+    />
   </svg>
 )
 
@@ -112,7 +127,8 @@ export function AppNav() {
               {session?.user?.isDemo && (
                 <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-purple-50 border border-purple-200 rounded-lg shrink-0">
                   <span className="text-xs md:text-sm font-medium text-purple-700 whitespace-nowrap">
-                    👁️ <span className="hidden sm:inline">Demo</span><span className="hidden md:inline"> (Read-Only)</span>
+                    👁️ <span className="hidden sm:inline">Demo</span>
+                    <span className="hidden md:inline"> (Read-Only)</span>
                   </span>
                 </div>
               )}
@@ -120,7 +136,9 @@ export function AppNav() {
                 <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-blue-50 border border-blue-200 rounded-lg shrink-0">
                   <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
                   <span className="text-xs md:text-sm font-medium text-blue-700 whitespace-nowrap">
-                    <span className="hidden sm:inline">{analysisType === 'batch' ? 'Batch analyzing...' : 'Analyzing...'}</span>
+                    <span className="hidden sm:inline">
+                      {analysisType === 'batch' ? 'Batch analyzing...' : 'Analyzing...'}
+                    </span>
                     <span className="sm:hidden">...</span>
                   </span>
                 </div>
@@ -165,9 +183,7 @@ export function AppNav() {
           <Link
             href="/journal"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/journal')
-                ? 'text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              isActive('/journal') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <JournalIcon className="w-6 h-6 mb-1" />
@@ -176,9 +192,7 @@ export function AppNav() {
           <Link
             href="/log"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/log')
-                ? 'text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              isActive('/log') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <LogIcon className="w-6 h-6 mb-1" />
@@ -187,9 +201,7 @@ export function AppNav() {
           <Link
             href="/parts"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/parts')
-                ? 'text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+              isActive('/parts') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <PartsIcon className="w-6 h-6 mb-1" />

@@ -1,13 +1,16 @@
+import { compare } from 'bcryptjs'
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
-import { compare } from 'bcryptjs'
-import prisma from '@/lib/db'
 import { z } from 'zod'
+import prisma from '@/lib/db'
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  isDemo: z.union([z.boolean(), z.string()]).optional().transform(val => val === true || val === 'true'),
+  isDemo: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === 'true'),
 })
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

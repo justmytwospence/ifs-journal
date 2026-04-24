@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { AppNav } from '@/components/AppNav'
-import { Toast } from '@/components/ui/Toast'
 import { PartsTreemap } from '@/components/parts/PartsTreemap'
-import { PartsPageSkeleton } from '@/components/ui/skeleton/PartsPageSkeleton'
-import { slugify } from '@/lib/slug-utils'
-import { getPartIcon } from '@/lib/part-icons'
-import { useAnalysisStore } from '@/lib/stores/analysis-store'
-import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { PartsPageSkeleton } from '@/components/ui/skeleton/PartsPageSkeleton'
+import { Toast } from '@/components/ui/Toast'
+import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
+import { getPartIcon } from '@/lib/part-icons'
+import { slugify } from '@/lib/slug-utils'
+import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 interface Part {
   id: string
@@ -32,7 +32,12 @@ export default function PartsPage() {
   const queryClient = useQueryClient()
 
   // Fetch parts using React Query
-  const { data: partsData, isLoading, isError, error } = useQuery({
+  const {
+    data: partsData,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ['parts'],
     queryFn: async () => {
       const response = await fetch('/api/parts')
@@ -43,10 +48,10 @@ export default function PartsPage() {
   })
 
   const parts = Array.isArray(partsData) ? partsData : []
-  
+
   // Apply minimum loading time to prevent skeleton flashing
   const showLoading = useMinimumLoadingTime(isLoading)
-  
+
   // Check if we're doing a batch reanalysis (either local state or global state)
   const isBatchAnalyzing = reanalyzing || (isAnalyzing && analysisType === 'batch')
 
@@ -66,27 +71,25 @@ export default function PartsPage() {
     })
   }, [parts, queryClient])
 
-
-
   const handleReanalyze = async () => {
     setShowConfirmDialog(false)
     setReanalyzing(true)
     setAnalyzing(true, 'batch')
-    
+
     // Invalidate the parts query to show loading state
     queryClient.invalidateQueries({ queryKey: ['parts'] })
-    
+
     try {
       const response = await fetch('/api/parts/batch-reanalysis', {
         method: 'POST',
       })
-      
+
       const data = await response.json()
-      
+
       if (response.ok) {
-        setToast({ 
-          message: `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`, 
-          type: 'success' 
+        setToast({
+          message: `Reanalysis complete! ${data.partsCreated} parts identified from ${data.entriesAnalyzed} entries.`,
+          type: 'success',
         })
         // Invalidate all queries that depend on analysis results
         await queryClient.invalidateQueries({ queryKey: ['parts'] })
@@ -94,18 +97,18 @@ export default function PartsPage() {
         await queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
         await queryClient.invalidateQueries({ queryKey: ['journal-entry'] })
       } else {
-        setToast({ 
-          message: data.error || 'Failed to reanalyze', 
-          type: 'error' 
+        setToast({
+          message: data.error || 'Failed to reanalyze',
+          type: 'error',
         })
         // Refetch parts data even on error to restore previous state
         await queryClient.invalidateQueries({ queryKey: ['parts'] })
       }
     } catch (error) {
       console.error('Failed to reanalyze:', error)
-      setToast({ 
-        message: 'Failed to start reanalysis', 
-        type: 'error' 
+      setToast({
+        message: 'Failed to start reanalysis',
+        type: 'error',
       })
       // Refetch parts data even on error to restore previous state
       await queryClient.invalidateQueries({ queryKey: ['parts'] })
@@ -122,7 +125,9 @@ export default function PartsPage() {
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-red-600 mb-4">Failed to load parts</p>
-            <p className="text-gray-600 mb-4">{error instanceof Error ? error.message : 'An error occurred'}</p>
+            <p className="text-gray-600 mb-4">
+              {error instanceof Error ? error.message : 'An error occurred'}
+            </p>
             <button
               onClick={() => queryClient.invalidateQueries({ queryKey: ['parts'] })}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
@@ -145,7 +150,7 @@ export default function PartsPage() {
           <>
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
               <h2 className="text-3xl font-bold">Your Parts</h2>
-              <button 
+              <button
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={true}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
@@ -159,7 +164,7 @@ export default function PartsPage() {
           <>
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
               <h2 className="text-3xl font-bold">Your Parts</h2>
-              <button 
+              <button
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={isBatchAnalyzing}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
@@ -171,7 +176,9 @@ export default function PartsPage() {
             {parts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">No parts discovered yet</p>
-                <p className="text-sm text-gray-400">Write journal entries to discover your internal parts</p>
+                <p className="text-sm text-gray-400">
+                  Write journal entries to discover your internal parts
+                </p>
               </div>
             ) : (
               <>
@@ -226,13 +233,7 @@ export default function PartsPage() {
       />
 
       {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
 }

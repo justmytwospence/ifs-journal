@@ -1,9 +1,9 @@
 'use client'
 
-import { useSession, signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
+import { useState } from 'react'
 import { AppNav } from '@/components/AppNav'
 import { Toast } from '@/components/ui/Toast'
-import { useState } from 'react'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -16,7 +16,7 @@ export default function ProfilePage() {
     setExporting(true)
     try {
       const response = await fetch('/api/user/export')
-      
+
       if (!response.ok) {
         throw new Error('Export failed')
       }
@@ -98,14 +98,14 @@ export default function ProfilePage() {
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h3 className="text-xl font-semibold mb-4">Account Actions</h3>
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={handleExportData}
                 disabled={exporting}
                 className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {exporting ? 'Exporting...' : 'Export My Data'}
               </button>
-              <button 
+              <button
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
                 className="w-full px-6 py-3 bg-red-50 text-red-600 rounded-xl font-medium hover:bg-red-100 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -123,7 +123,8 @@ export default function ProfilePage() {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4 text-red-600">Delete Account?</h3>
             <p className="text-gray-600 mb-6">
-              This action cannot be undone. All your journal entries, parts, and conversations will be permanently deleted.
+              This action cannot be undone. All your journal entries, parts, and conversations will
+              be permanently deleted.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -144,13 +145,7 @@ export default function ProfilePage() {
       )}
 
       {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
 }

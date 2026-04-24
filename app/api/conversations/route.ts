@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { readFile } from 'fs/promises'
+import { type NextRequest, NextResponse } from 'next/server'
+import { join } from 'path'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { openai } from '@/lib/openai'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import { demoGuard } from '@/lib/demo-guard'
+import { openai } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     let promptTemplate = await readFile(promptPath, 'utf-8')
 
     // Prepare part quotes from highlights
-    const allQuotes = part.partAnalyses.flatMap(analysis => 
-      analysis.highlights.map(h => h.exact)
+    const allQuotes = part.partAnalyses.flatMap((analysis) =>
+      analysis.highlights.map((h) => h.exact)
     )
     const uniqueQuotes = [...new Set(allQuotes)].slice(0, 10) // Limit to 10 most relevant
     const quotesText = uniqueQuotes.map((quote, i) => `${i + 1}. "${quote}"`).join('\n')
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       .map((analysis, i) => {
         const entry = analysis.entry
         const date = new Date(entry.createdAt).toLocaleDateString()
-        const highlightTexts = analysis.highlights.map(h => h.exact)
+        const highlightTexts = analysis.highlights.map((h) => h.exact)
         return `### Entry ${i + 1} (${date})
 **Prompt:** ${entry.prompt}
 **Content:** ${entry.content.substring(0, 500)}${entry.content.length > 500 ? '...' : ''}
@@ -163,15 +163,15 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
   } catch (error) {
     console.error('Conversation error:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to generate response',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )

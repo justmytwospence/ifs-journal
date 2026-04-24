@@ -3,10 +3,7 @@ import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { deriveQuotes } from '@/lib/part-utils'
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -16,13 +13,13 @@ export async function GET(
     const { id } = await params
 
     const part = await prisma.part.findUnique({
-      where: { 
+      where: {
         id,
         userId: session.user.id,
       },
       include: {
         partAnalyses: {
-          select: { 
+          select: {
             id: true,
             highlights: {
               select: { exact: true },
@@ -36,7 +33,7 @@ export async function GET(
       return NextResponse.json({ error: 'Part not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       part: {
         id: part.id,
         name: part.name,
@@ -46,7 +43,7 @@ export async function GET(
         description: part.description,
         quotes: deriveQuotes(part.partAnalyses),
         appearances: part.partAnalyses.length,
-      }
+      },
     })
   } catch (error) {
     console.error('Get part error:', error)

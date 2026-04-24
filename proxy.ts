@@ -1,12 +1,14 @@
-import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
-  const isAuthPage = req.nextUrl.pathname.startsWith('/login') ||
+  const isAuthPage =
+    req.nextUrl.pathname.startsWith('/login') ||
     req.nextUrl.pathname.startsWith('/register') ||
     req.nextUrl.pathname.startsWith('/reset-password')
-  const isPublicPage = req.nextUrl.pathname === '/' ||
+  const isPublicPage =
+    req.nextUrl.pathname === '/' ||
     req.nextUrl.pathname === '/demo' ||
     req.nextUrl.pathname.startsWith('/api/auth')
 

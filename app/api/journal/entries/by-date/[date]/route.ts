@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ date: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ date: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -13,7 +10,7 @@ export async function GET(
     }
 
     const { date: dateParam } = await params
-    
+
     // Parse date format: 2025-10-26-14-30-45
     const parts = dateParam.split('-')
     if (parts.length !== 6) {
@@ -25,7 +22,7 @@ export async function GET(
 
     // Find entry closest to this timestamp
     const entry = await prisma.journalEntry.findFirst({
-      where: { 
+      where: {
         userId: session.user.id,
         createdAt: {
           gte: new Date(targetDate.getTime() - 1000), // 1 second before

@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { anthropic, ANALYSIS_MODEL } from '@/lib/anthropic'
-import prisma from '@/lib/db'
 import { readFile } from 'fs/promises'
+import { NextResponse } from 'next/server'
 import { join } from 'path'
-import { slugify } from '@/lib/slug-utils'
+import { ANALYSIS_MODEL, anthropic } from '@/lib/anthropic'
+import { auth } from '@/lib/auth'
+import { type ParsedPart, parseCitationsResponse } from '@/lib/citation-parser'
+import prisma from '@/lib/db'
 import { findSimilarPart } from '@/lib/part-similarity'
-import { parseCitationsResponse, type ParsedPart } from '@/lib/citation-parser'
+import { slugify } from '@/lib/slug-utils'
 
 const PART_COLORS = {
   Protector: '#ef4444',
@@ -17,7 +17,10 @@ const PART_COLORS = {
 
 const CONTEXT_LENGTH = 32
 
-function buildSelector(text: string, citation: ParsedPart['instances'][number]['citations'][number]) {
+function buildSelector(
+  text: string,
+  citation: ParsedPart['instances'][number]['citations'][number]
+) {
   const { startOffset, endOffset, citedText } = citation
   return {
     startOffset,
@@ -28,10 +31,7 @@ function buildSelector(text: string, citation: ParsedPart['instances'][number]['
   }
 }
 
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -61,9 +61,10 @@ export async function POST(
     const templatePath = join(process.cwd(), 'lib/prompts/incremental-entry-analysis.md')
     const template = await readFile(templatePath, 'utf-8')
 
-    const partsContext = existingParts.length > 0
-      ? existingParts.map(p => `- ${p.name} (${p.role}): ${p.description}`).join('\n')
-      : 'No existing parts yet.'
+    const partsContext =
+      existingParts.length > 0
+        ? existingParts.map((p) => `- ${p.name} (${p.role}): ${p.description}`).join('\n')
+        : 'No existing parts yet.'
 
     const systemPrompt = template.replace('{{EXISTING_PARTS}}', partsContext)
 
@@ -105,14 +106,19 @@ export async function POST(
         description: partData.description ?? '',
       }
 
-      let matchedPartId = findSimilarPart(
+      const matchedPartId = findSimilarPart(
         partDataForMatch,
-        existingParts.map(p => ({ id: p.id, name: p.name, role: p.role, description: p.description }))
+        existingParts.map((p) => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          description: p.description,
+        }))
       )
 
       let part
       if (matchedPartId) {
-        part = existingParts.find(p => p.id === matchedPartId)
+        part = existingParts.find((p) => p.id === matchedPartId)
       } else {
         if (existingParts.length >= 9) {
           const partsWithConfidence = await Promise.all(
@@ -121,9 +127,10 @@ export async function POST(
                 where: { partId: p.id },
                 select: { confidence: true },
               })
-              const avgConfidence = analyses.length > 0
-                ? analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length
-                : 0
+              const avgConfidence =
+                analyses.length > 0
+                  ? analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length
+                  : 0
               return { part: p, avgConfidence }
             })
           )
@@ -142,7 +149,7 @@ export async function POST(
             where: { id: lowestConfidencePart.part.id },
           })
 
-          const index = existingParts.findIndex(p => p.id === lowestConfidencePart.part.id)
+          const index = existingParts.findIndex((p) => p.id === lowestConfidencePart.part.id)
           if (index > -1) existingParts.splice(index, 1)
         }
 

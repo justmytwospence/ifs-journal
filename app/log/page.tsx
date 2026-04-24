@@ -1,14 +1,14 @@
 'use client'
 
-import { AppNav } from '@/components/AppNav'
-import { useState, useMemo, useEffect, Suspense, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { formatEntryDate } from '@/lib/date-utils'
-import { createEntrySlug, slugify } from '@/lib/slug-utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { AppNav } from '@/components/AppNav'
 import { LogPageSkeleton } from '@/components/ui/skeleton/LogPageSkeleton'
+import { formatEntryDate } from '@/lib/date-utils'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
+import { createEntrySlug, slugify } from '@/lib/slug-utils'
 
 interface Part {
   id: string
@@ -53,7 +53,7 @@ function LogPageContent() {
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const queryClient = useQueryClient()
-  
+
   // Persist weeksToLoad in sessionStorage
   const [weeksToLoad, setWeeksToLoad] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -73,7 +73,11 @@ function LogPageContent() {
   }, [weeksToLoad])
 
   // Fetch entries
-  const { data: entriesData, isLoading: entriesLoading, isFetching: entriesFetching } = useQuery({
+  const {
+    data: entriesData,
+    isLoading: entriesLoading,
+    isFetching: entriesFetching,
+  } = useQuery({
     queryKey: ['journal-entries', weeksToLoad],
     queryFn: async () => {
       const response = await fetch(`/api/journal/entries?includeAnalyses=true&weeks=${weeksToLoad}`)
@@ -117,8 +121,7 @@ function LogPageContent() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (entry) =>
-          entry.content.toLowerCase().includes(query) ||
-          entry.prompt.toLowerCase().includes(query)
+          entry.content.toLowerCase().includes(query) || entry.prompt.toLowerCase().includes(query)
       )
     }
 
@@ -131,11 +134,14 @@ function LogPageContent() {
       const currentEntryCount = entriesData.entries?.length || 0
       const totalCount = entriesData.totalCount || 0
       const currentFilteredCount = filteredEntries.length
-      
+
       // If we still have more entries to load but didn't get any new filtered entries, keep loading
-      if (currentEntryCount < totalCount && currentFilteredCount === previousEntryCountRef.current) {
+      if (
+        currentEntryCount < totalCount &&
+        currentFilteredCount === previousEntryCountRef.current
+      ) {
         // Use setTimeout to avoid cascading renders
-        setTimeout(() => setWeeksToLoad(prev => prev + 1), 0)
+        setTimeout(() => setWeeksToLoad((prev) => prev + 1), 0)
       } else {
         // Either we got new entries or we've loaded everything - stop loading
         setTimeout(() => setIsLoadingMore(false), 0)
@@ -148,10 +154,10 @@ function LogPageContent() {
     if (!entriesLoading && !entriesFetching && entriesData && !isLoadingMore) {
       const currentEntryCount = entriesData.entries?.length || 0
       const totalCount = entriesData.totalCount || 0
-      
+
       // If there are no entries loaded but there are entries in the database, load more weeks
       if (currentEntryCount === 0 && totalCount > 0) {
-        setWeeksToLoad(prev => prev + 4) // Load 4 more weeks at a time to find older entries faster
+        setWeeksToLoad((prev) => prev + 4) // Load 4 more weeks at a time to find older entries faster
       }
     }
   }, [entriesLoading, entriesFetching, entriesData, isLoadingMore])
@@ -186,7 +192,7 @@ function LogPageContent() {
     }
 
     // Find the part by slug
-    const part = parts.find(p => slugify(p.name) === partSlugFromUrl)
+    const part = parts.find((p) => slugify(p.name) === partSlugFromUrl)
 
     if (part) {
       setSelectedPartId(part.id)
@@ -208,17 +214,17 @@ function LogPageContent() {
   const formatWeekRange = (weekStart: Date) => {
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 6)
-    
+
     const now = new Date()
     const currentYear = now.getFullYear()
     const weekYear = weekStart.getFullYear()
-    
+
     const startMonth = weekStart.toLocaleDateString('en-US', { month: 'short' })
     const startDay = weekStart.getDate()
     const endMonth = weekEnd.toLocaleDateString('en-US', { month: 'short' })
     const endDay = weekEnd.getDate()
     const year = weekYear !== currentYear ? `, ${weekYear}` : ''
-    
+
     if (startMonth === endMonth) {
       return `${startMonth} ${startDay}–${endDay}${year}`
     }
@@ -228,18 +234,18 @@ function LogPageContent() {
   // Group entries by calendar week
   const entriesByWeek = useMemo(() => {
     const weeks = new Map<string, JournalEntry[]>()
-    
+
     filteredEntries.forEach((entry) => {
       const entryDate = new Date(entry.createdAt)
       const weekStart = getWeekStart(entryDate)
       const weekKey = weekStart.toISOString()
-      
+
       if (!weeks.has(weekKey)) {
         weeks.set(weekKey, [])
       }
       weeks.get(weekKey)!.push(entry)
     })
-    
+
     return Array.from(weeks.entries()).map(([weekKey, entries]) => ({
       weekStart: new Date(weekKey),
       entries,
@@ -253,7 +259,7 @@ function LogPageContent() {
     }
 
     // Find the analysis for the selected part
-    const relevantAnalysis = entry.partAnalyses.find(a => a.partId === selectedPartId)
+    const relevantAnalysis = entry.partAnalyses.find((a) => a.partId === selectedPartId)
     if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
       return entry.content
     }
@@ -270,7 +276,10 @@ function LogPageContent() {
     // Extract context around the highlight (about 150 chars before and after)
     const contextLength = 150
     const start = Math.max(0, highlightIndex - contextLength)
-    const end = Math.min(entry.content.length, highlightIndex + highlightText.length + contextLength)
+    const end = Math.min(
+      entry.content.length,
+      highlightIndex + highlightText.length + contextLength
+    )
 
     let excerpt = entry.content.substring(start, end)
 
@@ -289,7 +298,7 @@ function LogPageContent() {
       return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
 
-    const relevantAnalysis = entry.partAnalyses.find(a => a.partId === selectedPartId)
+    const relevantAnalysis = entry.partAnalyses.find((a) => a.partId === selectedPartId)
     if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
       return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
     }
@@ -309,10 +318,7 @@ function LogPageContent() {
     return (
       <p className="font-serif text-gray-700 line-clamp-3">
         {before}
-        <span
-          className="font-bold"
-          style={{ color: relevantAnalysis.part.color }}
-        >
+        <span className="font-bold" style={{ color: relevantAnalysis.part.color }}>
           {highlighted}
         </span>
         {after}
@@ -382,10 +388,10 @@ function LogPageContent() {
                     {selectedPartId ? (
                       <>
                         <span className="text-lg">
-                          {parts.find(p => p.id === selectedPartId)?.icon || '●'}
+                          {parts.find((p) => p.id === selectedPartId)?.icon || '●'}
                         </span>
                         <span className="text-gray-900 font-medium">
-                          {parts.find(p => p.id === selectedPartId)?.name}
+                          {parts.find((p) => p.id === selectedPartId)?.name}
                         </span>
                       </>
                     ) : (
@@ -398,26 +404,31 @@ function LogPageContent() {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
                 {isDropdownOpen && (
                   <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setIsDropdownOpen(false)}
-                    />
+                    <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
                     <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                       <button
                         onClick={() => {
                           setSelectedPartId(null)
                           setIsDropdownOpen(false)
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${!selectedPartId ? 'bg-indigo-50' : ''
-                          }`}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
+                          !selectedPartId ? 'bg-indigo-50' : ''
+                        }`}
                       >
-                        <span className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}>
+                        <span
+                          className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}
+                        >
                           All Parts
                         </span>
                       </button>
@@ -428,12 +439,11 @@ function LogPageContent() {
                             setSelectedPartId(part.id)
                             setIsDropdownOpen(false)
                           }}
-                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${selectedPartId === part.id ? 'bg-gray-50' : ''
-                            }`}
+                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
+                            selectedPartId === part.id ? 'bg-gray-50' : ''
+                          }`}
                         >
-                          <span className="text-lg shrink-0">
-                            {part.icon || '●'}
-                          </span>
+                          <span className="text-lg shrink-0">{part.icon || '●'}</span>
                           <span className="text-gray-900 font-medium">{part.name}</span>
                         </button>
                       ))}
@@ -447,7 +457,9 @@ function LogPageContent() {
           {/* Active Filters Display */}
           {(searchQuery || selectedPartId) && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>Showing {filteredEntries.length} of {entries.length} entries</span>
+              <span>
+                Showing {filteredEntries.length} of {entries.length} entries
+              </span>
               <button
                 onClick={() => {
                   setSearchQuery('')
@@ -503,7 +515,7 @@ function LogPageContent() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* First week label (no divider above) */}
                   {weekIndex === 0 && (
                     <div className="mb-4 text-center">
@@ -533,9 +545,7 @@ function LogPageContent() {
                               <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
                                 {entry.partAnalyses.slice(0, 3).map((analysis) => (
                                   <div key={analysis.id} className="relative group">
-                                    <span className="text-lg">
-                                      {analysis.part.icon || '●'}
-                                    </span>
+                                    <span className="text-lg">{analysis.part.icon || '●'}</span>
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-lg">
                                       {analysis.part.name}
                                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
@@ -571,12 +581,12 @@ function LogPageContent() {
                   onClick={() => {
                     previousEntryCountRef.current = filteredEntries.length
                     setIsLoadingMore(true)
-                    setWeeksToLoad(prev => prev + 1)
+                    setWeeksToLoad((prev) => prev + 1)
                   }}
                   disabled={entriesFetching || isLoadingMore}
                   className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {(entriesFetching || isLoadingMore) ? 'Loading...' : 'Load one more week'}
+                  {entriesFetching || isLoadingMore ? 'Loading...' : 'Load one more week'}
                 </button>
               </div>
             )}
@@ -589,14 +599,16 @@ function LogPageContent() {
 
 export default function LogPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50">
-        <AppNav />
-        <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
-          <LogPageSkeleton />
-        </main>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50">
+          <AppNav />
+          <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
+            <LogPageSkeleton />
+          </main>
+        </div>
+      }
+    >
       <LogPageContent />
     </Suspense>
   )

@@ -19,7 +19,8 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: 'IFS Journal - Discover Your Internal Parts',
-  description: 'A therapeutic journaling app based on Internal Family Systems (IFS) therapy principles',
+  description:
+    'A therapeutic journaling app based on Internal Family Systems (IFS) therapy principles',
 }
 
 export default async function RootLayout({
@@ -28,14 +29,12 @@ export default async function RootLayout({
   children: React.ReactNode
 }>) {
   const session = await auth()
-  
+
   return (
     <html lang="en" className={`${inter.variable} ${lora.variable}`}>
       <body className="antialiased">
         <QueryProvider>
-          <SessionProvider session={session}>
-            {children}
-          </SessionProvider>
+          <SessionProvider session={session}>{children}</SessionProvider>
         </QueryProvider>
       </body>
     </html>
