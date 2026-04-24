@@ -446,7 +446,7 @@ export default function JournalPage() {
               // Short on mobile so the save button and word-count bar stay
               // above the keyboard; full height on tablet+.
               rows={6}
-              className="font-serif w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none md:min-h-[300px]"
+              className="font-serif w-full px-4 py-3 border border-input rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none md:min-h-[300px]"
             />
           </div>
 
@@ -459,13 +459,13 @@ export default function JournalPage() {
                   <div className="h-3 bg-purple-200 rounded animate-pulse w-5/6" />
                 </div>
               ) : writingTip ? (
-                <p className="text-sm text-gray-700 leading-relaxed">{writingTip}</p>
+                <p className="text-sm text-foreground leading-relaxed">{writingTip}</p>
               ) : content.trim().length < 50 ? (
-                <p className="text-sm text-gray-500 italic">
+                <p className="text-sm text-muted-foreground italic">
                   Start writing to receive personalized tips...
                 </p>
               ) : (
-                <p className="text-sm text-gray-500 italic">Keep writing to receive tips...</p>
+                <p className="text-sm text-muted-foreground italic">Keep writing to receive tips...</p>
               )}
             </div>
           )}
@@ -482,10 +482,10 @@ export default function JournalPage() {
               />
               {/* Word Count Text Overlay */}
               <div className="absolute inset-0 flex items-center justify-between px-4">
-                <span className="text-sm font-medium text-gray-700 relative z-10">
+                <span className="text-sm font-medium text-foreground relative z-10">
                   {wordCount} words
                 </span>
-                <span className="text-xs text-gray-500 relative z-10">750</span>
+                <span className="text-xs text-muted-foreground relative z-10">750</span>
               </div>
             </div>
 
@@ -496,7 +496,7 @@ export default function JournalPage() {
                 className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
                   isListening
                     ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-muted text-muted-foreground hover:bg-gray-200'
                 }`}
                 title={isListening ? 'Stop recording' : 'Start voice input'}
               >
@@ -526,7 +526,7 @@ export default function JournalPage() {
               className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
                 showWritingTips
                   ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-muted text-foreground hover:bg-gray-200'
               }`}
               title={showWritingTips ? 'Hide writing tips' : 'Show writing tips'}
             >

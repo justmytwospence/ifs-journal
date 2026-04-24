@@ -278,7 +278,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           <TooltipTrigger
             render={
               <span
-                className={`relative cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-gray-400' : ''}`}
+                className={`relative cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-muted-foreground' : ''}`}
                 style={{ backgroundColor: `${highlight.part.color}20` }}
                 onClick={() => (window.location.href = `/parts/${slugify(highlight.part.name)}`)}
                 data-quote={highlightedText}
@@ -335,7 +335,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Entry not found</p>
+            <p className="text-muted-foreground mb-4">Entry not found</p>
             <Link href="/log" className="text-blue-600 hover:text-blue-700 font-medium">
               ← Back to Journal Log
             </Link>
@@ -382,7 +382,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               onClick={() => setShowDeleteConfirm(true)}
               className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
                 isDemo
-                  ? 'text-gray-400 border-gray-300 opacity-50 cursor-pointer'
+                  ? 'text-muted-foreground border-input opacity-50 cursor-pointer'
                   : 'text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300'
               }`}
             >
@@ -394,7 +394,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                   render={
                     <Link
                       href={`/log/${navigation.previous.slug}`}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-muted transition-colors"
                     >
                       <span className="text-lg leading-none">←</span>
                       Previous
@@ -414,7 +414,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-muted border border-border rounded-lg cursor-not-allowed">
                 <span className="text-lg leading-none">←</span>
                 Previous
               </div>
@@ -426,7 +426,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                   render={
                     <Link
                       href={`/log/${navigation.next.slug}`}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-foreground bg-background border border-input rounded-lg hover:bg-muted transition-colors"
                     >
                       Next
                       <span className="text-lg leading-none">→</span>
@@ -446,7 +446,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
+              <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-muted border border-border rounded-lg cursor-not-allowed">
                 Next
                 <span className="text-lg leading-none">→</span>
               </div>
@@ -454,11 +454,11 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-8">
+        <div className="bg-card rounded-2xl shadow-sm p-8">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold">{formatFullEntryDate(entry.createdAt)}</h1>
-              <span className="text-sm text-gray-500">{entry.wordCount} words</span>
+              <span className="text-sm text-muted-foreground">{entry.wordCount} words</span>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
               <p className="text-sm font-medium text-blue-900 mb-1">Prompt:</p>
@@ -468,7 +468,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             {/* Parts in this entry - moved above content */}
             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   Parts in this entry
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -501,7 +501,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="prose max-w-none">
-            <div className="font-serif text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
+            <div className="font-serif text-foreground text-lg leading-relaxed whitespace-pre-wrap">
               {entry.analysisStatus === 'completed' && entry.partAnalyses
                 ? highlightText(entry.content, entry.partAnalyses)
                 : entry.content}
@@ -509,7 +509,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           </div>
 
           {entry.analysisStatus === 'pending' && (
-            <div className="mt-6 text-sm text-gray-500 italic">Analysis pending...</div>
+            <div className="mt-6 text-sm text-muted-foreground italic">Analysis pending...</div>
           )}
           {entry.analysisStatus === 'processing' && (
             <div className="mt-6 text-sm text-blue-600 italic">Analyzing parts...</div>

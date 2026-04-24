@@ -70,23 +70,23 @@ export default function ProfilePage() {
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Profile</h2>
-          <p className="text-gray-600">Manage your account settings</p>
+          <p className="text-muted-foreground">Manage your account settings</p>
         </div>
 
         <div className="space-y-6">
           {/* Account Info */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="bg-card rounded-2xl shadow-sm p-6">
             <h3 className="text-xl font-semibold mb-4">Account Information</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-xl text-gray-700">
+                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <div className="px-4 py-3 bg-muted rounded-xl text-foreground">
                   {session?.user?.email || 'Loading...'}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-xl text-gray-700">
+                <label className="block text-sm font-medium text-foreground mb-1">Member Since</label>
+                <div className="px-4 py-3 bg-muted rounded-xl text-foreground">
                   {new Date().toLocaleDateString()}
                 </div>
               </div>
@@ -94,13 +94,13 @@ export default function ProfilePage() {
           </div>
 
           {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="bg-card rounded-2xl shadow-sm p-6">
             <h3 className="text-xl font-semibold mb-4">Account Actions</h3>
             <div className="space-y-3">
               <button
                 onClick={handleExportData}
                 disabled={exporting}
-                className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full px-6 py-3 bg-muted text-foreground rounded-xl font-medium hover:bg-gray-200 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {exporting ? 'Exporting...' : 'Export My Data'}
               </button>
@@ -119,16 +119,16 @@ export default function ProfilePage() {
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+          <div className="bg-card rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <h3 className="text-xl font-bold mb-4 text-red-600">Delete Account?</h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               This action cannot be undone. All your journal entries, parts, and conversations will
               be permanently deleted.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteDialog(false)}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                className="px-6 py-2 bg-muted text-foreground rounded-lg font-medium hover:bg-gray-200 transition"
               >
                 Cancel
               </button>

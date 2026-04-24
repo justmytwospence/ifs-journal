@@ -295,12 +295,12 @@ function LogPageContent() {
     const excerpt = getEntryExcerpt(entry)
 
     if (!selectedPartId || !entry.partAnalyses) {
-      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-foreground line-clamp-3">{excerpt}</p>
     }
 
     const relevantAnalysis = entry.partAnalyses.find((a) => a.partId === selectedPartId)
     if (!relevantAnalysis || !relevantAnalysis.highlights.length) {
-      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-foreground line-clamp-3">{excerpt}</p>
     }
 
     const highlight = relevantAnalysis.highlights[0]
@@ -308,7 +308,7 @@ function LogPageContent() {
     const highlightIndex = excerpt.toLowerCase().indexOf(highlightText.toLowerCase())
 
     if (highlightIndex === -1) {
-      return <p className="font-serif text-gray-700 line-clamp-3">{excerpt}</p>
+      return <p className="font-serif text-foreground line-clamp-3">{excerpt}</p>
     }
 
     const before = excerpt.substring(0, highlightIndex)
@@ -316,7 +316,7 @@ function LogPageContent() {
     const after = excerpt.substring(highlightIndex + highlightText.length)
 
     return (
-      <p className="font-serif text-gray-700 line-clamp-3">
+      <p className="font-serif text-foreground line-clamp-3">
         {before}
         <span className="font-bold" style={{ color: relevantAnalysis.part.color }}>
           {highlighted}
@@ -344,7 +344,7 @@ function LogPageContent() {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal Log</h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {totalCount} {totalCount === 1 ? 'entry' : 'entries'} in your journal
           </p>
         </div>
@@ -360,10 +360,10 @@ function LogPageContent() {
                 placeholder="Search entries..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 pl-12 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <svg
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -382,7 +382,7 @@ function LogPageContent() {
               <div className="relative w-full md:w-64">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="w-full px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {selectedPartId ? (
@@ -390,16 +390,16 @@ function LogPageContent() {
                         <span className="text-lg">
                           {parts.find((p) => p.id === selectedPartId)?.icon || '●'}
                         </span>
-                        <span className="text-gray-900 font-medium">
+                        <span className="text-foreground font-medium">
                           {parts.find((p) => p.id === selectedPartId)?.name}
                         </span>
                       </>
                     ) : (
-                      <span className="text-gray-700">All Parts</span>
+                      <span className="text-foreground">All Parts</span>
                     )}
                   </div>
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -416,18 +416,18 @@ function LogPageContent() {
                 {isDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
+                    <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-lg max-h-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
                       <button
                         onClick={() => {
                           setSelectedPartId(null)
                           setIsDropdownOpen(false)
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
+                        className={`w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center gap-3 ${
                           !selectedPartId ? 'bg-indigo-50' : ''
                         }`}
                       >
                         <span
-                          className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-gray-700'}`}
+                          className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-foreground'}`}
                         >
                           All Parts
                         </span>
@@ -439,12 +439,12 @@ function LogPageContent() {
                             setSelectedPartId(part.id)
                             setIsDropdownOpen(false)
                           }}
-                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 ${
-                            selectedPartId === part.id ? 'bg-gray-50' : ''
+                          className={`w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center gap-3 ${
+                            selectedPartId === part.id ? 'bg-muted' : ''
                           }`}
                         >
                           <span className="text-lg shrink-0">{part.icon || '●'}</span>
-                          <span className="text-gray-900 font-medium">{part.name}</span>
+                          <span className="text-foreground font-medium">{part.name}</span>
                         </button>
                       ))}
                     </div>
@@ -456,7 +456,7 @@ function LogPageContent() {
 
           {/* Active Filters Display */}
           {(searchQuery || selectedPartId) && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>
                 Showing {filteredEntries.length} of {entries.length} entries
               </span>
@@ -475,8 +475,8 @@ function LogPageContent() {
 
         {/* Entries List */}
         {totalCount === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
-            <p className="text-gray-600 mb-4">No journal entries yet</p>
+          <div className="text-center py-12 bg-card rounded-2xl shadow-sm">
+            <p className="text-muted-foreground mb-4">No journal entries yet</p>
             <Link
               href="/journal"
               className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -485,8 +485,8 @@ function LogPageContent() {
             </Link>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
-            <p className="text-gray-600 mb-2">No entries match your filters</p>
+          <div className="text-center py-12 bg-card rounded-2xl shadow-sm">
+            <p className="text-muted-foreground mb-2">No entries match your filters</p>
             <button
               onClick={() => {
                 setSearchQuery('')
@@ -506,10 +506,10 @@ function LogPageContent() {
                   {weekIndex > 0 && (
                     <div className="relative mb-8">
                       <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                        <div className="w-full border-t border-gray-200"></div>
+                        <div className="w-full border-t border-border"></div>
                       </div>
                       <div className="relative flex justify-center">
-                        <span className="px-3 bg-gray-50 text-sm text-gray-500 font-medium">
+                        <span className="px-3 bg-muted text-sm text-muted-foreground font-medium">
                           {formatWeekRange(weekStart)}
                         </span>
                       </div>
@@ -519,7 +519,7 @@ function LogPageContent() {
                   {/* First week label (no divider above) */}
                   {weekIndex === 0 && (
                     <div className="mb-4 text-center">
-                      <span className="text-sm text-gray-500 font-medium">
+                      <span className="text-sm text-muted-foreground font-medium">
                         {formatWeekRange(weekStart)}
                       </span>
                     </div>
@@ -531,14 +531,14 @@ function LogPageContent() {
                       <Link
                         key={entry.id}
                         href={`/log/${createEntrySlug(entry.createdAt)}`}
-                        className="block bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100"
+                        className="block bg-card rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-border"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            <h3 className="text-lg font-semibold text-foreground mb-1">
                               {formatEntryDate(entry.createdAt)}
                             </h3>
-                            <p className="text-sm text-gray-500 font-semibold">{entry.prompt}</p>
+                            <p className="text-sm text-muted-foreground font-semibold">{entry.prompt}</p>
                           </div>
                           <div className="flex items-center gap-3 ml-4">
                             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
@@ -555,13 +555,13 @@ function LogPageContent() {
                                   </div>
                                 ))}
                                 {entry.partAnalyses.length > 3 && (
-                                  <span className="text-xs text-gray-600 flex items-center">
+                                  <span className="text-xs text-muted-foreground flex items-center">
                                     +{entry.partAnalyses.length - 3}
                                   </span>
                                 )}
                               </div>
                             )}
-                            <span className="text-sm text-gray-500 whitespace-nowrap">
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
                               {entry.wordCount} words
                             </span>
                           </div>
@@ -584,7 +584,7 @@ function LogPageContent() {
                     setWeeksToLoad((prev) => prev + 1)
                   }}
                   disabled={entriesFetching || isLoadingMore}
-                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-background border border-input text-foreground rounded-lg hover:bg-muted transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {entriesFetching || isLoadingMore ? 'Loading...' : 'Load one more week'}
                 </button>

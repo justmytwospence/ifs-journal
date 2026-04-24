@@ -117,7 +117,7 @@ export default function PartsPage() {
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-red-600 mb-4">Failed to load parts</p>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               {error instanceof Error ? error.message : 'An error occurred'}
             </p>
             <button
@@ -167,8 +167,8 @@ export default function PartsPage() {
 
             {parts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 mb-4">No parts discovered yet</p>
-                <p className="text-sm text-gray-400">
+                <p className="text-muted-foreground mb-4">No parts discovered yet</p>
+                <p className="text-sm text-muted-foreground">
                   Write journal entries to discover your internal parts
                 </p>
               </div>
@@ -184,7 +184,7 @@ export default function PartsPage() {
                     <Link
                       key={part.id}
                       href={`/parts/${slugify(part.name)}`}
-                      className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col"
+                      className="bg-card rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col"
                     >
                       <div className="flex items-start gap-4 mb-3">
                         <div
@@ -195,13 +195,13 @@ export default function PartsPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="text-lg font-semibold mb-0.5">{part.name}</h3>
-                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                          <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
                             {part.role}
                           </span>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-sm flex-1 mb-4">{part.description}</p>
-                      <div className="text-sm text-gray-500 pt-3 border-t border-gray-100">
+                      <p className="text-muted-foreground text-sm flex-1 mb-4">{part.description}</p>
+                      <div className="text-sm text-muted-foreground pt-3 border-t border-border">
                         {part.appearances} {part.appearances === 1 ? 'appearance' : 'appearances'}
                       </div>
                     </Link>
