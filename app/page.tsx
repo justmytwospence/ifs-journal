@@ -36,10 +36,10 @@ export default async function Home() {
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               IFS Journal
             </h1>
-            <p className="text-2xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-2xl text-muted-foreground max-w-2xl mx-auto">
               Discover and understand your internal parts through guided journaling
             </p>
-            <p className="text-lg text-gray-500 max-w-xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
               Based on Internal Family Systems therapy principles
             </p>
           </div>
@@ -54,7 +54,7 @@ export default async function Home() {
             </a>
             <a
               href="/login"
-              className="px-8 py-4 bg-white text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all border-2 border-gray-200 text-center"
+              className="px-8 py-4 bg-background text-foreground rounded-xl font-semibold hover:bg-muted transition-all border-2 border-border text-center"
             >
               Sign In
             </a>
@@ -68,32 +68,32 @@ export default async function Home() {
 
           {/* Features */}
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
               <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <span className="text-3xl">✍️</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">AI-Powered Prompts</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Personalized journal prompts that help you explore your internal parts
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
               <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
                 <span className="text-3xl">🎭</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Parts Discovery</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Automatically identify your Protectors, Managers, Firefighters, and Exiles
               </p>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
               <div className="w-14 h-14 bg-cyan-100 rounded-xl flex items-center justify-center mb-4">
                 <span className="text-3xl">💬</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Part Conversations</h3>
-              <p className="text-gray-600">Engage in therapeutic dialogues with your parts</p>
+              <p className="text-muted-foreground">Engage in therapeutic dialogues with your parts</p>
             </div>
           </div>
         </div>

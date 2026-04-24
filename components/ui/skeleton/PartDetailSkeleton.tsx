@@ -7,7 +7,7 @@ export function PartDetailSkeleton() {
       <span className="sr-only">Loading part details...</span>
 
       {/* Part Header */}
-      <div className="bg-white rounded-2xl shadow-sm p-8 mb-6">
+      <div className="bg-card rounded-2xl shadow-sm p-8 mb-6">
         <div className="flex items-center gap-4 mb-4">
           {/* Large icon placeholder */}
           <SkeletonCircle size={64} className="rounded-xl" />
@@ -32,7 +32,7 @@ export function PartDetailSkeleton() {
       {/* Two-column grid layout */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Key Quotes Section */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="bg-card rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <Skeleton height={24} width={120} />
             <Skeleton height={16} width={80} />
@@ -41,7 +41,7 @@ export function PartDetailSkeleton() {
           {/* 3 quote items */}
           <ul className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <li key={i} className="border-l-4 border-gray-200 pl-4 py-2">
+              <li key={i} className="border-l-4 border-border pl-4 py-2">
                 <Skeleton height={48} width="90%" className="rounded" />
               </li>
             ))}
@@ -49,7 +49,7 @@ export function PartDetailSkeleton() {
         </div>
 
         {/* Actions Section */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="bg-card rounded-2xl shadow-sm p-6">
           <Skeleton height={24} width={100} className="mb-4" />
 
           {/* 2 button placeholders */}
@@ -61,7 +61,7 @@ export function PartDetailSkeleton() {
       </div>
 
       {/* Conversation Area */}
-      <div className="bg-white rounded-2xl shadow-sm p-6">
+      <div className="bg-card rounded-2xl shadow-sm p-6">
         <Skeleton height={24} width={250} className="mb-2" />
         <Skeleton height={16} width={300} className="mb-6" />
 

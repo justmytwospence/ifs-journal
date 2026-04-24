@@ -94,11 +94,11 @@ function CustomTooltip({
   const count = data.appearances ?? data.size
 
   return (
-    <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-200">
-      <p className="font-semibold text-gray-900">{label}</p>
-      {data.role && <p className="text-sm text-gray-600">{data.role}</p>}
+    <div className="bg-popover px-4 py-3 rounded-lg shadow-lg border border-border">
+      <p className="font-semibold text-foreground">{label}</p>
+      {data.role && <p className="text-sm text-muted-foreground">{data.role}</p>}
       {count !== undefined && (
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {count} {count === 1 ? 'appearance' : 'appearances'}
         </p>
       )}

@@ -11,8 +11,8 @@ export function PartsPageSkeleton({ reanalyzing = false }: { reanalyzing?: boole
         <Skeleton width="100%" height={300} className="rounded-2xl" />
         {reanalyzing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-gray-500 font-medium">Reanalyzing all journal entries...</p>
-            <p className="text-sm text-gray-400 mt-2">This may take a minute</p>
+            <p className="text-muted-foreground font-medium">Reanalyzing all journal entries...</p>
+            <p className="text-sm text-muted-foreground mt-2">This may take a minute</p>
           </div>
         )}
       </div>

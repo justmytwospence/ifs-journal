@@ -5,7 +5,7 @@ export function JournalEntrySkeleton() {
     <div role="status" aria-busy="true" aria-label="Loading journal entry">
       <span className="sr-only">Loading journal entry...</span>
 
-      <div className="bg-white rounded-2xl shadow-sm p-8">
+      <div className="bg-card rounded-2xl shadow-sm p-8">
         <div className="mb-6">
           {/* Header with date and word count */}
           <div className="flex items-center justify-between mb-4">

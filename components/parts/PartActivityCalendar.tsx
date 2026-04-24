@@ -38,10 +38,10 @@ export function PartActivityCalendar({ trend, color }: PartActivityCalendarProps
   const hasActivity = trend.some((c) => c > 0)
 
   return (
-    <div className="pt-4 border-t border-gray-100">
+    <div className="pt-4 border-t border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-500">Activity (Last 30 days)</span>
-        {!hasActivity && <span className="text-xs text-gray-400">No activity</span>}
+        <span className="text-sm text-muted-foreground">Activity (Last 30 days)</span>
+        {!hasActivity && <span className="text-xs text-muted-foreground">No activity</span>}
       </div>
       <ActivityCalendar
         data={data}

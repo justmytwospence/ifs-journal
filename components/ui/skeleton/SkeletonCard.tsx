@@ -17,7 +17,7 @@ export function SkeletonCard({
   ...props
 }: SkeletonCardProps) {
   return (
-    <div className={cn('bg-white rounded-2xl shadow-sm p-6', className)} {...props}>
+    <div className={cn('bg-card rounded-2xl shadow-sm p-6', className)} {...props}>
       {showIcon && (
         <div className="flex items-start gap-4 mb-4">
           <SkeletonCircle size={48} animate={animate} />

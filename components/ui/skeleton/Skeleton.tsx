@@ -26,7 +26,7 @@ export function Skeleton({
       role="status"
       aria-busy="true"
       className={cn(
-        'bg-gray-200',
+        'bg-muted',
         circle ? 'rounded-full' : 'rounded-lg',
         animate && 'skeleton-shimmer',
         className
