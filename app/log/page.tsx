@@ -362,7 +362,7 @@ function LogPageContent() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-3 pl-12 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <svg
+              <svg aria-hidden="true"
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
@@ -399,7 +399,7 @@ function LogPageContent() {
                       <span className="text-foreground">All Parts</span>
                     )}
                   </div>
-                  <svg
+                  <svg aria-hidden="true"
                     className={`w-5 h-5 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
