@@ -3,8 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
-import { useEffect, useRef, useState } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 // SVG Icons for bottom nav
@@ -45,9 +50,6 @@ export function AppNav() {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session } = useSession()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const { isAnalyzing, analysisType } = useAnalysisStore()
 
   const handleSignOut = async () => {
@@ -67,18 +69,6 @@ export function AppNav() {
     }
     return emailName.substring(0, 2).toUpperCase()
   }
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   return (
     <>
@@ -145,35 +135,18 @@ export function AppNav() {
                   </span>
                 </div>
               )}
-              <div className="relative shrink-0" ref={dropdownRef}>
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-white font-semibold flex items-center justify-center hover:shadow-lg transition-shadow"
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label="Account menu"
+                  className="size-10 shrink-0 rounded-full bg-linear-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold flex items-center justify-center hover:shadow-lg transition-shadow focus-visible:ring-2 focus-visible:ring-ring outline-none"
                 >
                   {getInitials()}
-                </button>
-
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                    <Link
-                      href="/profile"
-                      onClick={() => setDropdownOpen(false)}
-                      className="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Profile
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setDropdownOpen(false)
-                        handleSignOut()
-                      }}
-                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem render={<Link href="/profile">Profile</Link>} />
+                  <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
