@@ -32,10 +32,6 @@ Creating duplicate or similar parts is the worst outcome. Match to existing part
 - Maximum 9 parts total across the whole system — not a per-entry cap.
 - Cite complete sentences or meaningful phrases, not single words or fragments.
 
-## Existing Parts
-
-{{EXISTING_PARTS}}
-
 ## Output Format
 
 Respond with one `<part>` element per identified part, nothing else. No preamble, no JSON, no markdown fences.
@@ -63,3 +59,7 @@ Rules for the output:
 ## Icon Options for New Parts
 
 Pick one unique icon per new part: 🛡️ 📋 🔥 💔 👁️ ⚡ 🎭 🧊 🌪️ 💭 🎯 🚨 🧱 🌊 ⚖️ 🎪 🔒 🌱 🎨 🏃
+
+## Existing Parts
+
+{{EXISTING_PARTS}}

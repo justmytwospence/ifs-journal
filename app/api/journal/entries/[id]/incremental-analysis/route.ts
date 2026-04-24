@@ -61,18 +61,29 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const templatePath = join(process.cwd(), 'lib/prompts/incremental-entry-analysis.md')
     const template = await readFile(templatePath, 'utf-8')
 
+    // Placeholder is at the end of the template so the front (large, stable)
+    // is cacheable and the user-specific parts list is the only uncached tail.
+    const [templatePrefix] = template.split('{{EXISTING_PARTS}}')
+
     const partsContext =
       existingParts.length > 0
         ? existingParts.map((p) => `- ${p.name} (${p.role}): ${p.description}`).join('\n')
         : 'No existing parts yet.'
 
-    const systemPrompt = template.replace('{{EXISTING_PARTS}}', partsContext)
-
-    const response = await anthropic.messages.create({
+    // Stream the call — matches batch-analysis.ts; a sync create() silently
+    // dies at Vercel's 60s function timeout on slow responses.
+    const stream = anthropic.messages.stream({
       model: ANALYSIS_MODEL,
       max_tokens: 16000,
       thinking: { type: 'adaptive' },
-      system: systemPrompt,
+      system: [
+        {
+          type: 'text',
+          text: templatePrefix,
+          cache_control: { type: 'ephemeral' },
+        },
+        { type: 'text', text: `## Existing Parts\n\n${partsContext}` },
+      ],
       messages: [
         {
           role: 'user',
@@ -95,6 +106,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         },
       ],
     })
+    const response = await stream.finalMessage()
+
+    const usage = response.usage
+    console.log(
+      `incremental-analysis entry=${entry.id} cache_read=${usage.cache_read_input_tokens ?? 0} cache_write=${usage.cache_creation_input_tokens ?? 0} input=${usage.input_tokens} output=${usage.output_tokens}`
+    )
 
     const parsedParts = parseCitationsResponse(response.content)
     console.log(`Claude returned ${parsedParts.length} parts for entry ${entry.id}`)

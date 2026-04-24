@@ -55,7 +55,15 @@ export async function runBatchAnalysis(
     model: ANALYSIS_MODEL,
     max_tokens: 32000,
     thinking: { type: 'adaptive' },
-    system: systemPrompt,
+    // Cache the full system prompt — batch reanalysis is rerun on
+    // demand and during seed; identical prefix across calls.
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [
       {
         role: 'user',
@@ -76,6 +84,11 @@ export async function runBatchAnalysis(
     ],
   })
   const response = await stream.finalMessage()
+
+  const usage = response.usage
+  console.log(
+    `batch-analysis entries=${entries.length} cache_read=${usage.cache_read_input_tokens ?? 0} cache_write=${usage.cache_creation_input_tokens ?? 0} input=${usage.input_tokens} output=${usage.output_tokens}`
+  )
 
   const rawParts = parseCitationsResponse(response.content)
   console.log(`Claude returned ${rawParts.length} parts across ${entries.length} entries`)
