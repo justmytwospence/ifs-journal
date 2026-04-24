@@ -4,12 +4,13 @@ import { computeContentHash } from '@/lib/anchoring/content-hash'
 import { reanchorHighlight } from '@/lib/anchoring/match-quote'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { captureException } from '@/lib/logger'
 
 const CONTEXT_LENGTH = 32
 
 const patchSchema = z.object({
-  content: z.string().min(1),
-  prompt: z.string().optional(),
+  content: z.string().min(1).max(20_000),
+  prompt: z.string().max(500).optional(),
 })
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -48,7 +49,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ entry })
   } catch (error) {
-    console.error('Get entry error:', error)
+    captureException(error, { route: 'GET /api/journal/entries/[id]' })
     return NextResponse.json({ error: 'Failed to fetch entry' }, { status: 500 })
   }
 }
@@ -156,7 +157,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
     }
-    console.error('Patch entry error:', error)
+    captureException(error, { route: 'PATCH /api/journal/entries/[id]' })
     return NextResponse.json({ error: 'Failed to update entry' }, { status: 500 })
   }
 }
@@ -194,7 +195,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete entry error:', error)
+    captureException(error, { route: 'DELETE /api/journal/entries/[id]' })
     return NextResponse.json({ error: 'Failed to delete entry' }, { status: 500 })
   }
 }

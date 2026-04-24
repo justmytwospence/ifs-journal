@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { runBatchAnalysis } from '@/lib/batch-analysis'
 import prisma from '@/lib/db'
+import { demoGuard } from '@/lib/demo-guard'
+import { captureException } from '@/lib/logger'
+import { DAY_MS, enforceRateLimit } from '@/lib/rate-limit'
 
 export async function POST() {
   try {
@@ -9,6 +12,17 @@ export async function POST() {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const demoCheck = await demoGuard()
+    if (demoCheck) return demoCheck
+
+    const limited = await enforceRateLimit({
+      subjectKey: `user:${session.user.id}`,
+      bucket: 'analysis:batch',
+      limit: 5,
+      windowMs: DAY_MS,
+    })
+    if (limited) return limited
 
     const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, session.user.id)
 
@@ -26,7 +40,7 @@ export async function POST() {
       partsCreated,
     })
   } catch (error) {
-    console.error('Reanalyze error:', error)
+    captureException(error, { route: 'POST /api/parts/batch-reanalysis' })
     return NextResponse.json({ error: 'Failed to reanalyze entries' }, { status: 500 })
   }
 }
