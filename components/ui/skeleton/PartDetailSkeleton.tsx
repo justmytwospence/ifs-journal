@@ -1,6 +1,5 @@
 import { Skeleton } from './Skeleton'
 import { SkeletonCircle } from './SkeletonCircle'
-import { SkeletonText } from './SkeletonText'
 
 export function PartDetailSkeleton() {
   return (

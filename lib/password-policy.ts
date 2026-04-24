@@ -26,5 +26,4 @@ export const newPasswordSchema = z
     'Password must include at least one non-alphanumeric character (e.g., !@#$%)'
   )
 
-export const NEW_PASSWORD_HINT =
-  'At least 12 characters, including one symbol (like !@#$%).'
+export const NEW_PASSWORD_HINT = 'At least 12 characters, including one symbol (like !@#$%).'

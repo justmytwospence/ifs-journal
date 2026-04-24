@@ -8,7 +8,7 @@ import {
   getActivityDates,
 } from '@/lib/part-utils'
 
-export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const session = await auth()
     if (!session?.user?.id) {

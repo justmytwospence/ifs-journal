@@ -125,9 +125,9 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   // Prefetch part pages for parts in this entry
   useEffect(() => {
     if (entry?.partAnalyses) {
-      const uniqueParts = Array.from(new Set(entry.partAnalyses.map((a) => a.part.id))).map(
-        (partId) => entry.partAnalyses!.find((a) => a.part.id === partId)!.part
-      )
+      const uniqueParts = Array.from(new Set(entry.partAnalyses.map((a) => a.part.id)))
+        .map((partId) => entry.partAnalyses?.find((a) => a.part.id === partId)?.part)
+        .filter((p): p is NonNullable<typeof p> => p !== undefined)
 
       uniqueParts.forEach((part) => {
         const slug = slugify(part.name)
@@ -477,7 +477,8 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {Array.from(new Set(entry.partAnalyses.map((a) => a.part.id))).map((partId) => {
-                    const part = entry.partAnalyses!.find((a) => a.part.id === partId)!.part
+                    const part = entry.partAnalyses?.find((a) => a.part.id === partId)?.part
+                    if (!part) return null
                     return (
                       <Link
                         key={part.id}

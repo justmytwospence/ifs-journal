@@ -1,6 +1,6 @@
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { NextResponse } from 'next/server'
-import { join } from 'path'
 import { ANALYSIS_MODEL, anthropic } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { type ParsedPart, parseCitationsResponse } from '@/lib/citation-parser'

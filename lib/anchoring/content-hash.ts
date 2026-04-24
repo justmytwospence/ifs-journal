@@ -6,7 +6,7 @@
  * detect when highlights may be stale.
  */
 
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 /**
  * Compute SHA-256 hash of content.

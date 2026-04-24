@@ -52,14 +52,14 @@ describe('matchQuote', () => {
     const match = matchQuote(text, 'rehearsing worst-case scenarios')
     expect(match).not.toBeNull()
     expect(match?.score).toBe(1)
-    expect(text.slice(match!.start, match!.end)).toBe('rehearsing worst-case scenarios')
+    expect(text.slice(match?.start, match?.end)).toBe('rehearsing worst-case scenarios')
   })
 
   it('finds a quote after a small edit (fuzzy)', () => {
     // "worst-case" → "worst case" (hyphen removed)
     const match = matchQuote(text, 'rehearsing worst case scenarios')
     expect(match).not.toBeNull()
-    expect(match!.score).toBeGreaterThan(0.8)
+    expect(match?.score).toBeGreaterThan(0.8)
   })
 
   it('rejects when the quote has diverged too far from the text', () => {
@@ -77,7 +77,7 @@ describe('matchQuote', () => {
     })
     expect(match).not.toBeNull()
     // The correct one starts after the first ". "
-    expect(match!.start).toBe(textTwo.indexOf('I felt stuck for hours'))
+    expect(match?.start).toBe(textTwo.indexOf('I felt stuck for hours'))
   })
 })
 
@@ -101,15 +101,14 @@ describe('reanchorHighlight', () => {
 
     // Edit: insert a whole paragraph before the quote. Old offsets are now wrong.
     const editedText =
-      'A whole new paragraph that was added on retrospective review. ' +
-      originalText
+      'A whole new paragraph that was added on retrospective review. ' + originalText
 
     const reanchored = reanchorHighlight(editedText, selector)
     expect(reanchored).not.toBeNull()
-    expect(editedText.slice(reanchored!.startOffset, reanchored!.endOffset)).toBe(
+    expect(editedText.slice(reanchored?.startOffset, reanchored?.endOffset)).toBe(
       'A tightness in my chest'
     )
-    expect(reanchored!.startOffset).not.toBe(selector.startOffset)
+    expect(reanchored?.startOffset).not.toBe(selector.startOffset)
   })
 
   it('returns null when the quote text is no longer present and has no near-match', () => {

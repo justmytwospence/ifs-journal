@@ -1,6 +1,6 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { PrismaClient } from '@prisma/client'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
 import { ANALYSIS_MODEL, anthropic } from './anthropic'
 import { type ParsedPart, parseCitationsResponse } from './citation-parser'
 import { deduplicateParts, normalizeName } from './part-similarity'

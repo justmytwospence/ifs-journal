@@ -103,7 +103,7 @@ export function parseCitationsResponse(content: Anthropic.ContentBlock[]): Parse
   while ((partMatch = partRegex.exec(flat)) !== null) {
     const attrs = parseAttributes(partMatch[1])
     const innerStart = partMatch.index + partMatch[0].indexOf('>') + 1
-    const innerEnd = partMatch.index + partMatch[0].length - '</part>'.length
+    const _innerEnd = partMatch.index + partMatch[0].length - '</part>'.length
     const inner = partMatch[2]
 
     const name = attrs.name?.trim()

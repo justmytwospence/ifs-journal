@@ -1,6 +1,6 @@
+import { createHash } from 'node:crypto'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { createHash } from 'crypto'
 import { runBatchAnalysis } from '../lib/batch-analysis'
 
 const prisma = new PrismaClient()
@@ -18,7 +18,7 @@ const computeContentHash = (content: string): string => {
 }
 
 // Simple slugify function
-const slugify = (name: string): string => {
+const _slugify = (name: string): string => {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

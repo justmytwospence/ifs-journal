@@ -112,7 +112,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     // Scroll to bottom when conversation updates
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [conversation])
+  }, [])
 
   const handleSendMessage = async () => {
     if (!message.trim() || !part || sending) return

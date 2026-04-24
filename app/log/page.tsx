@@ -243,14 +243,14 @@ function LogPageContent() {
       if (!weeks.has(weekKey)) {
         weeks.set(weekKey, [])
       }
-      weeks.get(weekKey)!.push(entry)
+      weeks.get(weekKey)?.push(entry)
     })
 
     return Array.from(weeks.entries()).map(([weekKey, entries]) => ({
       weekStart: new Date(weekKey),
       entries,
     }))
-  }, [filteredEntries])
+  }, [filteredEntries, getWeekStart])
 
   // Function to get excerpt with highlighted quote for selected part
   const getEntryExcerpt = (entry: JournalEntry) => {
@@ -284,8 +284,8 @@ function LogPageContent() {
     let excerpt = entry.content.substring(start, end)
 
     // Add ellipsis if we're not at the start/end
-    if (start > 0) excerpt = '...' + excerpt
-    if (end < entry.content.length) excerpt = excerpt + '...'
+    if (start > 0) excerpt = `...${excerpt}`
+    if (end < entry.content.length) excerpt = `${excerpt}...`
 
     return excerpt
   }

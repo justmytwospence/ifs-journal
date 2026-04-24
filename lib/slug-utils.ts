@@ -19,7 +19,7 @@ export function extractPartIdFromSlug(slug: string): string | null {
   return parts[parts.length - 1]
 }
 
-export function createEntrySlug(createdAt: string | Date, entryId?: string): string {
+export function createEntrySlug(createdAt: string | Date, _entryId?: string): string {
   // Create a slug from the date using UTC to ensure consistency: "2024-01-15-monday-3-45pm"
   const date = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
 
