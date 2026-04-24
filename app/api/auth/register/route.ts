@@ -13,20 +13,17 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { email, password } = registerSchema.parse(body)
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 })
+      return NextResponse.json({ success: true, user: { email } }, { status: 201 })
     }
 
-    // Hash password
     const passwordHash = await hash(password, 12)
 
-    // Create user
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         email,
         passwordHash,
@@ -34,16 +31,7 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json(
-      {
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-      },
-      { status: 201 }
-    )
+    return NextResponse.json({ success: true, user: { email } }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
