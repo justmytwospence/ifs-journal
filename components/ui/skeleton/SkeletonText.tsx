@@ -23,6 +23,7 @@ export function SkeletonText({
   return (
     <div className={cn('space-y-2', className)} {...props}>
       {lineWidths.map((width, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length placeholder array
         <Skeleton key={index} height={8} width={width} animate={animate} />
       ))}
     </div>

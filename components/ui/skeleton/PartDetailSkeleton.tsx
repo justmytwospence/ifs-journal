@@ -3,6 +3,7 @@ import { SkeletonCircle } from './SkeletonCircle'
 
 export function PartDetailSkeleton() {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role=status on a div is the ARIA pattern for loading placeholders; <output> is for form results.
     <div role="status" aria-busy="true" aria-label="Loading part details">
       <span className="sr-only">Loading part details...</span>
 

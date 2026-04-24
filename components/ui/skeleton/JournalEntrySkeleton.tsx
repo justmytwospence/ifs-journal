@@ -2,6 +2,7 @@ import { Skeleton } from './Skeleton'
 
 export function JournalEntrySkeleton() {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role=status on a div is the ARIA pattern for loading placeholders; <output> is for form results.
     <div role="status" aria-busy="true" aria-label="Loading journal entry">
       <span className="sr-only">Loading journal entry...</span>
 

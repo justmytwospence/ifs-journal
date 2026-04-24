@@ -133,7 +133,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         }))
       )
 
-      let part
+      let part: (typeof existingParts)[number] | undefined
       if (matchedPartId) {
         part = existingParts.find((p) => p.id === matchedPartId)
       } else {

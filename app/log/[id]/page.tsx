@@ -266,21 +266,36 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
     const parts: React.ReactElement[] = []
     let lastIndex = 0
 
-    filteredHighlights.forEach((highlight, i) => {
+    filteredHighlights.forEach((highlight) => {
       if (highlight.start > lastIndex) {
-        parts.push(<span key={`text-${i}`}>{text.slice(lastIndex, highlight.start)}</span>)
+        parts.push(
+          <span key={`text-${lastIndex}-${highlight.start}`}>
+            {text.slice(lastIndex, highlight.start)}
+          </span>
+        )
       }
 
       const highlightedText = highlight.text
 
       parts.push(
-        <Tooltip key={`highlight-${i}`}>
+        <Tooltip key={`highlight-${highlight.start}-${highlight.end}`}>
           <TooltipTrigger
             render={
+              // biome-ignore lint/a11y/useSemanticElements: must stay a <span> for inline flow inside the journal paragraph; <a> would be block-like here
               <span
+                role="link"
+                tabIndex={0}
                 className={`relative cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-muted-foreground' : ''}`}
                 style={{ backgroundColor: `${highlight.part.color}20` }}
-                onClick={() => (window.location.href = `/parts/${slugify(highlight.part.name)}`)}
+                onClick={() => {
+                  window.location.href = `/parts/${slugify(highlight.part.name)}`
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    window.location.href = `/parts/${slugify(highlight.part.name)}`
+                  }
+                }}
                 data-quote={highlightedText}
               >
                 {highlightedText}

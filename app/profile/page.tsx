@@ -79,15 +79,13 @@ export default function ProfilePage() {
             <h3 className="text-xl font-semibold mb-4">Account Information</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <div className="block text-sm font-medium text-foreground mb-1">Email</div>
                 <div className="px-4 py-3 bg-muted rounded-xl text-foreground">
                   {session?.user?.email || 'Loading...'}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Member Since
-                </label>
+                <div className="block text-sm font-medium text-foreground mb-1">Member Since</div>
                 <div className="px-4 py-3 bg-muted rounded-xl text-foreground">
                   {new Date().toLocaleDateString()}
                 </div>

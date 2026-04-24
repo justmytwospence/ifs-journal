@@ -3,6 +3,7 @@ import { SkeletonCard } from './SkeletonCard'
 
 export function PartsPageSkeleton({ reanalyzing = false }: { reanalyzing?: boolean }) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role=status on a div is the ARIA pattern for loading placeholders; <output> is for form results.
     <div role="status" aria-busy="true" aria-label="Loading parts">
       {/* Page Header Skeleton - removed as it's now rendered outside the skeleton */}
 
@@ -23,6 +24,7 @@ export function PartsPageSkeleton({ reanalyzing = false }: { reanalyzing?: boole
       {/* Parts Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholder list
           <SkeletonCard key={index} showIcon={true} textLines={3} />
         ))}
       </div>

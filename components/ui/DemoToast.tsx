@@ -28,8 +28,17 @@ export function DemoToast({ onClose }: DemoToastProps) {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 animate-slide-up pb-safe">
+      {/* biome-ignore lint/a11y/useSemanticElements: has a nested <button> close action; <button> here would produce invalid nested-button HTML */}
       <div
+        role="button"
+        tabIndex={0}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleClick()
+          }
+        }}
         className="bg-blue-600 text-white rounded-xl shadow-2xl p-4 max-w-md hover:bg-blue-700 transition-colors cursor-pointer"
       >
         <div className="flex items-start gap-3">
@@ -47,7 +56,13 @@ export function DemoToast({ onClose }: DemoToastProps) {
             className="text-white hover:text-blue-100 transition-colors"
             aria-label="Close"
           >
-            <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              aria-hidden="true"
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

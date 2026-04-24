@@ -2,6 +2,7 @@ import { Skeleton } from './Skeleton'
 
 export function LogPageSkeleton() {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: role=status on a div is the ARIA pattern for loading placeholders; <output> is for form results.
     <div role="status" aria-busy="true" aria-label="Loading journal entries">
       {/* Page Header Skeleton */}
       <div className="mb-8 flex items-center justify-between">
@@ -27,6 +28,7 @@ export function LogPageSkeleton() {
       {/* Entry Cards List Skeleton */}
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton placeholder list
           <div key={index} className="bg-card rounded-2xl shadow-sm p-6 border border-border">
             {/* Entry Header with Date and Metadata */}
             <div className="flex items-start justify-between mb-3">

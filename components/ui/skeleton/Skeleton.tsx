@@ -22,6 +22,7 @@ export function Skeleton({
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: <output> is semantically for form results; role="status" on a div is the conventional ARIA pattern for loading placeholders.
     <div
       role="status"
       aria-busy="true"

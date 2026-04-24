@@ -24,14 +24,11 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npx tsc --noEmit
 
       - name: Unit tests
         run: npm test
-
-      # Lint is deliberately NOT gating yet. biome reports ~70 pre-existing
-      # a11y warnings cleaned up gradually by the shadcn migration. Re-enable
-      # once the backlog clears — tracked in the revamp plan (P1.5 follow-up).
-      # - name: Lint
-      #   run: npm run lint

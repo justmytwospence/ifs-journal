@@ -71,9 +71,7 @@ function flatten(content: Anthropic.ContentBlock[]): { flat: string; spans: Span
 
 function parseAttributes(openTag: string): Record<string, string> {
   const attrs: Record<string, string> = {}
-  const attrRegex = /(\w+)\s*=\s*"([^"]*)"/g
-  let m: RegExpExecArray | null
-  while ((m = attrRegex.exec(openTag)) !== null) {
+  for (const m of openTag.matchAll(/(\w+)\s*=\s*"([^"]*)"/g)) {
     attrs[m[1]] = m[2]
   }
   return attrs
@@ -98,12 +96,10 @@ export function parseCitationsResponse(content: Anthropic.ContentBlock[]): Parse
   const { flat, spans } = flatten(content)
   const parts: ParsedPart[] = []
 
-  const partRegex = /<part\b([^>]*)>([\s\S]*?)<\/part>/g
-  let partMatch: RegExpExecArray | null
-  while ((partMatch = partRegex.exec(flat)) !== null) {
+  for (const partMatch of flat.matchAll(/<part\b([^>]*)>([\s\S]*?)<\/part>/g)) {
     const attrs = parseAttributes(partMatch[1])
-    const innerStart = partMatch.index + partMatch[0].indexOf('>') + 1
-    const _innerEnd = partMatch.index + partMatch[0].length - '</part>'.length
+    const partIndex = partMatch.index
+    const innerStart = partIndex + partMatch[0].indexOf('>') + 1
     const inner = partMatch[2]
 
     const name = attrs.name?.trim()
@@ -119,9 +115,7 @@ export function parseCitationsResponse(content: Anthropic.ContentBlock[]): Parse
     const description = descMatch ? descMatch[1].trim() : null
 
     const instances: ParsedInstance[] = []
-    const instanceRegex = /<instance\b([^>]*)>([\s\S]*?)<\/instance>/g
-    let instMatch: RegExpExecArray | null
-    while ((instMatch = instanceRegex.exec(inner)) !== null) {
+    for (const instMatch of inner.matchAll(/<instance\b([^>]*)>([\s\S]*?)<\/instance>/g)) {
       const instAttrs = parseAttributes(instMatch[1])
       const instFlatStart = innerStart + instMatch.index + instMatch[0].indexOf('>') + 1
       const instFlatEnd = innerStart + instMatch.index + instMatch[0].length - '</instance>'.length

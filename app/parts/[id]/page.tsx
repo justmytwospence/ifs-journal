@@ -325,8 +325,8 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
             <ul className="space-y-3">
               {part.quotesWithEntries && part.quotesWithEntries.length > 0
                 ? (showAllQuotes ? part.quotesWithEntries : part.quotesWithEntries.slice(0, 3)).map(
-                    (quote, i) => (
-                      <li key={i}>
+                    (quote) => (
+                      <li key={`${quote.entryId}-${quote.text}`}>
                         <Link
                           href={`/log/${quote.entryCreatedAt ? createEntrySlug(quote.entryCreatedAt) : quote.entryId}#quote-${encodeURIComponent(quote.text)}`}
                           className="block text-foreground italic border-l-4 pl-4 py-2 hover:bg-muted transition-colors rounded-r"
@@ -337,9 +337,9 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                       </li>
                     )
                   )
-                : part.quotes.slice(0, showAllQuotes ? undefined : 3).map((quote, i) => (
+                : part.quotes.slice(0, showAllQuotes ? undefined : 3).map((quote) => (
                     <li
-                      key={i}
+                      key={quote}
                       className="text-foreground italic border-l-4 pl-4 py-2"
                       style={{ borderColor: part.color }}
                     >
@@ -379,7 +379,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                 <>
                   {conversation.map((msg, i) => (
                     <div
-                      key={i}
+                      key={msg.id ?? `${msg.role}-${i}-${msg.content.slice(0, 20)}`}
                       className={`p-4 rounded-xl ${
                         msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-muted mr-8'
                       }`}

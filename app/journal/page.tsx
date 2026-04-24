@@ -64,10 +64,15 @@ export default function JournalPage() {
       typeof window !== 'undefined' &&
       ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognitionAPI =
-        (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-      const recognitionInstance = new SpeechRecognitionAPI() as SpeechRecognition
+      // Web Speech API isn't in @types/react-dom's lib yet; reach for it via
+      // a narrow unknown cast rather than any.
+      const win = window as unknown as {
+        webkitSpeechRecognition?: new () => SpeechRecognition
+        SpeechRecognition?: new () => SpeechRecognition
+      }
+      const SpeechRecognitionAPI = win.webkitSpeechRecognition || win.SpeechRecognition
+      if (!SpeechRecognitionAPI) return
+      const recognitionInstance = new SpeechRecognitionAPI()
       recognitionInstance.continuous = true
       recognitionInstance.interimResults = true
       recognitionInstance.lang = 'en-US'
@@ -505,7 +510,12 @@ export default function JournalPage() {
                 title={isListening ? 'Stop recording' : 'Start voice input'}
               >
                 {isListening ? (
-                  <svg aria-hidden="true" className="w-5 h-5 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    aria-hidden="true"
+                    className="w-5 h-5 animate-pulse"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
@@ -513,7 +523,12 @@ export default function JournalPage() {
                     />
                   </svg>
                 ) : (
-                  <svg aria-hidden="true" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    aria-hidden="true"
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"

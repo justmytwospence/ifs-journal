@@ -14,7 +14,13 @@ import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 // SVG Icons for bottom nav
 const JournalIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -25,7 +31,13 @@ const JournalIcon = ({ className }: { className?: string }) => (
 )
 
 const LogIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -36,7 +48,13 @@ const LogIcon = ({ className }: { className?: string }) => (
 )
 
 const PartsIcon = ({ className }: { className?: string }) => (
-  <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg
+    aria-hidden="true"
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"

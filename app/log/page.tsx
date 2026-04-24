@@ -362,7 +362,8 @@ function LogPageContent() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-3 pl-12 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <svg aria-hidden="true"
+              <svg
+                aria-hidden="true"
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
@@ -399,7 +400,8 @@ function LogPageContent() {
                       <span className="text-foreground">All Parts</span>
                     )}
                   </div>
-                  <svg aria-hidden="true"
+                  <svg
+                    aria-hidden="true"
                     className={`w-5 h-5 text-muted-foreground transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
@@ -416,6 +418,10 @@ function LogPageContent() {
 
                 {isDropdownOpen && (
                   <>
+                    {/* Click-outside catcher. Esc-close is handled on the dropdown button itself,
+                        so keyboard users don't need this layer; ignoring the a11y rule here. */}
+                    {/* biome-ignore lint/a11y/useKeyWithClickEvents: pointer-only click-outside overlay */}
+                    {/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only click-outside overlay */}
                     <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
                     <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-lg max-h-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
                       <button
@@ -549,6 +555,8 @@ function LogPageContent() {
                           </div>
                           <div className="flex items-center gap-3 ml-4">
                             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
+                              // biome-ignore lint/a11y/useKeyWithClickEvents: only calls e.preventDefault
+                              // biome-ignore lint/a11y/noStaticElementInteractions: only calls e.preventDefault
                               <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
                                 {entry.partAnalyses.slice(0, 3).map((analysis) => (
                                   <div key={analysis.id} className="relative group">
