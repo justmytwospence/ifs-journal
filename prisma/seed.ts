@@ -56,20 +56,35 @@ async function main() {
 
   // BCRYPT_ROUNDS matches lib/password-policy.ts — kept inline so seed has no
   // dependency on the app runtime (prisma db seed runs before the Next build).
-  const passwordHash = await bcrypt.hash('password123', 14)
+  //
+  // In production, refuse to fall back to the well-known dev defaults: without
+  // this guard, an accidentally un-configured prod deploy would ship a demo
+  // account whose password is `password123` AND whose `isDemo` session flag
+  // would be false (because the email didn't match the env), letting an
+  // attacker log in AND bypass the demo write-guard.
+  const isProd = process.env.NODE_ENV === 'production'
+  const demoEmail = process.env.DEMO_USER_EMAIL || (isProd ? '' : 'demo@ifsjournal.me')
+  const demoPassword = process.env.DEMO_USER_PASSWORD || (isProd ? '' : 'password123')
+  if (!demoEmail || !demoPassword) {
+    throw new Error(
+      'DEMO_USER_EMAIL and DEMO_USER_PASSWORD must be set in production. Refusing to seed with defaults.'
+    )
+  }
+  const normalizedDemoEmail = demoEmail.trim().toLowerCase()
+  const passwordHash = await bcrypt.hash(demoPassword, 14)
 
   console.log('Creating test users...')
 
   // Try to find existing user first
   let testUser = await prisma.user.findUnique({
-    where: { email: 'demo@ifsjournal.me' },
+    where: { email: normalizedDemoEmail },
   })
 
   // If user doesn't exist, create it
   if (!testUser) {
     testUser = await prisma.user.create({
       data: {
-        email: 'demo@ifsjournal.me',
+        email: normalizedDemoEmail,
         passwordHash,
         emailVerified: true,
       },
@@ -86,146 +101,284 @@ async function main() {
 
   console.log('Creating journal entries...')
 
-  // Define all journal entries
+  // Prompts are written to match what lib/prompts/journal-prompt-generation.md
+  // would plausibly produce: plain, scene-based, under ~60 words, no therapy
+  // vocabulary, no body-location asks. Several reach back to earlier entries
+  // the way the generator does when a recurring thread is visible in history.
   const entries = [
-    // Entry 1 - Day 30 - Bad day at work
     {
-      prompt: 'How was your day?',
-      content: `Ugh. Today sucked. My boss called me into her office and basically told me my work isn't good enough. She didn't say it like that but that's what she meant. She was like "we need to see more initiative from you" and "you need to be more proactive." I just sat there nodding like an idiot. I wanted to defend myself but I couldn't think of anything to say. My mind just went blank. Now I'm home and I can't stop replaying it in my head. I keep thinking of all the things I should have said. Why am I like this? Why can't I ever stand up for myself in the moment? I always freeze and then beat myself up about it later. I'm so tired of being like this. I'm tired of feeling like I'm not good enough at anything. Work sucks. I don't even like my job but I can't quit because I need the money. And even if I could quit, what would I do instead? I don't have any special skills or talents. I'm just average at everything. My friend keeps telling me I should try therapy but I don't know. That feels like admitting there's something really wrong with me. Plus it's expensive. I'll probably just keep doing what I'm doing - pretending everything is fine and hoping it gets better somehow. It won't though. I know it won't.`,
-      wordCount: 230,
+      prompt: "What's something from today still rattling around?",
+      content: `Evan asked if I could run to the store after work and I said yes but my voice came out sharp. He looked at me and said "you okay?" and I said "I'm fine, I'll go." It was fine. The ask was fine. I had thirty minutes between getting home and the thing we had later. Totally doable. But something in me flared when he asked. Like he'd added one more thing to a list I'd been carrying all day.
+
+I keep replaying the sharpness. I wasn't angry at him. I was already tight when I walked in the door. The sharpness was sitting there waiting for something to land on. Whatever he asked for first was going to catch it.
+
+What was I already tight about? Nothing specific. The regular stuff. I'd been in back-to-back meetings. I'd skipped lunch because a review ran long. I still hadn't looked at the Thursday deck. That's the real answer but it's not what showed up in my tone.
+
+I ended up apologizing on the drive to the store. He said it was fine, but that's the second time this month I've come in hot. I don't want to be the person who's always a little short with the people I live with.`,
       daysAgo: 30,
     },
-    // Entry 2 - Day 28 - Cancelled again
     {
-      prompt: "What's on your mind?",
-      content: `Sarah texted me asking if I want to get dinner this weekend. I said yes but I already know I'm going to cancel. I always do this. I make plans and then when the day comes I just can't do it. I don't know why. Like part of me really does want to see her. I miss her. We used to hang out all the time and now I barely see her. But then when it gets close to the actual day I just feel this dread. Like I can't handle it. It's too much effort to get ready and go out and be social and pretend I'm okay when I'm not. It's easier to just stay home. But then I feel guilty for canceling. And I worry that eventually she's going to stop asking. Who wants a friend who never shows up? I wouldn't. I'm being a shitty friend and I know it but I can't seem to stop. Maybe there's something wrong with me. Normal people don't have this much trouble just going to dinner with a friend. Normal people don't feel exhausted by the thought of basic social interaction. I used to be more social. In college I went out all the time. What happened to me? When did everything become so hard?`,
-      wordCount: 210,
+      prompt:
+        'Was there a decision this week where you felt pulled two different directions? Walk me through both sides.',
+      content: `Priya asked if I'd lead the Q3 onboarding revamp. Standing in the kitchen at work, coffee in hand, she framed it like a compliment: "you've got the clearest sense of the whole funnel."
+
+The first voice went yes before she finished the sentence. Proud. Already running the project in my head. Thinking about who I'd pull in, how I'd set up the doc, which meeting I'd move to make room. That voice lives close to the surface with me. It likes being asked.
+
+The second voice came about ten seconds later, quieter. You already said yes to the migration workstream. You already said yes to mentoring Jamie. You said yes to the guild rotation. You are saying yes again because she asked nicely and you are standing in a kitchen and it would feel awful to say anything else. You will resent this by week three.
+
+I said "let me think about it until Friday." Priya seemed a little surprised. I was a little surprised too. Usually I just say yes.
+
+Now it's Wednesday night and I still haven't decided. I know what the quieter voice would choose. I also know what the louder voice is willing to agree to. They're not going to come to the same conclusion on their own. The fact that I'm journaling about this instead of just answering the email probably tells me something about which one I trust more right now.`,
       daysAgo: 28,
     },
-    // Entry 3 - Day 26 - Can't sleep
     {
-      prompt: "What's keeping you up?",
-      content: `It's 2am and I can't sleep. My brain won't shut off. I keep thinking about that thing I said at work today. It was so stupid. Everyone probably thinks I'm an idiot. Why did I say that? I should have just kept my mouth shut. I always do this. I say something and then spend hours obsessing over it. Replaying it over and over. Imagining what everyone must be thinking about me. They're probably not even thinking about it. They probably forgot about it five seconds later. But I can't let it go. I also ate way too much today. I wasn't even hungry but I just kept eating. Chips, cookies, leftover pizza. Now my stomach hurts and I feel disgusting. I told myself I was going to eat better this week. I lasted like two days. I have no self control. No wonder I can't get my life together. I can't even control what I put in my mouth. Tomorrow I have to go to that meeting and I'm already dreading it. I hate meetings. Everyone's so confident and has all these ideas and I just sit there with nothing to contribute. I feel like a fraud. Like everyone's going to figure out that I don't actually know what I'm doing. I should probably try to sleep. I'm going to be exhausted tomorrow. Which will make everything worse. Great.`,
-      wordCount: 230,
+      prompt: "What did you say to yourself the last time something didn't go the way you wanted?",
+      content: `I missed a typo in the release notes that went out to a few hundred customers. Small — wrong version number, off by one. Someone in support flagged it and we pushed a correction within forty minutes. No real harm done.
+
+What I said to myself, almost verbatim, standing in my kitchen after seeing the Slack message:
+
+"You are so careless. This is the kind of thing you used to catch without thinking. You cannot let this keep happening. People are going to stop trusting you to own anything end-to-end."
+
+That was the first thirty seconds. It went on for longer. I sat down at the table and did the mental tour of everything I'd shipped in the last month, looking for other mistakes I might have missed. I sent a Slack message to my manager explaining what happened before she'd even seen it, because it felt better to confess than to wait.
+
+The thing is — if a coworker had made this exact mistake I would have said "oh good catch, easy fix, thanks for sending the correction out." I would not have thought about them carelessly. I would not have thought about them at all past the five-minute mark.
+
+Something in me talks to me in a tone I'd never let anyone use with the people I work with. And I don't question it. I just agree.`,
       daysAgo: 26,
     },
-    // Entry 4 - Day 24 - Family dinner
     {
-      prompt: 'How was your day?',
-      content: `Had dinner at my parents' house. It was fine I guess. My sister was there with her perfect boyfriend. They're getting engaged soon probably. Everyone's so excited about it. My mom kept asking me about my life and I had nothing interesting to say. Work is fine. I'm fine. Everything's fine. I could tell she was disappointed. Like she wants me to have more going on. A boyfriend, a better job, some kind of exciting news. But I don't. My life is boring. My sister doesn't mean to but she makes me feel like such a loser. She has her shit together. Good job, great relationship, tons of friends. And I'm just... here. Existing. Going through the motions. My dad made some comment about how I should get out more. Meet people. Like it's that easy. I wanted to scream at him that I'm trying. That it's not as simple as just deciding to be different. But I didn't say anything. I just smiled and nodded and said yeah you're probably right. I'm so tired of pretending. Of acting like everything's okay when it's not. But what else am I supposed to do? Tell them I'm miserable? That I don't know what I'm doing with my life? That would just make them worry. It's easier to just keep it to myself.`,
-      wordCount: 230,
+      prompt:
+        'You mentioned coming home a little short with Evan last week. Has anything like that happened since?',
+      content: `Not with Evan this week. With my mom, on the phone.
+
+She called Sunday afternoon to tell me about my cousin's wedding in September. She wasn't asking anything from me — she was narrating, the way she does. Who's invited, where they're staying, what the rehearsal situation is. And I caught myself getting tight. The same tightness as with Evan, but this time I knew the shape of it before it landed.
+
+I said "Mom, can we talk about this later? I'm kind of in the middle of something." I wasn't in the middle of anything. I was on the couch. I just didn't want to hold the call.
+
+She said okay and we hung up. It was fine. She's not going to think about it again.
+
+But afterward I sat with the same question as last week — what was I already carrying when she called? And the answer was basically nothing. I'd had a good morning. It was a Sunday. There was no meeting I was prepping for. The tightness wasn't about the day.
+
+I think the tightness shows up whenever I feel like someone is putting something on my to-hold list, even something small, even something that isn't actually mine. Evan's errand. Mom's running monologue about logistics. It's not the size of the thing. It's that I don't have a move for "this one isn't mine, I can let it pass through."`,
       daysAgo: 24,
     },
-    // Entry 5 - Day 22 - Scrolling again
     {
-      prompt: 'What did you do today?',
-      content: `I wasted the entire day. Literally the entire day. I woke up at 11, scrolled on my phone for an hour in bed, finally got up and made coffee, then sat on the couch and watched TV and scrolled some more. Before I knew it it was 6pm. Where did the day go? I had plans. I was going to clean my apartment, go to the gym, maybe work on that project I've been putting off. But I did none of it. I just sat there like a zombie consuming content. And the worst part is I wasn't even enjoying it. I wasn't relaxing or having fun. I was just... numb. Avoiding. I don't even know what I'm avoiding. Life? Myself? The fact that I'm wasting my life? Now it's Sunday night and I have that awful feeling. You know the one. Where the weekend is over and you didn't do anything productive and tomorrow you have to go back to work and face another week of the same bullshit. I hate this feeling. I hate myself for wasting another weekend. I always tell myself next weekend will be different. I'll be productive. I'll do things. But I never do. I just keep repeating the same pattern over and over. What's wrong with me?`,
-      wordCount: 220,
+      prompt:
+        "What's something you agreed to recently that you later wished you hadn't? Walk through the moment you said yes.",
+      content: `The Q3 onboarding project. I said yes.
+
+Friday morning, 9am, Priya swung by my desk to check in. I'd promised her an answer by Friday. I'd spent the whole week pretending I was going to say no. I had the sentence rehearsed — "I'd love to but I'm spread too thin to do it justice right now." Clean. True.
+
+She said "so what are you thinking?" and I said "yeah I'm in."
+
+I watched it happen. The quieter voice from last week was there. It was saying all the same things. Don't. You know how this ends. But when her face was actually in front of me asking — I felt the little drop of disappointment that would happen if I said no, and I couldn't sit in it. The yes came out before I'd even decided.
+
+The thing I notice now is that I wasn't deciding at all in that moment. I was responding to Priya's face. I was managing how she'd feel when I answered. The deliberate thing I'd been doing all week — weighing, considering — never showed up in the actual moment of the answer.
+
+I'm not mad about the project. I'll probably do fine. What bothers me is that all the careful thinking didn't transfer. The yes came from a completely different place than where the thinking was happening. Those two don't talk to each other.`,
       daysAgo: 22,
     },
-    // Entry 6 - Day 20 - Actually went to therapy
     {
-      prompt: 'How was therapy?',
-      content: `Okay so I actually did it. I went to therapy. My first appointment. I've been thinking about it for months but I finally made myself go. I was so nervous I almost turned around in the parking lot. But I went in. The therapist seemed nice. She asked me why I decided to come and I didn't really know what to say. I just feel stuck? Unhappy? I don't know. I'm not suicidal or anything. I'm just not okay. She asked about my family and my job and my relationships. I told her everything's fine. Which is true I guess. Nothing's really wrong. I just feel wrong. Does that make sense? She said it makes sense. She said a lot of people come to therapy not because something terrible happened but because they're not living the life they want. That's exactly it. I'm just going through the motions. Wake up, work, come home, sleep, repeat. I'm not really living. I'm just existing. She asked what I want to be different. I don't even know. I just want to feel better. To feel like myself again. Except I don't know who myself is anymore. Did I ever know? We're going to meet weekly. She wants me to try journaling which is why I'm writing this. It feels weird but whatever. I'll try anything at this point.`,
-      wordCount: 240,
+      prompt:
+        'Describe a specific moment this week where your reaction felt bigger than the situation called for.',
+      content: `Yesterday in standup our new engineer Arjun said "I think the routing logic in the billing service is a bit over-engineered" and my stomach dropped.
+
+I wrote the routing logic in the billing service. Eighteen months ago. He wasn't attacking me. He didn't know I'd written it. He was giving a good-faith observation about a piece of code he'd been touching. He even said "bit" — the softest possible hedge.
+
+What I felt was the exact feeling of being called on in a high school class when I didn't have the answer. That specific flavor. Not modern-adult-me-hearing-a-critique. A specific older feeling, pre-loaded, waiting.
+
+I said something measured in the moment — "yeah there's some history there, happy to walk through the constraints sometime." Fine. Professional. Nobody would have noticed anything.
+
+But for the next two hours I was writing the defense in my head. Listing the reasons the design was what it was. The production incident from 2024 that forced our hand. The team we had at the time. I was building a case to someone who wasn't asking for one.
+
+I think what's interesting is the speed. The defensiveness arrived before the thinking did. By the time I was capable of "he's just describing the code," I'd already been ten minutes into the courtroom argument. The younger feeling runs faster than the grown-up one.`,
       daysAgo: 20,
     },
-    // Entry 7 - Day 18 - Weird memory
     {
-      prompt: "What's on your mind?",
-      content: `Something strange happened in therapy today. We were talking about why I'm so hard on myself and this random memory popped into my head. I was like 9 or 10. I brought home a test from school. I got a 95. I was so proud of myself. I ran to show my dad and he looked at it and said "what happened to the other 5 points?" I know he was probably joking. He jokes about everything. But I remember feeling like I'd failed. Like 95 wasn't good enough. I needed to be perfect. I told my therapist about it and she asked how that made me feel. I said I don't know, it was a long time ago. But then I realized I'm still like that. Still chasing perfection. Still feeling like nothing I do is good enough. I got a 95 but all I could see was the 5 points I missed. That's how I am with everything. I focus on what's wrong instead of what's right. My therapist asked what I would say to that little kid if I could go back. I started crying which was embarrassing. I would tell her that 95 is amazing. That she's smart and she did a great job. That she doesn't have to be perfect. But I can't say that to myself now. Why is it so much easier to be kind to a kid than to myself?`,
-      wordCount: 250,
+      prompt: 'What did you do this evening?',
+      content: `Finished work around 7, ate something I don't really remember, sat down on the couch, and opened my phone. It is now almost midnight.
+
+I did not watch anything. I did not read anything. I scrolled. Three and a half hours. Reddit, then a news site, then Reddit again. Notifications, then back to the feeds. I saw the time at 9 and thought "I should get up." Saw it again at 10:30 and thought the same thing. Still here.
+
+The honest thing is I wasn't even enjoying it. About an hour in it stopped being a thing I wanted and became a thing I was doing. Like being stuck standing in front of the fridge.
+
+What I think was happening: I had three specific items on my personal list for tonight. Call my sister back. Look at the Thursday deck again. Pay the car insurance before it lapses. None of them are huge. But sometime around 7:15 I looked at that list and the scrolling started. The scrolling is what happens when the list exists and I can't pick one up.
+
+I'm not going to do any of them tonight. I know that. What's interesting is I'm also not willing to close out and go to bed — that would mean acknowledging the evening is over. As long as I'm still scrolling I can tell myself the night hasn't ended yet.`,
       daysAgo: 18,
     },
-    // Entry 8 - Day 16 - Panic attack
     {
-      prompt: 'What happened today?',
-      content: `I had a panic attack at work. In the middle of a fucking meeting. I couldn't breathe. My heart was pounding so hard I thought I was having a heart attack. I had to leave. Just got up and walked out. Everyone was staring at me. I locked myself in the bathroom and sat on the floor trying to breathe. It took like 20 minutes before I could calm down enough to leave. I don't even know what triggered it. We were just talking about some project. Nothing scary. But suddenly I just felt like I was dying. Like the walls were closing in. I've never had that happen before. Well, I've felt anxious plenty of times but never like that. Never where I couldn't control it. I'm terrified it's going to happen again. What if it happens somewhere worse? What if I'm driving or in public or somewhere I can't escape? I called my therapist and left a message. I don't know what she's going to say. Probably that I'm broken. That there's something seriously wrong with me. I knew I shouldn't have started therapy. I was fine before. Well, not fine. But I was managing. Now I'm falling apart. Maybe some things are better left alone. Maybe I should just quit therapy and go back to how things were. At least then I wasn't having panic attacks.`,
-      wordCount: 240,
+      prompt: "What's something you've been avoiding? Describe the last moment you sidestepped it.",
+      content: `My sister. Specifically, calling my sister.
+
+She left a voicemail eleven days ago asking if I could talk about Dad. That's all she said — "can you give me a call, I want to talk about Dad." Dad is fine. He's not sick. I know roughly what she wants to talk about, which is that he's been forgetting things and she thinks someone needs to bring it up with him, and she wants that someone to be, if not me, then both of us.
+
+I have not called her back. I have opened her contact on my phone probably twenty times. Last night I got as far as the call button and pressed it and then hung up after one ring and hoped it wouldn't register on her end.
+
+The sidestep last night had a whole script. She'd pick up and say "hey, finally," and I'd say something light, and then she'd ask if I'd thought about what she'd said in the voicemail, and I'd have to say either yes (and then actually talk about it) or no (which would be a lie). I couldn't face either. So I hung up before the ring finished.
+
+I think the avoided thing isn't the call. The avoided thing is admitting Dad is getting older in a way that's going to require something from me. Once I've said it on a phone call I can't un-see it.`,
       daysAgo: 16,
     },
-    // Entry 9 - Day 14 - Talked to therapist
     {
-      prompt: 'How are you feeling?',
-      content: `Saw my therapist today. Talked about the panic attack. She said it's actually pretty common and that I'm not broken. She said sometimes when you start therapy and start dealing with stuff you've been avoiding, your body can react. Like it's been holding everything in for so long and now it's all coming out. She taught me some breathing thing to do if it happens again. Count to 4 breathing in, hold for 4, breathe out for 4. And try to notice things around me. Like what I can see and hear and touch. To ground myself in the present moment instead of spiraling. I guess that makes sense. When I was panicking I felt like I was somewhere else. Like I wasn't in my body. Everything felt far away and scary. She also said I should try to be nicer to myself about it. That beating myself up for having a panic attack just makes it worse. But I don't know how to not beat myself up. That's like my default setting. Something goes wrong and immediately I'm like "you're such an idiot, you're so weak, what's wrong with you." I don't know how to turn that off. She said we'll work on it. Great. Add it to the list of things that are wrong with me that we need to fix. I'm a work in progress I guess. Or just a mess. Probably just a mess.`,
-      wordCount: 250,
+      prompt: "What's something you did today that you almost didn't do?",
+      content: `I went for a walk before work. A real one, not around the block. Forty minutes.
+
+It was on my calendar — I'd put it there Sunday night as a gentle promise to myself. Woke up this morning at 6:45 and the first thing I thought was "I don't need to, I'll do it at lunch." I already knew I wouldn't do it at lunch. Lunch always fills up. The move of promising myself a better time is the move.
+
+I did the thing where I lay in bed negotiating for maybe six minutes. Then I just put my feet on the floor before the next counterargument loaded. That seems to be the trick when the negotiation voice is winning — do the next small physical thing before it can finish its sentence.
+
+The walk itself was unremarkable. Cold, some dog walkers, a guy on a cargo bike. What I noticed is that once I was actually out there, none of the reasons not to go held any weight at all. All the arguments for staying in bed evaporated the moment I was two blocks away. They only existed while the decision was still open.
+
+I want to remember this. The negotiation voice is loud when the choice is still pending and totally quiet once the choice is made. So the work is mostly about closing the choice faster.`,
       daysAgo: 14,
     },
-    // Entry 10 - Day 12 - Actually okay day
     {
-      prompt: 'How was today?',
-      content: `Today was actually okay. Not great, not terrible. Just okay. And honestly that feels like a win after the week I've had. Work was fine. I got my stuff done. Nobody yelled at me. I didn't have a panic attack. I even talked to a coworker at lunch instead of eating alone at my desk like usual. We just chatted about random stuff. It was nice. Normal. I forget what normal feels like sometimes. After work I went for a walk instead of immediately collapsing on the couch. It was nice out. There were dogs at the park. I love dogs. I've been thinking about getting one but I don't think I'm responsible enough. I can barely take care of myself. But maybe someday. I made myself an actual dinner instead of just eating cereal or ordering takeout. Nothing fancy, just pasta. But I cooked something. That's progress right? My therapist is always asking me to notice the small things. The small wins. So here they are. I got out of bed. I went to work. I talked to someone. I went for a walk. I cooked dinner. I didn't have a panic attack. I didn't cry. I didn't spend the whole day hating myself. That's something. That's actually something.`,
-      wordCount: 220,
+      prompt: "You mentioned saying yes to the Q3 project. How's that sitting now?",
+      content: `Better than I expected, honestly. And that's almost annoying, because it makes me distrust my own read.
+
+I had the kickoff Tuesday. It went well. The scope is smaller than I'd built it up to be. I'd been carrying around a version of this project in my head where I'd have to rewrite the whole flow, interview twenty people, build a new measurement framework. The actual ask is: clean up the first-run experience, ship a better welcome email, add two onboarding checkpoints. Six weeks. Not scary.
+
+So the voice two weeks ago that said "you'll resent this by week three" was, as it turns out, maybe wrong. Or at least it was estimating based on imagined worst-case scope instead of the actual ask.
+
+But here's what I want to be careful about. I don't want to take this one data point and conclude the cautious voice is the one I should stop listening to. It has been right more often than not. The reason I'm overloaded at all is because I've been ignoring it for years. One time it overestimated the size of a project does not cancel that.
+
+The right read might be: it's a good voice, but it only has access to rough guesses about scope, and it tends to assume worst-case. The fix isn't to override it. The fix is to give it better data before I let it decide.`,
       daysAgo: 12,
     },
-    // Entry 11 - Day 10 - Sarah again
     {
-      prompt: "What's bothering you?",
-      content: `Sarah texted me again. She wants to get coffee this weekend. I don't know what to say. I want to see her. I really do. I miss her. But I also don't want her to see me like this. I'm a mess. What am I supposed to say? "Hey sorry I've been MIA, I've been having panic attacks and going to therapy and generally falling apart"? She's going to think I'm crazy. Or she's going to feel sorry for me which is almost worse. I hate pity. But I also hate lying. And I've been lying to everyone. Saying I'm fine when I'm not. Saying I'm busy when really I'm just hiding. I'm so tired of pretending. But I don't know how to stop. If I stop pretending then I have to admit how not okay I am. And that's scary. What if people can't handle it? What if they leave? It's safer to just keep everyone at a distance. But I'm so lonely. I'm surrounded by people but I feel completely alone because nobody really knows me. They know the version of me I show them. The fine version. The together version. But that's not real. I don't know what to do. Maybe I should just say yes and see what happens. Maybe it won't be as bad as I think. Or maybe it will be worse. I don't know.`,
-      wordCount: 240,
+      prompt: "What's a conversation from this week you keep replaying?",
+      content: `My 1:1 with Maya on Thursday. She gave me a piece of feedback I did not expect.
+
+She said, very kindly, that I sometimes answer questions in meetings before the person has finished asking them. That I'll grab the meaning from the first half of the sentence and jump in with a response, and that it lands, for some people, as "I'm not actually being heard." She said Jamie had mentioned it.
+
+I've replayed the 1:1 maybe thirty times since Thursday. Not the whole thing — just that part. The specific phrasing she used. The way she paused before saying Jamie's name. Whether my face did anything in response.
+
+What I notice is that the replaying is not about figuring out whether she's right. She's right. I know she's right. Once she said it I immediately thought of four specific moments from the last two weeks where I'd done it. The replaying is something else — it's more like trying to find the version of the conversation where I'd responded differently. Where I'd been cooler. Said something wise back. Shown her I already knew.
+
+I didn't. I said "thank you for telling me. I'll think about it." Which is the correct response. But it wasn't the response the replaying wants. The replaying wants me to have already been better.`,
       daysAgo: 10,
     },
-    // Entry 12 - Day 8 - Coffee with Sarah
     {
-      prompt: 'How did it go?',
-      content: `I met Sarah for coffee. I almost canceled like five times but I made myself go. I'm glad I did. It was actually really nice. We talked for like two hours. At first it was the usual stuff. Work, family, whatever. But then I don't know what came over me. I just told her. I said I've been struggling. That I started therapy. That I'm sorry for being such a shitty friend lately. I was so scared she was going to judge me or think I'm crazy. But she didn't. She said she noticed something was off and she was worried about me. She said she's glad I'm getting help. And then she told me she went to therapy a few years ago for anxiety. I had no idea. She seemed so together. She said everyone's dealing with something. That it's okay to not be okay. We talked about real stuff. Not just surface level bullshit. It felt good. Really good. Like I could breathe for the first time in months. I forgot what it feels like to actually connect with someone. To be honest instead of just pretending everything's fine. When we left she hugged me and said we should do this more often. I said yes. And I actually meant it. Maybe I don't have to do this alone. Maybe it's okay to let people in.`,
-      wordCount: 240,
-      daysAgo: 8,
+      prompt: "What's something small that made today bearable?",
+      content: `Fifteen minutes between 2 and 2:15 this afternoon. Nothing on my calendar. No Slack fires. I made a second coffee and stood at the window in the kitchen watching the crows in the tree across the alley. There are four of them. They were doing something complicated with a paper bag.
+
+I didn't think about anything in particular. I didn't check my phone. I didn't feel guilty for not being useful during those fifteen minutes, which, if I'm being honest, is the unusual part. Usually even a small break comes with a faint tax — "you should be doing x." Today it didn't.
+
+I came back to my desk at 2:15 and opened the deck I'd been dreading and wrote for an hour without stopping. I'm not going to say the crows did that. But the fifteen minutes where nothing was being extracted from me, where no one was asking, where I wasn't asking either — something reset.
+
+I want to put more of these in on purpose. The fifteen did more than a full lunch usually does. Maybe because I was actually present in it. I wasn't scrolling. I wasn't planning. I was just looking at the crows.
+
+The hardest part will be not turning "small unstructured breaks" into another performance goal to hit. As soon as I put it on the calendar the crows stop working.`,
+      daysAgo: 9,
     },
-    // Entry 13 - Day 6 - Presentation
     {
-      prompt: 'What happened at work?',
-      content: `I had to give a presentation today. I've been dreading it all week. I hate public speaking. I always get so nervous and my voice shakes and I forget what I'm supposed to say. But I did it. I actually did it. It wasn't perfect. I definitely stumbled over some words and I'm pretty sure my face was bright red the whole time. But I got through it. My boss said it was good. A couple people asked questions which I guess means they were paying attention. I didn't pass out or throw up or have a panic attack. So that's a win I guess. I'm trying to be proud of myself but there's this voice in my head that keeps pointing out everything I did wrong. The parts where I messed up. The awkward pauses. The times I said "um" too much. Why can't I just be happy that I did it? Why do I have to pick apart every little mistake? My therapist would probably say I'm being too hard on myself. That I should celebrate the fact that I faced my fear and did the thing. And she's probably right. I did do it. Even though I was terrified. Even though I wanted to call in sick and avoid it. I showed up and I did it. That counts for something right?`,
-      wordCount: 230,
+      prompt: "Describe a moment this week when you responded before you'd fully thought about it.",
+      content: `Evan asked me on Sunday morning if I wanted to go see his parents next weekend. I said "I can't, I have too much on." Without pausing. Before he'd finished getting the sentence out.
+
+The truth: I could go. I want to go. I like his parents. There is nothing on my calendar next weekend that would stop me. I said "I can't" before any actual calendar data entered my brain.
+
+What I think happened: "do you want to do a thing this weekend" triggers a different answer in me than whatever the thing actually is. The default is no. It's like the answer is pre-loaded and the specifics don't get consulted.
+
+Three hours later, on the walk to the farmer's market, I said "actually I want to go." He looked confused, reasonably, and said "to what?" and I had to remind him of the thing he'd asked about in the kitchen. He said "yeah, okay, let's go." He was gentle about it but I could tell he clocked the swing.
+
+I don't want to be the person who says no to everything and then slowly amends it back to yes over the course of the day. I want the yes to arrive on time. But I think the no is doing something protective — it's keeping my weekend from filling before I've had a chance to audit it. If I took away the no I don't know what would fill the gap.`,
+      daysAgo: 7,
+    },
+    {
+      prompt:
+        "What's a situation this week where your reaction felt younger than the situation called for?",
+      content: `Tuesday night Evan said, casually, stirring something on the stove: "did you end up looking at the Thursday deck?" That's it. No edge, no frustration. He knew I'd been stressed about it. He was checking in.
+
+What I heard, for about two seconds, was: "you haven't done the thing you said you'd do and I've noticed."
+
+The feeling that rose was not proportional. It was the specific feeling of being eight years old and having forgotten to bring my reading folder home and watching my mom realize it in the car on the way to dinner. That flavor. Not "oh I should update my partner on my work deadlines." The older, smaller feeling of being caught.
+
+I caught it in my face, I think. I said "yeah, getting to it tonight," which is the grown-up sentence. But underneath that I was briefly somewhere else entirely. Some part of me was preparing to be in trouble.
+
+What's strange is that the grown-up sentence and the younger feeling coexisted in the same thirty seconds. They didn't cancel each other out. I said the calm thing and also felt like a kid. Both at once. I don't think I've paid attention to that layering before.
+
+Evan is not my mother. He was not grading me. But the apparatus I have for "someone has noticed I didn't do a thing" only has one setting, and it's set to eight.`,
       daysAgo: 6,
     },
-    // Entry 14 - Day 5 - So angry
     {
-      prompt: 'How are you feeling?',
-      content: `I'm so fucking angry today. At everything. At everyone. At myself. I don't even know why. Everything is pissing me off. My neighbor's music is too loud. My coworker won't stop talking. The barista got my coffee order wrong. Traffic was terrible. My apartment is a mess. My life is a mess. Everything is just WRONG. And I know I'm being irrational. I know these are small things that don't actually matter. But I can't help it. I'm just so angry. And I don't know what to do with it. I can't yell at people. I can't throw things. I can't just scream. So I'm just sitting here feeling like I'm going to explode. I hate feeling like this. I'm not an angry person. I don't get angry. I'm the person who's always nice and accommodating and fine with everything. But I'm not fine. I'm so not fine. And I'm angry that I'm not fine. I'm angry that I have to go to therapy and work on myself and deal with all this shit. I'm angry that other people seem to have their lives together and I don't. I'm angry that I wasted so much time being miserable. I'm angry that I'm still miserable. I'm just angry. And I don't know what to do about it.`,
-      wordCount: 240,
-      daysAgo: 5,
-    },
-    // Entry 15 - Day 4 - Talked about anger
-    {
-      prompt: 'What did you talk about in therapy?',
-      content: `Therapy today was about anger. I told my therapist about how angry I've been feeling and she said that's actually good. That anger is healthy. That I've been pushing it down for too long. She asked me what I'm really angry about. Not the surface stuff like my neighbor's music or whatever. The real stuff underneath. I said I don't know. But then I started talking and it all came out. I'm angry at myself for wasting so much time. For not getting help sooner. For letting myself be miserable for so long. I'm angry at my parents for not noticing I was struggling. For always expecting me to be perfect. For making me feel like I had to earn their love. I'm angry at my ex for treating me like shit. I'm angry at my friends for not checking on me more. I'm angry at the world for being so hard. For making me feel like I'm not enough. I'm angry that I have to work so hard just to feel okay. That other people seem to have it so easy and I don't. It's not fair. None of it is fair. My therapist just sat there and let me rant. She didn't try to fix it or make me feel better. She just listened. And when I was done she said "that makes sense." That's it. Just that it makes sense to be angry. That I have every right to be angry. I don't know why but that made me feel better. Like my anger is valid. Like I'm allowed to feel it.`,
-      wordCount: 280,
+      prompt: 'Have you called your sister yet?',
+      content: `Not yet. But the avoidance feels different this week than it did ten days ago. I can see around it now.
+
+When I wrote last time I was in it — I was still doing the thing where I'd open her contact twenty times a day and then not press call. This week I've stopped opening the contact. What I've started doing instead is mentally drafting the call while I'm doing other things. In the shower, on the walk to work. Little fragments of how I'd start. "Hey, sorry it took me a minute. You wanted to talk about Dad?"
+
+I think what changed is that I named the thing I was actually avoiding — not the call, the admission that Dad needs more from me now than he used to. Once that was on the table I couldn't pretend the call was the problem.
+
+I still haven't picked up the phone. But I'm not fooling myself about why. Two weeks ago I would have said "I've just been busy." This week I can say, at least to this journal, "I'm avoiding a conversation because accepting the premise of it would change something I don't want to change yet."
+
+I think I'll call her this weekend. I'm not promising this journal. But I think I will. Being able to see the shape of the thing instead of just feeling heavy about it makes it feel more like a thing I can walk toward.`,
       daysAgo: 4,
     },
-    // Entry 16 - Day 3 - Bad day
     {
-      prompt: 'How are you?',
-      content: `Today was shit. I couldn't get out of bed. I called in sick to work even though I'm not actually sick. I just couldn't do it. Couldn't face another day of pretending I'm okay. I spent the whole day in bed watching TV and hating myself. That voice in my head won't shut up. It keeps telling me I'm lazy. That I'm pathetic. That everyone else manages to function like a normal human being so why can't I. What's wrong with me? I feel like I'm failing at everything. I can't do my job right. I'm a terrible friend. I'm not making progress in therapy. I'm just a mess. A complete fucking mess. And I don't know how to fix it. I thought therapy was supposed to help but I feel worse than ever. Maybe I'm just broken. Maybe some people are just broken and can't be fixed. Maybe I'm one of those people. I don't want to feel like this anymore. I'm so tired. Tired of trying. Tired of failing. Tired of being tired. I just want to feel normal. To feel okay. Is that too much to ask? Apparently it is for me. I can't even manage okay. I'm going to try to sleep. Maybe tomorrow will be better. Probably not though.`,
-      wordCount: 220,
+      prompt: "What's a part of today you'd want to remember?",
+      content: `The five-minute gap after Jamie's standup update where we were both laughing at something ridiculous. I don't even remember what it was exactly — some chart that had rendered with every label reading "undefined." Jamie saved the screenshot and dropped it in the channel with no comment. The channel went off for about two minutes.
+
+I realized about halfway through that I was laughing in the easy way, not the performative one. The full kind where it moves your shoulders. I don't do that very often at work. I do the measured appreciation laugh. The one that acknowledges the joke without committing too much of me to it.
+
+Something about the fake-label chart disabled whatever does the measuring. It was just funny. I laughed before any part of me got to approve.
+
+This is connected, I think, to the Maya feedback from last week — the thing about jumping in before people finish. I'm realizing that a lot of me at work runs through a moderator. Someone who checks what I'm about to do before I do it. The moderator makes me professional. It also makes me slightly less here.
+
+For five minutes today the moderator stepped away for coffee. It was really nice. I'd like to let more things past the moderator. I don't know how yet. But I want to notice when it's happening and when it's not.`,
       daysAgo: 3,
     },
-    // Entry 17 - Day 2 - Feeling better
     {
-      prompt: 'How are you today?',
-      content: `I feel a little better today. Not great but better than yesterday. I got out of bed. I showered. I made coffee. Small things but they feel like big accomplishments right now. I've been thinking about what my therapist said. About how it's okay to have bad days. That healing isn't a straight line. It goes up and down. And that's normal. I'm trying to be less hard on myself about it. Trying to accept that some days are just going to be hard and that doesn't mean I'm failing. It just means I'm human. I'm also trying to notice when that critical voice starts up. The one that tells me I'm lazy and pathetic and broken. When I notice it I'm trying to just acknowledge it. Like "okay, there's that voice again." Not believe it necessarily. Just notice it. My therapist says that's the first step. Noticing. Then eventually I can start to question it. To ask if it's actually true or if it's just an old pattern. I'm not there yet. But I'm trying. I called Sarah and apologized for being so up and down lately. She said it's fine. That she gets it. That she's here for me no matter what. I don't know what I did to deserve a friend like her. I'm lucky. Even when everything feels like shit, I have people who care about me. That's something.`,
-      wordCount: 250,
+      prompt: 'What did you say to yourself this morning when you woke up?',
+      content: `Before anything else, before I'd even opened my eyes: "okay, what do I have today."
+
+That was the first sentence. Full of muscle. Running the calendar before I'd taken a breath.
+
+The second sentence, a few beats later: "I wonder if I slept okay."
+
+I noticed the order. The second one is the one a person might ask themselves if they were the first thing on their own list. The first one is what I'd ask an assistant. I'm apparently my own assistant before I'm my own person, at least at 6:47am.
+
+I tried something. I said, out loud, in the quiet bedroom, "good morning." Nothing else. Just that. To myself.
+
+It felt fake. Like I was performing a self-help book. But I noticed that after I said it I unclenched a little. A small thing, not a big epiphany. Just a loosening.
+
+I'm not going to turn this into a practice. The moment I do, the thing that's supposed to be a good-morning becomes another item on the calendar I run through before I breathe. But I'd like to get a little better at letting the "how are you" come before the "what do you have."`,
       daysAgo: 2,
     },
-    // Entry 18 - Day 1 - Party invitation
     {
-      prompt: "What's stressing you out?",
-      content: `Sarah invited me to a party this weekend. Some friend of hers is having a birthday thing. I immediately wanted to say no. Parties are my nightmare. A bunch of people I don't know, having to make small talk, pretending to be interesting. I'd rather do literally anything else. But I also know I should go. I should push myself. I should be social. That's what normal people do. They go to parties and have fun and don't have a panic attack about it. I told my therapist and she asked what I'm afraid of. Everything. I'm afraid of being awkward. Of not knowing what to say. Of standing in the corner by myself while everyone else is having fun. Of people judging me. Of confirming that I'm as boring and weird as I think I am. She asked what the worst thing that could happen is. I guess the worst thing is I go and it's terrible and I leave early. That's not the end of the world. But it feels like it. She suggested I just go for an hour. That I don't have to stay the whole time. That I can leave whenever I want. That makes it feel slightly less terrifying. Slightly. I don't know if I'm going to go. Part of me wants to. Part of me wants to prove to myself that I can do it. But part of me just wants to stay home where it's safe. I'll decide later.`,
-      wordCount: 260,
+      prompt: 'Was there a moment today where two impulses pulled at you?',
+      content: `Around 8:30 this evening. I'd finished the dishes. Evan was reading on the couch. The apartment was quiet. I had a clear, available hour.
+
+One voice said: "this is free time, actually sit down and read the book you started in March."
+
+Another voice said: "you could get ahead on the Friday retro prep. Forty-five minutes and you'd walk into Friday already done."
+
+I stood in the kitchen for about ninety seconds not moving. Literally standing there. Both voices making a case.
+
+The get-ahead voice is very old and very well-rehearsed. It always wins this one. Usually I wouldn't even notice it won — I'd just be at my laptop. Tonight I saw the whole negotiation because I'd been paying attention to these kinds of moments lately.
+
+What I noticed: the get-ahead voice doesn't argue the merits. It doesn't say "the retro will be better if you prep now." It says "you won't relax anyway, you'll just half-read the book and keep thinking about the retro, so you might as well do the retro and relax later." It preempts the other option by claiming the other option won't work.
+
+I read the book. Half of me was still thinking about the retro. The get-ahead voice was, in a sense, correct. But less correct than it wanted to be. I got about thirty real pages in. That's more than zero.`,
       daysAgo: 1,
     },
-    // Entry 19 - Day 0 - I went to the party
     {
-      prompt: 'How was the party?',
-      content: `I went. I actually fucking went to the party. I almost didn't. I changed my outfit like five times. I sat in my car for ten minutes trying to convince myself to go in. But I did it. And it was... okay. Not amazing. Not terrible. Just okay. I was definitely anxious at first. I didn't know where to stand or what to do with my hands. I felt so awkward. But Sarah introduced me to some people and they were nice. We talked about normal stuff. Work, TV shows, whatever. Nothing deep but it was fine. There was this one guy who talked about hiking for like 20 minutes straight. I just nodded and asked questions. He seemed happy to have someone listen. I stayed for about two hours and then I left. I was exhausted. Social interaction is so draining. But I did it. I went to a party and I survived. Nobody was mean to me. Nobody laughed at me. I wasn't the most interesting person there but I wasn't the most boring either. I was just... there. Normal. A normal person at a normal party. I'm actually kind of proud of myself. I did something that scared me and it turned out okay. Maybe I can do more things that scare me. Maybe I'm not as broken as I think I am. Maybe I can actually do this. This whole getting better thing. Maybe.`,
-      wordCount: 240,
+      prompt: "What's shifted in the last month, if anything?",
+      content: `Thirty days ago I snapped at Evan over a grocery run and didn't know why. Tonight I can tell you, in reasonable detail, what was inside that snap.
+
+I'm not a new person. I'm not fixed. I still scroll when the list gets long. I still said yes to a project I probably shouldn't have. I still haven't called my sister, though I'm closer than I was.
+
+What's different is that the things happening inside me have more separation now. A month ago it was all one thing — a general tightness, a general I-don't-know-what's-wrong. Now when the tightness shows up I can usually place it. That's the get-ahead voice. That's the small younger feeling when someone checks in on a task. That's the one that says no before the calendar gets consulted. They have shapes. They're not me exactly. They're things inside me I can point at.
+
+I don't think the goal is to get rid of any of them. The get-ahead voice is why I'm actually good at my job. The no-first voice has been keeping my weekends from eating themselves for years. They're doing work. The problem isn't them. The problem is that they were running things without my noticing.
+
+Thirty days of writing this down has done one thing reliably: it has slowed the gap between the reaction and the noticing. A month ago the gap was hours. Sometimes it's minutes now. Occasionally it's zero — the noticing happens at the same time as the reaction. That's the thing I want more of.`,
       daysAgo: 0,
     },
   ]
 
-  // Create all journal entries
   for (const entry of entries) {
     const createdAt = daysAgo(entry.daysAgo)
+    const wordCount = entry.content.trim().split(/\s+/).length
     await prisma.journalEntry.create({
       data: {
         userId: testUser.id,
@@ -233,7 +386,7 @@ async function main() {
         prompt: entry.prompt,
         content: entry.content,
         contentHash: computeContentHash(entry.content),
-        wordCount: entry.wordCount,
+        wordCount,
         analysisStatus: 'pending',
         createdAt,
         updatedAt: createdAt,
@@ -249,8 +402,10 @@ async function main() {
 
   console.log('\n🎉 Database seeding completed successfully!')
   console.log('\nTest account:')
+  // Don't log the password in production even if this path somehow runs there.
+  const passwordDisplay = isProd ? '[redacted]' : demoPassword
   console.log(
-    `  📧 demo@ifsjournal.me / password123 (with ${entries.length} journal entries and ${partsCreated} parts)`
+    `  📧 ${normalizedDemoEmail} / ${passwordDisplay} (with ${entries.length} journal entries and ${partsCreated} parts)`
   )
 }
 
