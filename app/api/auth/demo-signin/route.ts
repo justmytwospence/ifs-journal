@@ -23,10 +23,7 @@ export async function POST(request: Request) {
     originHost = null
   }
   const candidateHosts = new Set<string>()
-  for (const h of [
-    request.headers.get('host'),
-    request.headers.get('x-forwarded-host'),
-  ]) {
+  for (const h of [request.headers.get('host'), request.headers.get('x-forwarded-host')]) {
     if (h) candidateHosts.add(h.toLowerCase())
   }
   try {
