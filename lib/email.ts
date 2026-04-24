@@ -5,7 +5,13 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY
 // setup doesn't block on DNS. Override via EMAIL_FROM once your domain is
 // verified in Resend (deliverability is much better with a verified domain).
 const EMAIL_FROM = process.env.EMAIL_FROM || 'IFS Journal <onboarding@resend.dev>'
-const APP_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+// Prefer an explicitly configured NEXTAUTH_URL (production domain), then fall
+// back to Vercel's auto-injected VERCEL_URL (dynamic per-preview), then to
+// localhost for dev. This keeps email links valid across preview deployments
+// without having to set a per-branch NEXTAUTH_URL.
+const APP_URL =
+  process.env.NEXTAUTH_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
 const client = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 

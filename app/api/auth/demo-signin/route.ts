@@ -11,16 +11,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
   }
 
-  // CSRF: only accept requests from our own origin. NextAuth has its own CSRF
-  // protection on the callback endpoint, but we re-check here so this entry
-  // point can't be triggered cross-site to sign a visiting user into demo.
-  const expected = process.env.NEXTAUTH_URL
-  if (!expected) {
-    return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
-  }
+  // CSRF: Origin must match the request's own Host. On Vercel each preview
+  // deployment has its own host, so comparing against a configured
+  // NEXTAUTH_URL would break previews; comparing to the host Vercel actually
+  // routed this request through is both simpler and more correct. NextAuth
+  // has its own CSRF token on the callback endpoint — this is defense in
+  // depth, not the primary guard.
   const origin = request.headers.get('origin')
+  const host = request.headers.get('host')
   try {
-    if (!origin || new URL(origin).origin !== new URL(expected).origin) {
+    if (!origin || !host || new URL(origin).host !== host) {
       return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
     }
   } catch {
