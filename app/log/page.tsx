@@ -416,7 +416,7 @@ function LogPageContent() {
                 {isDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
                       <button
                         onClick={() => {
                           setSelectedPartId(null)

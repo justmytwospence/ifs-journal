@@ -444,8 +444,10 @@ export default function JournalPage() {
                 }
               }}
               placeholder="Start writing your thoughts..."
-              rows={12}
-              className="font-serif w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+              // Short on mobile so the save button and word-count bar stay
+              // above the keyboard; full height on tablet+.
+              rows={6}
+              className="font-serif w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none md:min-h-[300px]"
             />
           </div>
 

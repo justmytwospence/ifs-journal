@@ -82,3 +82,16 @@ button:disabled,
   animation: slide-up 0.3s ease-out;
 }
 
+/* iOS safe-area helpers. Tailwind v4 doesn't ship these; Tailwind's
+   `safe-area-bottom` was a Tailwind v3 classname from the Tailwind Play
+   CDN config only — using it in v4 is a no-op. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.pb-safe-plus-4 {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0));
+}
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0);
+}
+

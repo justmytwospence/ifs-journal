@@ -127,7 +127,7 @@ export function AppNav() {
               {session?.user?.isDemo && (
                 <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-purple-50 border border-purple-200 rounded-lg shrink-0">
                   <span className="text-xs md:text-sm font-medium text-purple-700 whitespace-nowrap">
-                    👁️ <span className="hidden sm:inline">Demo</span>
+                    👁️ Demo
                     <span className="hidden md:inline"> (Read-Only)</span>
                   </span>
                 </div>
@@ -178,7 +178,7 @@ export function AppNav() {
       </nav>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe">
         <div className="flex items-center justify-around h-16">
           <Link
             href="/journal"

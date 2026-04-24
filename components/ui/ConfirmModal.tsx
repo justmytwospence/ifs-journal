@@ -38,7 +38,7 @@ export function ConfirmModal({
   return (
     <div
       ref={modalRef}
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4 pb-safe-plus-4"
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !isLoading) {
           onConfirm()

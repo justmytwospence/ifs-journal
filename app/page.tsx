@@ -33,7 +33,7 @@ export default async function Home() {
         <div className="max-w-4xl mx-auto">
           {/* Hero */}
           <div className="text-center space-y-6 mb-16">
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               IFS Journal
             </h1>
             <p className="text-2xl text-gray-600 max-w-2xl mx-auto">

@@ -27,7 +27,7 @@ export function DemoToast({ onClose }: DemoToastProps) {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
+    <div className="fixed bottom-4 right-4 z-50 animate-slide-up pb-safe">
       <div
         onClick={handleClick}
         className="bg-blue-600 text-white rounded-xl shadow-2xl p-4 max-w-md hover:bg-blue-700 transition-colors cursor-pointer"
