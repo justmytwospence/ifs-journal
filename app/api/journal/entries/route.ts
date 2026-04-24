@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { computeContentHash } from '@/lib/anchoring'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { demoGuard } from '@/lib/demo-guard'
+import { reapStuckAnalyses, runIncrementalAnalysis } from '@/lib/incremental-analysis'
+import { captureException } from '@/lib/logger'
+import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 import { createEntrySlug } from '@/lib/slug-utils'
 
 const createEntrySchema = z.object({
-  prompt: z.string(),
-  content: z.string(),
-  wordCount: z.number(),
+  prompt: z.string().max(500),
+  content: z.string().min(1).max(20_000),
+  wordCount: z.number().int().min(0).max(10_000),
 })
 
 export async function POST(request: Request) {
@@ -22,6 +25,14 @@ export async function POST(request: Request) {
     // Prevent demo users from creating entries
     const demoCheck = await demoGuard()
     if (demoCheck) return demoCheck
+
+    const limited = await enforceRateLimit({
+      subjectKey: `user:${session.user.id}`,
+      bucket: 'journal:create',
+      limit: 30,
+      windowMs: HOUR_MS,
+    })
+    if (limited) return limited
 
     const body = await request.json()
     const { prompt, content, wordCount } = createEntrySchema.parse(body)
@@ -41,19 +52,13 @@ export async function POST(request: Request) {
       },
     })
 
-    // Trigger incremental analysis asynchronously (fire and forget)
-    const baseUrl = request.headers.get('host')
-      ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`
-      : process.env.NEXTAUTH_URL || 'http://localhost:3000'
-
-    fetch(`${baseUrl}/api/journal/entries/${entry.id}/incremental-analysis`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: request.headers.get('cookie') || '',
-      },
-    }).catch((err) => {
-      console.error('Failed to trigger incremental analysis:', err)
+    // Kick off analysis after the response has been sent. `after()` keeps the
+    // serverless function alive past response flush so the work actually runs
+    // — the previous fire-and-forget `fetch()` would get killed when Vercel
+    // wound down the container, leaving entries permanently in `pending`.
+    const userId = session.user.id
+    after(async () => {
+      await runIncrementalAnalysis({ entryId: entry.id, userId })
     })
 
     return NextResponse.json({ success: true, entry }, { status: 201 })
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
     }
 
-    console.error('Create entry error:', error)
+    captureException(error, { route: 'POST /api/journal/entries' })
     return NextResponse.json({ error: 'Failed to save entry' }, { status: 500 })
   }
 }
@@ -74,9 +79,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Mark entries whose analysis has been hanging in `processing` for too
+    // long as `failed`, so a killed-mid-run analysis doesn't leave the UI
+    // spinning forever.
+    await reapStuckAnalyses(session.user.id)
+
     const { searchParams } = new URL(request.url)
     const includeAnalyses = searchParams.get('includeAnalyses') === 'true'
-    const weeks = parseInt(searchParams.get('weeks') || '1', 10)
+    const weeksRaw = Number.parseInt(searchParams.get('weeks') ?? '1', 10)
+    // Clamp to a sane range: unbounded parseInt lets `?weeks=999999` scan the
+    // whole table, `?weeks=abc` produces NaN which Prisma rejects.
+    const weeks = Number.isFinite(weeksRaw) ? Math.min(Math.max(weeksRaw, 1), 520) : 1
 
     // Calculate date for N weeks ago
     const weeksAgo = new Date()
@@ -129,7 +142,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ entries, totalCount, weeks })
   } catch (error) {
-    console.error('Get entries error:', error)
+    captureException(error, { route: 'GET /api/journal/entries' })
     return NextResponse.json({ error: 'Failed to fetch entries' }, { status: 500 })
   }
 }

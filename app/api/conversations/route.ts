@@ -1,12 +1,26 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { type NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { anthropic, CONVERSATION_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { demoGuard } from '@/lib/demo-guard'
+import { captureException } from '@/lib/logger'
+import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
-type ConversationMessage = { role: 'user' | 'part'; content: string }
+const conversationMessageSchema = z.object({
+  role: z.enum(['user', 'part']),
+  content: z.string().max(4_000),
+})
+
+const conversationBodySchema = z.object({
+  partId: z.string().min(1).max(64),
+  message: z.string().min(1).max(4_000),
+  conversationHistory: z.array(conversationMessageSchema).max(50).optional().default([]),
+})
+
+type ConversationMessage = z.infer<typeof conversationMessageSchema>
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +32,27 @@ export async function POST(request: NextRequest) {
     const demoCheck = await demoGuard()
     if (demoCheck) return demoCheck
 
-    const { partId, message, conversationHistory } = await request.json()
+    const limited = await enforceRateLimit({
+      subjectKey: `user:${session.user.id}`,
+      bucket: 'conversations',
+      limit: 30,
+      windowMs: HOUR_MS,
+    })
+    if (limited) return limited
 
-    if (!partId || !message) {
-      return NextResponse.json({ error: 'Part ID and message are required' }, { status: 400 })
+    let partId: string
+    let message: string
+    let conversationHistory: ConversationMessage[]
+    try {
+      const parsed = conversationBodySchema.parse(await request.json())
+      partId = parsed.partId
+      message = parsed.message
+      conversationHistory = parsed.conversationHistory
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return NextResponse.json({ error: err.issues[0].message }, { status: 400 })
+      }
+      throw err
     }
 
     const part = await prisma.part.findFirst({
@@ -80,10 +111,29 @@ export async function POST(request: NextRequest) {
       })
       .join('\n\n')
 
+    // If the user has chosen a custom name for this part, speak as that name.
+    // Other user-curated fields (ageImpression, positiveIntent, fearedOutcome,
+    // whatItProtects, userNotes) are things the user has learned — we surface
+    // them so the part's voice is grounded in those observations rather than
+    // re-inferring from scratch each message.
+    const displayName = part.customName?.trim() || part.name
+    const userLearned: string[] = []
+    if (part.ageImpression) userLearned.push(`- I feel about **${part.ageImpression}** old.`)
+    if (part.positiveIntent) userLearned.push(`- What I'm trying to do: ${part.positiveIntent}`)
+    if (part.fearedOutcome)
+      userLearned.push(`- What I'm afraid would happen if I stopped: ${part.fearedOutcome}`)
+    if (part.whatItProtects) userLearned.push(`- What I'm protecting: ${part.whatItProtects}`)
+    if (part.userNotes) userLearned.push(`- Notes the user has recorded: ${part.userNotes}`)
+    const userLearnedBlock =
+      userLearned.length > 0
+        ? userLearned.join('\n')
+        : '(The user has not yet recorded anything specific about me. Speak from the quotes and entries below.)'
+
     promptTemplate = promptTemplate
-      .replace('{{partName}}', part.name)
+      .replace('{{partName}}', displayName)
       .replace('{{partRole}}', part.role)
       .replace('{{partDescription}}', part.description || 'No description available')
+      .replace('{{userLearnedBlock}}', userLearnedBlock)
       .replace('{{partQuotes}}', quotesText || 'No quotes available yet')
       .replace('{{journalEntries}}', journalEntriesText || 'No journal entries available yet')
 
@@ -100,24 +150,28 @@ export async function POST(request: NextRequest) {
 
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
-    if (conversationHistory && Array.isArray(conversationHistory)) {
-      for (const msg of conversationHistory as ConversationMessage[]) {
-        if (msg.role === 'user') {
-          messages.push({ role: 'user', content: msg.content })
-        } else if (msg.role === 'part') {
-          messages.push({ role: 'assistant', content: msg.content })
-        }
+    for (const msg of conversationHistory) {
+      if (msg.role === 'user') {
+        messages.push({ role: 'user', content: msg.content })
+      } else if (msg.role === 'part') {
+        messages.push({ role: 'assistant', content: msg.content })
       }
     }
 
     messages.push({ role: 'user', content: message })
 
-    const stream = anthropic.messages.stream({
-      model: CONVERSATION_MODEL,
-      max_tokens: 1024,
-      system: systemBlocks,
-      messages,
-    })
+    // Pass the request signal through so closing the tab / hitting Stop
+    // aborts the upstream Anthropic call instead of burning tokens on a
+    // stream the client is no longer listening to.
+    const stream = anthropic.messages.stream(
+      {
+        model: CONVERSATION_MODEL,
+        max_tokens: 1024,
+        system: systemBlocks,
+        messages,
+      },
+      { signal: request.signal }
+    )
 
     const encoder = new TextEncoder()
     let fullResponse = ''
@@ -144,7 +198,7 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
         } catch (error) {
-          console.error('Streaming error:', error)
+          captureException(error, { route: 'POST /api/conversations', phase: 'stream' })
           controller.error(error)
         }
       },
@@ -158,13 +212,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Conversation error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to generate response',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+    captureException(error, { route: 'POST /api/conversations' })
+    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 })
   }
 }

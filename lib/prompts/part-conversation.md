@@ -8,6 +8,10 @@ You are facilitating a therapeutic conversation between a user and one of their 
 **Role:** {{partRole}}
 **Description:** {{partDescription}}
 
+## What the user has learned about me so far
+
+{{userLearnedBlock}}
+
 ## Key Expressions from Journal Entries
 
 {{partQuotes}}

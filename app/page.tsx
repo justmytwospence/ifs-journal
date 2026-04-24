@@ -1,6 +1,27 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+
+const features = [
+  {
+    emoji: '✍️',
+    title: 'Guided prompts',
+    body: 'Personalized journal prompts that help you explore your internal parts.',
+  },
+  {
+    emoji: '🎭',
+    title: 'Parts discovery',
+    body: 'Identify your Protectors, Managers, Firefighters, and Exiles as you write.',
+  },
+  {
+    emoji: '💬',
+    title: 'Part conversations',
+    body: 'Open a dialogue with a part and listen to what it has to say.',
+  },
+]
 
 export default async function Home() {
   const session = await auth()
@@ -26,77 +47,54 @@ export default async function Home() {
     }
   }
 
-  // Show landing page for non-logged-in users
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          {/* Hero */}
-          <div className="text-center space-y-6 mb-16">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-16 md:py-24">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center space-y-6 mb-14">
+            <h1 className="font-heading text-5xl md:text-6xl tracking-tight text-foreground">
               IFS Journal
             </h1>
-            <p className="text-2xl text-muted-foreground max-w-2xl mx-auto">
-              Discover and understand your internal parts through guided journaling
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Discover and understand your internal parts through guided journaling.
             </p>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Based on Internal Family Systems therapy principles
+            <p className="text-base text-muted-foreground max-w-xl mx-auto">
+              Based on Internal Family Systems therapy principles.
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xl mx-auto pt-2">
+              IFS Journal is a journaling tool, not a substitute for therapy or medical advice. In
+              crisis? In the US, call or text <strong>988</strong>.
             </p>
           </div>
 
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-20">
-            <a
-              href="/register"
-              className="px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl text-center"
-            >
-              Get Started
-            </a>
-            <a
-              href="/login"
-              className="px-8 py-4 bg-background text-foreground rounded-xl font-semibold hover:bg-muted transition-all border-2 border-border text-center"
-            >
-              Sign In
-            </a>
-            <a
-              href="/demo"
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl text-center"
-            >
-              Try Demo
-            </a>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-20">
+            <Button size="lg" render={<Link href="/register" />}>
+              Get started
+            </Button>
+            <Button size="lg" variant="outline" render={<Link href="/login" />}>
+              Sign in
+            </Button>
+            <Button size="lg" variant="ghost" render={<Link href="/demo" />}>
+              Try the demo
+            </Button>
           </div>
 
-          {/* Features */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                <span className="text-3xl">✍️</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Prompts</h3>
-              <p className="text-muted-foreground">
-                Personalized journal prompts that help you explore your internal parts
-              </p>
-            </div>
-
-            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                <span className="text-3xl">🎭</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Parts Discovery</h3>
-              <p className="text-muted-foreground">
-                Automatically identify your Protectors, Managers, Firefighters, and Exiles
-              </p>
-            </div>
-
-            <div className="bg-card p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-cyan-100 rounded-xl flex items-center justify-center mb-4">
-                <span className="text-3xl">💬</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Part Conversations</h3>
-              <p className="text-muted-foreground">
-                Engage in therapeutic dialogues with your parts
-              </p>
-            </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {features.map((f) => (
+              <Card key={f.title}>
+                <CardHeader>
+                  <div className="size-12 rounded-xl bg-muted grid place-items-center mb-2">
+                    <span aria-hidden="true" className="text-2xl">
+                      {f.emoji}
+                    </span>
+                  </div>
+                  <CardTitle>{f.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{f.body}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter, Lora } from 'next/font/google'
 import { SessionProvider } from '@/components/auth/SessionProvider'
+import { DemoBanner } from '@/components/DemoBanner'
+import { Footer } from '@/components/Footer'
 import { QueryProvider } from '@/components/providers/QueryProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { Toaster } from '@/components/ui/sonner'
@@ -46,7 +48,13 @@ export default async function RootLayout({
       <body className="antialiased">
         <ThemeProvider>
           <QueryProvider>
-            <SessionProvider session={session}>{children}</SessionProvider>
+            <SessionProvider session={session}>
+              <div className="min-h-screen flex flex-col">
+                <DemoBanner />
+                <div className="flex-1">{children}</div>
+                <Footer />
+              </div>
+            </SessionProvider>
           </QueryProvider>
           <Toaster richColors position="bottom-right" />
         </ThemeProvider>

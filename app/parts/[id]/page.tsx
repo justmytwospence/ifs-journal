@@ -2,9 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { AppNav } from '@/components/AppNav'
+import { GettingToKnowPanel } from '@/components/parts/GettingToKnowPanel'
 import { PartActivityCalendar } from '@/components/parts/PartActivityCalendar'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PartDetailSkeleton } from '@/components/ui/skeleton/PartDetailSkeleton'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 import { getPartIcon } from '@/lib/part-icons'
@@ -26,6 +30,12 @@ interface Part {
   quotes: string[]
   quotesWithEntries?: QuoteWithEntry[]
   weeklyActivity?: number[]
+  customName?: string | null
+  ageImpression?: string | null
+  positiveIntent?: string | null
+  fearedOutcome?: string | null
+  whatItProtects?: string | null
+  userNotes?: string | null
 }
 
 interface ConversationMessage {
@@ -36,12 +46,15 @@ interface ConversationMessage {
 }
 
 export default function PartDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter()
   const [slug, setSlug] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<ConversationMessage[]>([])
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAllQuotes, setShowAllQuotes] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const conversationEndRef = useRef<HTMLDivElement>(null)
 
   // Unwrap params
@@ -208,6 +221,26 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const handleDeletePart = async () => {
+    if (!part || deleting) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/parts/${part.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Could not delete part.')
+        return
+      }
+      toast.success(`Deleted "${part.customName?.trim() || part.name}".`)
+      router.push('/parts')
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   const loading = partLoading || conversationLoading
 
   // Apply minimum loading time to prevent skeleton flashing
@@ -215,11 +248,11 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (showLoading) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
-            <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+            <Link href="/parts" className="text-primary hover:text-primary/80 font-medium text-sm">
               ← Back to Parts
             </Link>
           </div>
@@ -231,12 +264,12 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (partError && !partLoading) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">Part not found</p>
-            <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/parts" className="text-primary hover:text-primary/80 font-medium">
               ← Back to Parts
             </Link>
           </div>
@@ -247,11 +280,11 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!part) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
-            <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+            <Link href="/parts" className="text-primary hover:text-primary/80 font-medium text-sm">
               ← Back to Parts
             </Link>
           </div>
@@ -261,34 +294,39 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
+  const displayName = part.customName?.trim() || part.name
+  const originalName =
+    part.customName?.trim() && part.customName.trim() !== part.name ? part.name : null
+
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-background">
       <AppNav />
 
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         <div className="mb-6 flex items-center justify-between">
-          <Link href="/parts" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+          <Link href="/parts" className="text-primary hover:text-primary/80 font-medium text-sm">
             ← Back to Parts
           </Link>
           <div className="flex items-center gap-3">
             <Link
               href={`/log?part=${slug}`}
-              className="px-4 py-2 bg-muted text-foreground rounded-lg font-medium hover:bg-gray-200 transition text-sm whitespace-nowrap"
+              className="px-4 py-2 bg-muted text-foreground rounded-lg font-medium hover:bg-accent transition text-sm whitespace-nowrap"
             >
-              View Related Entries
+              View related entries
             </Link>
             <button
               type="button"
-              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition text-sm whitespace-nowrap"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-medium hover:bg-destructive/15 transition text-sm whitespace-nowrap"
             >
-              Delete Part
+              Delete part
             </button>
           </div>
         </div>
 
         <div>
           {/* Part Header */}
-          <div className="bg-card rounded-2xl shadow-sm p-8 mb-6">
+          <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-8 mb-6">
             <div className="flex items-start gap-4 mb-4">
               <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-4xl font-bold shrink-0"
@@ -297,8 +335,18 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                 {getPartIcon(part.icon)}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold mb-1">{part.name}</h1>
-                <span className="text-sm text-muted-foreground">{part.role}</span>
+                <h1 className="font-heading text-3xl tracking-tight text-foreground mb-1">
+                  {displayName}
+                </h1>
+                <span className="text-sm text-muted-foreground">
+                  {part.role}
+                  {originalName && (
+                    <>
+                      {' '}
+                      · originally <em>{originalName}</em>
+                    </>
+                  )}
+                </span>
               </div>
             </div>
             <p className="text-foreground text-lg mb-4">{part.description}</p>
@@ -307,10 +355,23 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
+          <GettingToKnowPanel
+            partId={part.id}
+            partSlug={slug || ''}
+            initial={{
+              customName: part.customName ?? null,
+              ageImpression: part.ageImpression ?? null,
+              positiveIntent: part.positiveIntent ?? null,
+              fearedOutcome: part.fearedOutcome ?? null,
+              whatItProtects: part.whatItProtects ?? null,
+              userNotes: part.userNotes ?? null,
+            }}
+          />
+
           {/* Key Quotes */}
-          <div className="bg-card rounded-2xl shadow-sm p-6 mb-6">
+          <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Key Quotes</h2>
+              <h2 className="font-heading text-xl text-foreground">Key quotes</h2>
               {part.quotesWithEntries && part.quotesWithEntries.length > 3 && (
                 <button
                   type="button"
@@ -350,19 +411,21 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Conversation */}
-          <div className="bg-card rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-2">Conversation with {part.name}</h2>
+          <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-6">
+            <h2 className="font-heading text-xl text-foreground mb-2">
+              Conversation with {displayName}
+            </h2>
             <p className="text-sm text-muted-foreground mb-6">
               Have a dialogue to understand this part better
             </p>
 
             {error && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                <p className="text-sm text-destructive">{error}</p>
                 <button
                   type="button"
                   onClick={() => setError(null)}
-                  className="text-sm text-red-700 underline mt-2"
+                  className="text-sm text-destructive underline mt-2"
                 >
                   Dismiss
                 </button>
@@ -381,11 +444,11 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                     <div
                       key={msg.id ?? `${msg.role}-${i}-${msg.content.slice(0, 20)}`}
                       className={`p-4 rounded-xl ${
-                        msg.role === 'user' ? 'bg-blue-50 ml-8' : 'bg-muted mr-8'
+                        msg.role === 'user' ? 'bg-primary/10 ml-8' : 'bg-muted mr-8'
                       }`}
                     >
                       <p className="text-sm font-medium mb-1 text-foreground">
-                        {msg.role === 'user' ? 'You' : part.name}
+                        {msg.role === 'user' ? 'You' : displayName}
                       </p>
                       <p className="text-foreground">
                         {msg.content ||
@@ -408,22 +471,33 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
+                placeholder="Type your message…"
                 disabled={sending}
-                className="flex-1 px-4 py-3 border border-input rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-muted disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 border border-input rounded-xl focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none disabled:bg-muted disabled:cursor-not-allowed"
               />
               <button
                 type="button"
                 onClick={handleSendMessage}
                 disabled={sending || !message.trim()}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {sending ? 'Sending...' : 'Send'}
+                {sending ? 'Sending…' : 'Send'}
               </button>
             </div>
           </div>
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeletePart}
+        title={`Delete "${displayName}"?`}
+        message="This removes the part, its highlighted passages, and your conversations with it. Your journal entries are not affected. This cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        isLoading={deleting}
+      />
     </div>
   )
 }

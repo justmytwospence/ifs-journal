@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export default function DemoPage() {
   const router = useRouter()
@@ -11,26 +12,14 @@ export default function DemoPage() {
   useEffect(() => {
     const loginAsDemo = async () => {
       try {
-        const result = await signIn('credentials', {
-          email: 'demo@ifsjournal.me',
-          password: 'password123',
-          redirect: false,
-        })
-
-        console.log('Demo login result:', result)
-
-        if (result?.error) {
-          console.error('Demo login error:', result.error)
+        const res = await fetch('/api/auth/demo-signin', { method: 'POST' })
+        if (!res.ok) {
           setError(true)
-        } else if (result?.ok) {
-          // Redirect to log page to show the demo data
-          router.push('/log')
-          router.refresh()
-        } else {
-          setError(true)
+          return
         }
-      } catch (err) {
-        console.error('Demo login exception:', err)
+        router.push('/log')
+        router.refresh()
+      } catch {
         setError(true)
       }
     }
@@ -40,27 +29,29 @@ export default function DemoPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Demo Login Failed</h1>
-          <p className="text-gray-600 mb-6">Unable to start demo session.</p>
-          <a
-            href="/"
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"
-          >
-            Back to Home
-          </a>
+          <h1 className="font-heading text-2xl tracking-tight text-foreground mb-4">
+            Demo login failed
+          </h1>
+          <p className="text-muted-foreground mb-6">Unable to start demo session.</p>
+          <Button size="lg" render={<Link href="/" />}>
+            Back to home
+          </Button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Loading Demo...</h1>
-        <p className="text-gray-600">Setting up your read-only demo session</p>
+        <div
+          aria-hidden="true"
+          className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-border border-t-primary mb-4"
+        />
+        <h1 className="font-heading text-2xl tracking-tight text-foreground mb-2">Loading demo…</h1>
+        <p className="text-muted-foreground">Setting up your read-only demo session</p>
       </div>
     </div>
   )

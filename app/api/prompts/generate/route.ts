@@ -3,7 +3,9 @@ import { join } from 'node:path'
 import { NextResponse } from 'next/server'
 import { anthropic, CONTENT_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
-import prisma from '@/lib/db'
+import { captureException } from '@/lib/logger'
+import { loadPriorEntriesContext } from '@/lib/prior-entries-context'
+import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
 export async function POST() {
   try {
@@ -12,34 +14,24 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const recentEntries = await prisma.journalEntry.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      select: {
-        prompt: true,
-        content: true,
-        createdAt: true,
-      },
+    const limited = await enforceRateLimit({
+      subjectKey: `user:${session.user.id}`,
+      bucket: 'prompts:generate',
+      limit: 60,
+      windowMs: HOUR_MS,
+    })
+    if (limited) return limited
+
+    const context = await loadPriorEntriesContext(session.user.id, {
+      verbatimCount: 3,
+      summaryCount: 7,
+      maxTotalEntries: 30,
     })
 
     const templatePath = join(process.cwd(), 'lib/prompts/journal-prompt-generation.md')
     const template = await readFile(templatePath, 'utf-8')
 
-    const recentEntriesText =
-      recentEntries.length > 0
-        ? recentEntries
-            .map((e, i) => {
-              const date = new Date(e.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })
-              return `Entry ${i + 1} (${date}):\nPrompt: "${e.prompt}"\nResponse: ${e.content}\n`
-            })
-            .join('\n---\n\n')
-        : "No previous entries. This is the user's first journal entry."
-
-    const systemPrompt = template.replace('{{RECENT_ENTRIES}}', recentEntriesText)
+    const systemPrompt = template.replace('{{RECENT_ENTRIES}}', context.text)
 
     const response = await anthropic.messages.create({
       model: CONTENT_MODEL,
@@ -61,11 +53,11 @@ export async function POST() {
 
     return NextResponse.json({ prompt })
   } catch (error) {
-    console.error('Generate prompt error:', error)
+    captureException(error, { route: 'POST /api/prompts/generate' })
     return NextResponse.json(
       {
         error: 'Failed to generate prompt',
-        fallback: 'What emotions are you experiencing right now?',
+        fallback: "What's something that's sitting with you today?",
       },
       { status: 500 }
     )

@@ -43,34 +43,6 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Skeleton loading animation */
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    #e5e7eb 0%,
-    #f3f4f6 50%,
-    #e5e7eb 100%
-  );
-  background-size: 1000px 100%;
-  animation: shimmer 2s infinite linear;
-}
-
-/* Respect user's motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-shimmer {
-    animation: none;
-  }
-}
-
 /* Slide up animation for toast */
 @keyframes slide-up {
   from {
@@ -101,7 +73,7 @@ button:disabled,
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-lora);
   --font-sans: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -144,24 +116,27 @@ button:disabled,
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Warm paper + sage theme. Neutrals sit in a stone-family (h=85, low chroma)
+     so the app reads like cream paper; --primary is a muted sage so the single
+     chromatic accent lives in actions (buttons, focus rings, links). */
+  --background: oklch(0.96 0.012 85);
+  --foreground: oklch(0.23 0.01 60);
+  --card: oklch(0.98 0.01 85);
+  --card-foreground: oklch(0.23 0.01 60);
+  --popover: oklch(0.98 0.01 85);
+  --popover-foreground: oklch(0.23 0.01 60);
+  --primary: oklch(0.48 0.045 150);
+  --primary-foreground: oklch(0.97 0.012 85);
+  --secondary: oklch(0.92 0.012 85);
+  --secondary-foreground: oklch(0.23 0.01 60);
+  --muted: oklch(0.92 0.012 85);
+  --muted-foreground: oklch(0.48 0.008 60);
+  --accent: oklch(0.92 0.012 85);
+  --accent-foreground: oklch(0.23 0.01 60);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.89 0.012 85);
+  --input: oklch(0.89 0.012 85);
+  --ring: oklch(0.48 0.045 150);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -179,24 +154,26 @@ button:disabled,
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Warm study at night: deep ink-brown bg, cream foreground, sage lifted for
+     legibility on dark. */
+  --background: oklch(0.20 0.008 60);
+  --foreground: oklch(0.93 0.01 85);
+  --card: oklch(0.25 0.008 60);
+  --card-foreground: oklch(0.93 0.01 85);
+  --popover: oklch(0.25 0.008 60);
+  --popover-foreground: oklch(0.93 0.01 85);
+  --primary: oklch(0.62 0.05 150);
+  --primary-foreground: oklch(0.18 0.008 60);
+  --secondary: oklch(0.29 0.008 60);
+  --secondary-foreground: oklch(0.93 0.01 85);
+  --muted: oklch(0.29 0.008 60);
+  --muted-foreground: oklch(0.72 0.008 85);
+  --accent: oklch(0.29 0.008 60);
+  --accent-foreground: oklch(0.93 0.01 85);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.62 0.05 150);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

@@ -328,7 +328,7 @@ function LogPageContent() {
 
   if (showLoading) {
     return (
-      <div className="min-h-screen bg-muted/30">
+      <div className="min-h-screen bg-background">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <LogPageSkeleton />
@@ -338,12 +338,12 @@ function LogPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-background">
       <AppNav />
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-3xl font-bold">Journal Log</h2>
+          <h2 className="font-heading text-3xl tracking-tight text-foreground">Journal log</h2>
           <p className="text-muted-foreground">
             {totalCount} {totalCount === 1 ? 'entry' : 'entries'} in your journal
           </p>
@@ -357,10 +357,10 @@ function LogPageContent() {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search entries..."
+                placeholder="Search entries…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 pl-12 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-3 pl-12 bg-card border border-border rounded-xl focus:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
               <svg
                 aria-hidden="true"
@@ -384,7 +384,7 @@ function LogPageContent() {
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-muted transition-colors"
+                  className="w-full px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 flex items-center justify-between hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     {selectedPartId ? (
@@ -431,11 +431,11 @@ function LogPageContent() {
                           setIsDropdownOpen(false)
                         }}
                         className={`w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center gap-3 ${
-                          !selectedPartId ? 'bg-indigo-50' : ''
+                          !selectedPartId ? 'bg-primary/10' : ''
                         }`}
                       >
                         <span
-                          className={`font-medium ${!selectedPartId ? 'text-indigo-600' : 'text-foreground'}`}
+                          className={`font-medium ${!selectedPartId ? 'text-primary' : 'text-foreground'}`}
                         >
                           All Parts
                         </span>
@@ -475,7 +475,7 @@ function LogPageContent() {
                   setSearchQuery('')
                   setSelectedPartId(null)
                 }}
-                className="text-indigo-600 hover:text-indigo-700 font-medium"
+                className="text-primary hover:text-primary/80 font-medium"
               >
                 Clear filters
               </button>
@@ -485,17 +485,33 @@ function LogPageContent() {
 
         {/* Entries List */}
         {totalCount === 0 ? (
-          <div className="text-center py-12 bg-card rounded-2xl shadow-sm">
-            <p className="text-muted-foreground mb-4">No journal entries yet</p>
+          <div className="max-w-xl mx-auto text-center py-12 space-y-6">
+            <div className="bg-card rounded-2xl ring-1 ring-foreground/10 p-6 text-left space-y-3">
+              <h3 className="font-heading text-lg text-foreground">Welcome to IFS Journal</h3>
+              <p className="text-sm text-muted-foreground">
+                This is a journaling tool grounded in Internal Family Systems therapy. You write,
+                and Claude notices "parts" in your writing — like a Protector that keeps you busy,
+                or an Exile that holds old grief — and highlights the exact passages where each part
+                shows up.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Your entries are private to your account. IFS Journal is not a substitute for
+                therapy; see{' '}
+                <Link href="/about" className="underline">
+                  About
+                </Link>{' '}
+                for more.
+              </p>
+            </div>
             <Link
               href="/journal"
-              className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               Write your first entry
             </Link>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-12 bg-card rounded-2xl shadow-sm">
+          <div className="text-center py-12 bg-card rounded-2xl ring-1 ring-foreground/10">
             <p className="text-muted-foreground mb-2">No entries match your filters</p>
             <button
               type="button"
@@ -503,7 +519,7 @@ function LogPageContent() {
                 setSearchQuery('')
                 setSelectedPartId(null)
               }}
-              className="text-indigo-600 hover:text-indigo-700 font-medium"
+              className="text-primary hover:text-primary/80 font-medium"
             >
               Clear filters
             </button>
@@ -542,11 +558,11 @@ function LogPageContent() {
                       <Link
                         key={entry.id}
                         href={`/log/${createEntrySlug(entry.createdAt)}`}
-                        className="block bg-card rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-border"
+                        className="block bg-card rounded-2xl ring-1 ring-foreground/10 hover:ring-foreground/20 transition-all p-6"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-foreground mb-1">
+                            <h3 className="font-heading text-lg text-foreground mb-1">
                               {formatEntryDate(entry.createdAt)}
                             </h3>
                             <p className="text-sm text-muted-foreground font-semibold">
@@ -561,10 +577,10 @@ function LogPageContent() {
                                 {entry.partAnalyses.slice(0, 3).map((analysis) => (
                                   <div key={analysis.id} className="relative group">
                                     <span className="text-lg">{analysis.part.icon || '●'}</span>
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-lg">
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-foreground text-background text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
                                       {analysis.part.name}
                                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
-                                        <div className="border-4 border-transparent border-t-gray-900"></div>
+                                        <div className="border-4 border-transparent border-t-foreground"></div>
                                       </div>
                                     </div>
                                   </div>
@@ -617,7 +633,7 @@ export default function LogPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-muted/30">
+        <div className="min-h-screen bg-background">
           <AppNav />
           <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
             <LogPageSkeleton />
