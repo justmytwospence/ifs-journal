@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.21.0
+          cache: npm
+
+      - name: Install dependencies
+        # --legacy-peer-deps matches what Vercel does (see vercel.json
+        # installCommand) — keeps next-auth@beta happy with React 19.
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      # Lint is deliberately NOT gating yet. biome reports ~70 pre-existing
+      # a11y warnings cleaned up gradually by the shadcn migration. Re-enable
+      # once the backlog clears — tracked in the revamp plan (P1.5 follow-up).
+      # - name: Lint
+      #   run: npm run lint
