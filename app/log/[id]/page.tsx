@@ -9,6 +9,7 @@ import { AppNav } from '@/components/AppNav'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { DemoToast } from '@/components/ui/DemoToast'
 import { JournalEntrySkeleton } from '@/components/ui/skeleton/JournalEntrySkeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { reanchorHighlight } from '@/lib/anchoring'
 import { formatFullEntryDate } from '@/lib/date-utils'
 import { slugify } from '@/lib/slug-utils'
@@ -273,27 +274,28 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
       const highlightedText = highlight.text
 
       parts.push(
-        <span
-          key={`highlight-${i}`}
-          className={`relative group cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-gray-400' : ''}`}
-          style={{ backgroundColor: `${highlight.part.color}20` }}
-          onClick={() => (window.location.href = `/parts/${slugify(highlight.part.name)}`)}
-          data-quote={highlightedText}
-        >
-          {highlightedText}
-          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 bg-gray-900 text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 w-80 shadow-2xl border border-gray-700 font-sans">
-            <div className="font-bold text-base mb-2" style={{ color: highlight.part.color }}>
+        <Tooltip key={`highlight-${i}`}>
+          <TooltipTrigger
+            render={
+              <span
+                className={`relative cursor-pointer rounded px-1 transition-all ${highlight.isStale ? 'border border-dashed border-gray-400' : ''}`}
+                style={{ backgroundColor: `${highlight.part.color}20` }}
+                onClick={() => (window.location.href = `/parts/${slugify(highlight.part.name)}`)}
+                data-quote={highlightedText}
+              >
+                {highlightedText}
+              </span>
+            }
+          />
+          <TooltipContent className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left">
+            <div className="font-bold text-sm mb-2" style={{ color: highlight.part.color }}>
               {highlight.part.name}
             </div>
             {highlight.reasoning && (
-              <div className="text-gray-200 text-left leading-relaxed">{highlight.reasoning}</div>
+              <div className="leading-relaxed text-background/90">{highlight.reasoning}</div>
             )}
-            {/* Arrow pointing down */}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
-              <div className="border-8 border-transparent border-t-gray-900"></div>
-            </div>
-          </span>
-        </span>
+          </TooltipContent>
+        </Tooltip>
       )
 
       lastIndex = highlight.end
@@ -387,33 +389,30 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
               Delete
             </button>
             {navigation?.previous ? (
-              <div className="relative group">
-                <Link
-                  href={`/log/${navigation.previous.slug}`}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-lg leading-none">←</span>
-                  Previous
-                </Link>
-                {/* Tooltip */}
-                <div className="absolute top-full right-0 mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                  <div className="bg-gray-900 text-white rounded-xl p-4 shadow-2xl border border-gray-700">
-                    <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                      Previous Entry
-                    </div>
-                    <div className="font-semibold text-base mb-2">
-                      {formatFullEntryDate(navigation.previous.createdAt)}
-                    </div>
-                    <div className="text-gray-300 text-sm leading-relaxed">
-                      {navigation.previous.prompt}
-                    </div>
-                    {/* Arrow */}
-                    <div className="absolute bottom-full right-4 -mb-px">
-                      <div className="border-8 border-transparent border-b-gray-900"></div>
-                    </div>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Link
+                      href={`/log/${navigation.previous.slug}`}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="text-lg leading-none">←</span>
+                      Previous
+                    </Link>
+                  }
+                />
+                <TooltipContent side="bottom" className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left">
+                  <div className="text-[10px] uppercase tracking-wide opacity-70 mb-1">
+                    Previous Entry
                   </div>
-                </div>
-              </div>
+                  <div className="font-semibold text-sm mb-1">
+                    {formatFullEntryDate(navigation.previous.createdAt)}
+                  </div>
+                  <div className="leading-relaxed text-background/80">
+                    {navigation.previous.prompt}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             ) : (
               <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
                 <span className="text-lg leading-none">←</span>
@@ -422,33 +421,30 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
             )}
 
             {navigation?.next ? (
-              <div className="relative group">
-                <Link
-                  href={`/log/${navigation.next.slug}`}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Next
-                  <span className="text-lg leading-none">→</span>
-                </Link>
-                {/* Tooltip */}
-                <div className="absolute top-full right-0 mt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                  <div className="bg-gray-900 text-white rounded-xl p-4 shadow-2xl border border-gray-700">
-                    <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                      Next Entry
-                    </div>
-                    <div className="font-semibold text-base mb-2">
-                      {formatFullEntryDate(navigation.next.createdAt)}
-                    </div>
-                    <div className="text-gray-300 text-sm leading-relaxed">
-                      {navigation.next.prompt}
-                    </div>
-                    {/* Arrow */}
-                    <div className="absolute bottom-full right-4 -mb-px">
-                      <div className="border-8 border-transparent border-b-gray-900"></div>
-                    </div>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Link
+                      href={`/log/${navigation.next.slug}`}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Next
+                      <span className="text-lg leading-none">→</span>
+                    </Link>
+                  }
+                />
+                <TooltipContent side="bottom" className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left">
+                  <div className="text-[10px] uppercase tracking-wide opacity-70 mb-1">
+                    Next Entry
                   </div>
-                </div>
-              </div>
+                  <div className="font-semibold text-sm mb-1">
+                    {formatFullEntryDate(navigation.next.createdAt)}
+                  </div>
+                  <div className="leading-relaxed text-background/80">
+                    {navigation.next.prompt}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             ) : (
               <div className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-400 bg-gray-100 border border-gray-200 rounded-lg cursor-not-allowed">
                 Next
