@@ -11,18 +11,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
   }
 
-  // CSRF: Origin must match the host Vercel actually routed this request
-  // through. Using new URL(request.url).host (rather than the raw Host
-  // header) reflects x-forwarded-host on Vercel's proxy and normalizes
-  // casing/port handling. NextAuth has its own CSRF token on the callback
-  // endpoint — this is defense in depth, not the primary guard.
+  // CSRF: Origin must match the host this request actually came in on.
+  // Vercel's proxy can populate any of a few host-ish headers, so accept
+  // a match against any of them. NextAuth has its own CSRF token on the
+  // callback endpoint — this is defense in depth, not the primary guard.
   const origin = request.headers.get('origin')
+  let originHost: string | null = null
   try {
-    const expectedHost = new URL(request.url).host
-    if (!origin || new URL(origin).host !== expectedHost) {
-      return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
-    }
+    originHost = origin ? new URL(origin).host : null
   } catch {
+    originHost = null
+  }
+  const candidateHosts = new Set<string>()
+  for (const h of [
+    request.headers.get('host'),
+    request.headers.get('x-forwarded-host'),
+  ]) {
+    if (h) candidateHosts.add(h.toLowerCase())
+  }
+  try {
+    candidateHosts.add(new URL(request.url).host.toLowerCase())
+  } catch {
+    // ignore
+  }
+  if (!originHost || !candidateHosts.has(originHost.toLowerCase())) {
     return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
   }
 
