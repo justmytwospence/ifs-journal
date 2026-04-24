@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
 // SVG Icons for bottom nav
@@ -124,6 +125,7 @@ export function AppNav() {
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-4">
+              <ThemeToggle />
               {session?.user?.isDemo && (
                 <div className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 bg-purple-50 border border-purple-200 rounded-lg shrink-0">
                   <span className="text-xs md:text-sm font-medium text-purple-700 whitespace-nowrap">

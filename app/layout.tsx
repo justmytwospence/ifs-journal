@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Lora } from 'next/font/google'
 import { SessionProvider } from '@/components/auth/SessionProvider'
 import { QueryProvider } from '@/components/providers/QueryProvider'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { auth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import './globals.css'
@@ -36,11 +37,13 @@ export default async function RootLayout({
   const session = await auth()
 
   return (
-    <html lang="en" className={cn(inter.variable, lora.variable, 'font-sans')}>
+    <html lang="en" className={cn(inter.variable, lora.variable, 'font-sans')} suppressHydrationWarning>
       <body className="antialiased">
-        <QueryProvider>
-          <SessionProvider session={session}>{children}</SessionProvider>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <SessionProvider session={session}>{children}</SessionProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
