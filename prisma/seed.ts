@@ -54,7 +54,9 @@ async function main() {
     throw error
   }
 
-  const passwordHash = await bcrypt.hash('password123', 12)
+  // BCRYPT_ROUNDS matches lib/password-policy.ts — kept inline so seed has no
+  // dependency on the app runtime (prisma db seed runs before the Next build).
+  const passwordHash = await bcrypt.hash('password123', 14)
 
   console.log('Creating test users...')
 

@@ -2,10 +2,11 @@ import { hash } from 'bcryptjs'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/db'
+import { BCRYPT_ROUNDS, newPasswordSchema } from '@/lib/password-policy'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: newPasswordSchema,
 })
 
 export async function POST(request: Request) {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, user: { email } }, { status: 201 })
     }
 
-    const passwordHash = await hash(password, 12)
+    const passwordHash = await hash(password, BCRYPT_ROUNDS)
 
     await prisma.user.create({
       data: {

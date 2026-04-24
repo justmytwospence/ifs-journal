@@ -22,8 +22,13 @@ export default function RegisterPage() {
       return
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters')
+      return
+    }
+
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      setError('Password must include at least one symbol (e.g., !@#$%)')
       return
     }
 
@@ -107,10 +112,12 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={8}
+                minLength={12}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               />
-              <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
+              <p className="text-xs text-gray-500 mt-1">
+                At least 12 characters, including one symbol (like !@#$%).
+              </p>
             </div>
 
             <div>
@@ -127,7 +134,7 @@ export default function RegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={8}
+                minLength={12}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               />
             </div>
