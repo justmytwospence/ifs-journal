@@ -310,7 +310,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
@@ -331,7 +331,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (isError && !loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
@@ -347,7 +347,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
 
   if (!entry) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6 flex items-center justify-between">
@@ -367,7 +367,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <AppNav />
 
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">

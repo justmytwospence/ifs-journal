@@ -73,7 +73,7 @@ export function AppNav() {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4 md:gap-8">
@@ -87,7 +87,7 @@ export function AppNav() {
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/journal')
                       ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      : 'text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   Journal
@@ -97,7 +97,7 @@ export function AppNav() {
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/log')
                       ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      : 'text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   Log
@@ -107,7 +107,7 @@ export function AppNav() {
                   className={`px-4 py-2 rounded-lg font-medium ${
                     isActive('/parts')
                       ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      : 'text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   Parts
@@ -153,12 +153,12 @@ export function AppNav() {
       </nav>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-sm border-t border-border pb-safe">
         <div className="flex items-center justify-around h-16">
           <Link
             href="/journal"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/journal') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+              isActive('/journal') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <JournalIcon className="w-6 h-6 mb-1" />
@@ -167,7 +167,7 @@ export function AppNav() {
           <Link
             href="/log"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/log') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+              isActive('/log') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <LogIcon className="w-6 h-6 mb-1" />
@@ -176,7 +176,7 @@ export function AppNav() {
           <Link
             href="/parts"
             className={`flex flex-col items-center justify-center flex-1 h-full py-2 ${
-              isActive('/parts') ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+              isActive('/parts') ? 'text-blue-600' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <PartsIcon className="w-6 h-6 mb-1" />

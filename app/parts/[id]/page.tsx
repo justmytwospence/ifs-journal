@@ -215,7 +215,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (showLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
@@ -231,7 +231,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (partError && !partLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="text-center py-12">
@@ -247,7 +247,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!part) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-muted/30">
         <AppNav />
         <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
           <div className="mb-6">
@@ -262,7 +262,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <AppNav />
 
       <main className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
