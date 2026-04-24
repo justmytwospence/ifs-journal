@@ -379,6 +379,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           {/* Navigation and action buttons */}
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowDeleteConfirm(true)}
               className={`px-3 py-1.5 text-sm font-medium border rounded-lg transition-colors ${
                 isDemo
@@ -401,7 +402,10 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                     </Link>
                   }
                 />
-                <TooltipContent side="bottom" className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left">
+                <TooltipContent
+                  side="bottom"
+                  className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left"
+                >
                   <div className="text-[10px] uppercase tracking-wide opacity-70 mb-1">
                     Previous Entry
                   </div>
@@ -433,16 +437,17 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
                     </Link>
                   }
                 />
-                <TooltipContent side="bottom" className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left">
+                <TooltipContent
+                  side="bottom"
+                  className="flex-col items-start w-80 max-w-[calc(100vw-2rem)] p-4 text-left"
+                >
                   <div className="text-[10px] uppercase tracking-wide opacity-70 mb-1">
                     Next Entry
                   </div>
                   <div className="font-semibold text-sm mb-1">
                     {formatFullEntryDate(navigation.next.createdAt)}
                   </div>
-                  <div className="leading-relaxed text-background/80">
-                    {navigation.next.prompt}
-                  </div>
+                  <div className="leading-relaxed text-background/80">{navigation.next.prompt}</div>
                 </TooltipContent>
               </Tooltip>
             ) : (

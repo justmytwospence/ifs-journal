@@ -38,6 +38,7 @@ export function DemoToast({ onClose }: DemoToastProps) {
             <p className="text-sm text-blue-100">Click here to create your own account →</p>
           </div>
           <button
+            type="button"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()

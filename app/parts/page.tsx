@@ -3,11 +3,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { AppNav } from '@/components/AppNav'
 import { PartsTreemap } from '@/components/parts/PartsTreemap'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { PartsPageSkeleton } from '@/components/ui/skeleton/PartsPageSkeleton'
-import { toast } from 'sonner'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 import { getPartIcon } from '@/lib/part-icons'
 import { slugify } from '@/lib/slug-utils'
@@ -121,6 +121,7 @@ export default function PartsPage() {
               {error instanceof Error ? error.message : 'An error occurred'}
             </p>
             <button
+              type="button"
               onClick={() => queryClient.invalidateQueries({ queryKey: ['parts'] })}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
             >
@@ -143,6 +144,7 @@ export default function PartsPage() {
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
               <h2 className="text-3xl font-bold">Your Parts</h2>
               <button
+                type="button"
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={true}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
@@ -157,6 +159,7 @@ export default function PartsPage() {
             <div className="mb-8 flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-4">
               <h2 className="text-3xl font-bold">Your Parts</h2>
               <button
+                type="button"
                 onClick={() => setShowConfirmDialog(true)}
                 disabled={isBatchAnalyzing}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap w-full min-[420px]:w-auto"
@@ -200,7 +203,9 @@ export default function PartsPage() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-muted-foreground text-sm flex-1 mb-4">{part.description}</p>
+                      <p className="text-muted-foreground text-sm flex-1 mb-4">
+                        {part.description}
+                      </p>
                       <div className="text-sm text-muted-foreground pt-3 border-t border-border">
                         {part.appearances} {part.appearances === 1 ? 'appearance' : 'appearances'}
                       </div>

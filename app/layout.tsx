@@ -38,7 +38,11 @@ export default async function RootLayout({
   const session = await auth()
 
   return (
-    <html lang="en" className={cn(inter.variable, lora.variable, 'font-sans')} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={cn(inter.variable, lora.variable, 'font-sans')}
+      suppressHydrationWarning
+    >
       <body className="antialiased">
         <ThemeProvider>
           <QueryProvider>

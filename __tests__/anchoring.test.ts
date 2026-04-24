@@ -100,8 +100,7 @@ describe('reanchorHighlight', () => {
     }
 
     // Edit: insert a whole paragraph before the quote. Old offsets are now wrong.
-    const editedText =
-      'A whole new paragraph that was added on retrospective review. ' + originalText
+    const editedText = `A whole new paragraph that was added on retrospective review. ${originalText}`
 
     const reanchored = reanchorHighlight(editedText, selector)
     expect(reanchored).not.toBeNull()

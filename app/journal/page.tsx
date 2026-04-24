@@ -3,9 +3,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { AppNav } from '@/components/AppNav'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
-import { toast } from 'sonner'
 import { DemoToast } from '@/components/ui/DemoToast'
 import { useAnalysisStore } from '@/lib/stores/analysis-store'
 
@@ -407,6 +407,7 @@ export default function JournalPage() {
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-3xl font-bold">Journal</h2>
           <button
+            type="button"
             onClick={handleNewPrompt}
             disabled={loadingPrompt}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
@@ -465,7 +466,9 @@ export default function JournalPage() {
                   Start writing to receive personalized tips...
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground italic">Keep writing to receive tips...</p>
+                <p className="text-sm text-muted-foreground italic">
+                  Keep writing to receive tips...
+                </p>
               )}
             </div>
           )}
@@ -492,6 +495,7 @@ export default function JournalPage() {
             {/* Voice Input Button */}
             {recognition && (
               <button
+                type="button"
                 onClick={toggleListening}
                 className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
                   isListening
@@ -522,6 +526,7 @@ export default function JournalPage() {
 
             {/* Writing Tips Toggle */}
             <button
+              type="button"
               onClick={toggleWritingTips}
               className={`h-10 w-10 rounded-lg transition cursor-pointer shrink-0 flex items-center justify-center ${
                 showWritingTips
@@ -537,6 +542,7 @@ export default function JournalPage() {
 
             {/* Save Button */}
             <button
+              type="button"
               onClick={handleSave}
               disabled={saving}
               className={`h-10 px-6 rounded-lg font-medium transition shadow-sm flex items-center gap-2 shrink-0 ${
@@ -552,7 +558,6 @@ export default function JournalPage() {
           </div>
         </div>
       </main>
-
 
       {showDemoToast && <DemoToast onClose={() => setShowDemoToast(false)} />}
 

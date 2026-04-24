@@ -93,7 +93,9 @@ export default async function Home() {
                 <span className="text-3xl">💬</span>
               </div>
               <h3 className="text-xl font-semibold mb-2">Part Conversations</h3>
-              <p className="text-muted-foreground">Engage in therapeutic dialogues with your parts</p>
+              <p className="text-muted-foreground">
+                Engage in therapeutic dialogues with your parts
+              </p>
             </div>
           </div>
         </div>

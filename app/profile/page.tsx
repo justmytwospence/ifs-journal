@@ -85,7 +85,9 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Member Since</label>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Member Since
+                </label>
                 <div className="px-4 py-3 bg-muted rounded-xl text-foreground">
                   {new Date().toLocaleDateString()}
                 </div>
@@ -98,6 +100,7 @@ export default function ProfilePage() {
             <h3 className="text-xl font-semibold mb-4">Account Actions</h3>
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={handleExportData}
                 disabled={exporting}
                 className="w-full px-6 py-3 bg-muted text-foreground rounded-xl font-medium hover:bg-gray-200 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -105,6 +108,7 @@ export default function ProfilePage() {
                 {exporting ? 'Exporting...' : 'Export My Data'}
               </button>
               <button
+                type="button"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
                 className="w-full px-6 py-3 bg-red-50 text-red-600 rounded-xl font-medium hover:bg-red-100 transition text-left disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -127,12 +131,14 @@ export default function ProfilePage() {
             </p>
             <div className="flex gap-3 justify-end">
               <button
+                type="button"
                 onClick={() => setShowDeleteDialog(false)}
                 className="px-6 py-2 bg-muted text-foreground rounded-lg font-medium hover:bg-gray-200 transition"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDeleteAccount}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
               >
@@ -142,7 +148,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-
     </div>
   )
 }

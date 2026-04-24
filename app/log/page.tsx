@@ -381,6 +381,7 @@ function LogPageContent() {
             {parts.length > 0 && (
               <div className="relative w-full md:w-64">
                 <button
+                  type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="w-full px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent flex items-center justify-between hover:bg-muted transition-colors"
                 >
@@ -418,6 +419,7 @@ function LogPageContent() {
                     <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />
                     <div className="absolute z-20 w-full mt-2 bg-card border border-border rounded-xl shadow-lg max-h-64 max-w-[calc(100vw-2rem)] overflow-y-auto">
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedPartId(null)
                           setIsDropdownOpen(false)
@@ -434,6 +436,7 @@ function LogPageContent() {
                       </button>
                       {parts.map((part) => (
                         <button
+                          type="button"
                           key={part.id}
                           onClick={() => {
                             setSelectedPartId(part.id)
@@ -461,6 +464,7 @@ function LogPageContent() {
                 Showing {filteredEntries.length} of {entries.length} entries
               </span>
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery('')
                   setSelectedPartId(null)
@@ -488,6 +492,7 @@ function LogPageContent() {
           <div className="text-center py-12 bg-card rounded-2xl shadow-sm">
             <p className="text-muted-foreground mb-2">No entries match your filters</p>
             <button
+              type="button"
               onClick={() => {
                 setSearchQuery('')
                 setSelectedPartId(null)
@@ -538,7 +543,9 @@ function LogPageContent() {
                             <h3 className="text-lg font-semibold text-foreground mb-1">
                               {formatEntryDate(entry.createdAt)}
                             </h3>
-                            <p className="text-sm text-muted-foreground font-semibold">{entry.prompt}</p>
+                            <p className="text-sm text-muted-foreground font-semibold">
+                              {entry.prompt}
+                            </p>
                           </div>
                           <div className="flex items-center gap-3 ml-4">
                             {entry.partAnalyses && entry.partAnalyses.length > 0 && (
@@ -578,6 +585,7 @@ function LogPageContent() {
             {entries.length < totalCount && (
               <div className="mt-8 text-center">
                 <button
+                  type="button"
                   onClick={() => {
                     previousEntryCountRef.current = filteredEntries.length
                     setIsLoadingMore(true)

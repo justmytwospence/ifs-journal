@@ -277,7 +277,10 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
             >
               View Related Entries
             </Link>
-            <button className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition text-sm whitespace-nowrap">
+            <button
+              type="button"
+              className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition text-sm whitespace-nowrap"
+            >
               Delete Part
             </button>
           </div>
@@ -310,6 +313,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               <h2 className="text-xl font-semibold">Key Quotes</h2>
               {part.quotesWithEntries && part.quotesWithEntries.length > 3 && (
                 <button
+                  type="button"
                   onClick={() => setShowAllQuotes(!showAllQuotes)}
                   className="text-sm font-medium hover:underline"
                   style={{ color: part.color }}
@@ -356,6 +360,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
                 <p className="text-sm text-red-600">{error}</p>
                 <button
+                  type="button"
                   onClick={() => setError(null)}
                   className="text-sm text-red-700 underline mt-2"
                 >
@@ -408,6 +413,7 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
                 className="flex-1 px-4 py-3 border border-input rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-muted disabled:cursor-not-allowed"
               />
               <button
+                type="button"
                 onClick={handleSendMessage}
                 disabled={sending || !message.trim()}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
