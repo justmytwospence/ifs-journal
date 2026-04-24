@@ -32,18 +32,7 @@ export async function POST(request: Request) {
     // ignore
   }
   if (!originHost || !candidateHosts.has(originHost.toLowerCase())) {
-    return NextResponse.json(
-      {
-        error: 'Invalid origin.',
-        debug: {
-          origin,
-          originHost,
-          candidates: [...candidateHosts],
-          requestUrl: request.url,
-        },
-      },
-      { status: 403 }
-    )
+    return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
   }
 
   const ip = getClientIp(request.headers)
