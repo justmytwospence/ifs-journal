@@ -531,7 +531,7 @@ export default function JournalEntryPage({ params }: { params: Promise<{ id: str
           title="Delete Journal Entry?"
           message="This will permanently delete this entry and all associated part analyses. This action cannot be undone."
           confirmText={deleteMutation.isPending ? 'Deleting...' : 'Delete Entry'}
-          confirmButtonClass="bg-red-600 hover:bg-red-700"
+          variant="destructive"
           isLoading={deleteMutation.isPending}
         />
 

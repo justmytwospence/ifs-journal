@@ -1,6 +1,14 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -10,10 +18,19 @@ interface ConfirmModalProps {
   message: string
   confirmText?: string
   cancelText?: string
+  /** Legacy prop retained so existing callers keep compiling; ignored in favor of variant. */
   confirmButtonClass?: string
+  /** Visual variant for the confirm button. Defaults to the primary (blue) style. */
+  variant?: 'default' | 'destructive'
   isLoading?: boolean
 }
 
+/**
+ * Thin wrapper around shadcn Dialog with a standard "Title / message / Cancel +
+ * Confirm" layout. Radix Dialog (via @base-ui) handles focus trap, Esc-close,
+ * and tap-outside for free — the hand-rolled version had to reimplement all of
+ * that and still didn't trap focus correctly.
+ */
 export function ConfirmModal({
   isOpen,
   onClose,
@@ -22,54 +39,29 @@ export function ConfirmModal({
   message,
   confirmText = 'Continue',
   cancelText = 'Cancel',
-  confirmButtonClass = 'bg-blue-600 hover:bg-blue-700',
+  variant = 'default',
   isLoading = false,
 }: ConfirmModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (isOpen && modalRef.current) {
-      modalRef.current.focus()
-    }
-  }, [isOpen])
-
-  if (!isOpen) return null
-
   return (
-    <div
-      ref={modalRef}
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4 pb-safe-plus-4"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && !isLoading) {
-          onConfirm()
-        } else if (e.key === 'Escape' && !isLoading) {
-          onClose()
-        }
-      }}
-      tabIndex={-1}
-    >
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-        <h3 className="text-xl font-bold mb-4">{title}</h3>
-        <p className="text-gray-600 mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
+      <DialogContent
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !isLoading) onConfirm()
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={isLoading}>
             {cancelText}
-            <span className="text-xs opacity-60">Esc</span>
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className={`px-6 py-2 text-white rounded-lg font-medium transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${confirmButtonClass}`}
-          >
+          </Button>
+          <Button variant={variant} onClick={onConfirm} disabled={isLoading}>
             {confirmText}
-            <span className="text-xs opacity-75">↵</span>
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
