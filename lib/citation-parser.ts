@@ -1,3 +1,16 @@
+/**
+ * Parse Claude's parts-analysis response into ParsedPart[].
+ *
+ * Why XML-tagged text rather than tool_use: the Anthropic Citations API
+ * attaches citations to TEXT content blocks, not to tool_use input fields.
+ * Part extraction needs BOTH guaranteed part metadata AND automatic passage
+ * anchoring; the XML-inside-text pattern keeps citations naturally aligned
+ * to each <instance> body without a separate bridging mechanism.
+ *
+ * Robustness is enforced by __tests__/citation-parser.test.ts — edit that
+ * suite when extending the accepted schema.
+ */
+
 import type Anthropic from '@anthropic-ai/sdk'
 
 export interface ParsedCitation {
