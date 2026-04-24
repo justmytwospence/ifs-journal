@@ -20,12 +20,58 @@ model User {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  journalEntries    JournalEntry[]
-  parts             Part[]
-  partConversations PartConversation[]
-  partsOperations   PartsOperation[]
+  journalEntries         JournalEntry[]
+  parts                  Part[]
+  partConversations      PartConversation[]
+  partsOperations        PartsOperation[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
+}
+
+// Email verification tokens (hashed) — consumed by /api/auth/verify-email.
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+// Password reset tokens (hashed) — consumed by /api/auth/reset-password.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// Fixed-window rate limit counters. One row per (subjectKey, bucket, windowStart).
+// subjectKey is either "user:<userId>" or "ip:<ip>"; bucket is the route name.
+model RateLimit {
+  id          String   @id @default(cuid())
+  subjectKey  String
+  bucket      String
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([subjectKey, bucket, windowStart])
+  @@index([windowStart])
+  @@map("rate_limits")
 }
 
 // Journaling
@@ -61,6 +107,18 @@ model Part {
   role        String   // Protector, Manager, Firefighter, Exile
   color       String   // Hex color for UI consistency
   icon        String   @default("●") // Simple unicode symbol for visual identification
+
+  // User-curated IFS fields. All optional; surfaced on the part page so the
+  // user can record bespoke detail that the LLM cannot infer from citations
+  // alone — age impression, feared outcome, what it protects, etc. See
+  // plans/take-a-step-back-modular-lovelace.md P1.
+  customName      String?  // User override of name; display layer prefers this when set
+  ageImpression   String?
+  positiveIntent  String?  @db.Text
+  fearedOutcome   String?  @db.Text
+  whatItProtects  String?  @db.Text
+  userNotes       String?  @db.Text
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

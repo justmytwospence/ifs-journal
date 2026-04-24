@@ -1,16 +1,33 @@
+import { neonConfig } from '@neondatabase/serverless'
+import { PrismaNeon } from '@prisma/adapter-neon'
 import { PrismaClient } from '@prisma/client'
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-// Learn more: https://pris.ly/d/help/next-js-best-practices
+// Neon's serverless driver uses WebSockets to talk to the database. In Node
+// runtimes it needs a WebSocket constructor; Node 22+ exposes a global one
+// that matches the browser API well enough for Neon's purposes. On edge it's
+// already there. Only override if a concrete polyfill is required.
+if (typeof WebSocket !== 'undefined') {
+  neonConfig.webSocketConstructor = WebSocket as unknown as typeof neonConfig.webSocketConstructor
+}
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+function createPrisma(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is required')
+  }
+  // Driver adapter keeps a pool alive across hot serverless invocations so
+  // cold starts don't open a fresh TCP connection every time — the previous
+  // vanilla PrismaClient would exhaust Neon's connection limits under load.
+  const adapter = new PrismaNeon({ connectionString })
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   })
+}
+
+export const prisma = globalForPrisma.prisma || createPrisma()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
