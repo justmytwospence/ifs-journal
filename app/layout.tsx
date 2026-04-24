@@ -3,11 +3,16 @@ import { Inter, Lora } from 'next/font/google'
 import { SessionProvider } from '@/components/auth/SessionProvider'
 import { QueryProvider } from '@/components/providers/QueryProvider'
 import { auth } from '@/lib/auth'
+import { cn } from '@/lib/utils'
 import './globals.css'
 
+// Inter provides both `--font-inter` (legacy reference) and `--font-sans`
+// (what shadcn's @theme block looks up via `font-sans`). Mapping to the
+// same typeface keeps the UI visually coherent while shadcn components
+// render correctly.
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
 })
 
@@ -31,7 +36,7 @@ export default async function RootLayout({
   const session = await auth()
 
   return (
-    <html lang="en" className={`${inter.variable} ${lora.variable}`}>
+    <html lang="en" className={cn(inter.variable, lora.variable, 'font-sans')}>
       <body className="antialiased">
         <QueryProvider>
           <SessionProvider session={session}>{children}</SessionProvider>
