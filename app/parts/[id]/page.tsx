@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { AppNav } from '@/components/AppNav'
+import { PartActivityCalendar } from '@/components/parts/PartActivityCalendar'
 import { PartDetailSkeleton } from '@/components/ui/skeleton/PartDetailSkeleton'
 import { useMinimumLoadingTime } from '@/lib/hooks/useMinimumLoadingTime'
 import { getPartIcon } from '@/lib/part-icons'
@@ -298,30 +299,8 @@ export default function PartDetailPage({ params }: { params: Promise<{ id: strin
               </div>
             </div>
             <p className="text-gray-700 text-lg mb-4">{part.description}</p>
-            {/* Activity Sparkline */}
             {part.weeklyActivity && part.weeklyActivity.length > 0 && (
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                <span className="text-sm text-gray-500">Activity (Last 30 days)</span>
-                <svg width="150" height="32" className="inline-block">
-                  {part.weeklyActivity.map((value, i) => {
-                    const max = Math.max(...part.weeklyActivity!, 1)
-                    const barHeight = (value / max) * 32
-                    const barWidth = 150 / part.weeklyActivity!.length
-                    return (
-                      <rect
-                        key={i}
-                        x={i * barWidth}
-                        y={32 - barHeight}
-                        width={barWidth - 1}
-                        height={barHeight}
-                        fill={part.color}
-                        opacity={0.7}
-                        rx={1}
-                      />
-                    )
-                  })}
-                </svg>
-              </div>
+              <PartActivityCalendar trend={part.weeklyActivity} color={part.color} />
             )}
           </div>
 
