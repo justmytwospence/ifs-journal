@@ -1,10 +1,12 @@
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { type NextRequest, NextResponse } from 'next/server'
-import { join } from 'path'
+import { anthropic, CONVERSATION_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { demoGuard } from '@/lib/demo-guard'
-import { openai } from '@/lib/openai'
+
+type ConversationMessage = { role: 'user' | 'part'; content: string }
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +15,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Prevent demo users from creating conversations
     const demoCheck = await demoGuard()
     if (demoCheck) return demoCheck
 
@@ -23,7 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Part ID and message are required' }, { status: 400 })
     }
 
-    // Fetch the part with its analyses and related journal entries
     const part = await prisma.part.findFirst({
       where: {
         id: partId,
@@ -58,20 +58,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Part not found' }, { status: 404 })
     }
 
-    // Load the conversation prompt template
     const promptPath = join(process.cwd(), 'lib', 'prompts', 'part-conversation.md')
     let promptTemplate = await readFile(promptPath, 'utf-8')
 
-    // Prepare part quotes from highlights
     const allQuotes = part.partAnalyses.flatMap((analysis) =>
       analysis.highlights.map((h) => h.exact)
     )
-    const uniqueQuotes = [...new Set(allQuotes)].slice(0, 10) // Limit to 10 most relevant
+    const uniqueQuotes = [...new Set(allQuotes)].slice(0, 10)
     const quotesText = uniqueQuotes.map((quote, i) => `${i + 1}. "${quote}"`).join('\n')
 
-    // Prepare journal entries context
     const journalEntriesText = part.partAnalyses
-      .slice(0, 5) // Limit to 5 most recent entries
+      .slice(0, 5)
       .map((analysis, i) => {
         const entry = analysis.entry
         const date = new Date(entry.createdAt).toLocaleDateString()
@@ -83,7 +80,6 @@ export async function POST(request: NextRequest) {
       })
       .join('\n\n')
 
-    // Replace template variables
     promptTemplate = promptTemplate
       .replace('{{partName}}', part.name)
       .replace('{{partRole}}', part.role)
@@ -91,56 +87,51 @@ export async function POST(request: NextRequest) {
       .replace('{{partQuotes}}', quotesText || 'No quotes available yet')
       .replace('{{journalEntries}}', journalEntriesText || 'No journal entries available yet')
 
-    // Build conversation messages
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    // The system prompt is large (template + quotes + recent entries) and
+    // stable for the duration of a conversation — cache it so follow-up
+    // messages in the same session hit the cache.
+    const systemBlocks = [
       {
-        role: 'system',
-        content: promptTemplate,
+        type: 'text' as const,
+        text: promptTemplate,
+        cache_control: { type: 'ephemeral' as const },
       },
     ]
 
-    // Add conversation history if provided
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+
     if (conversationHistory && Array.isArray(conversationHistory)) {
-      conversationHistory.forEach((msg: { role: string; content: string }) => {
+      for (const msg of conversationHistory as ConversationMessage[]) {
         if (msg.role === 'user') {
           messages.push({ role: 'user', content: msg.content })
         } else if (msg.role === 'part') {
           messages.push({ role: 'assistant', content: msg.content })
         }
-      })
+      }
     }
 
-    // Add the new user message
-    messages.push({
-      role: 'user',
-      content: message,
-    })
+    messages.push({ role: 'user', content: message })
 
-    // Call OpenAI API with streaming
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const stream = anthropic.messages.stream({
+      model: CONVERSATION_MODEL,
+      max_tokens: 1024,
+      system: systemBlocks,
       messages,
-      temperature: 0.8,
-      max_tokens: 200,
-      stream: true,
     })
 
-    // Create a readable stream for the response
     const encoder = new TextEncoder()
     let fullResponse = ''
 
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content || ''
-            if (content) {
-              fullResponse += content
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
-            }
-          }
+          stream.on('text', (delta) => {
+            fullResponse += delta
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: delta })}\n\n`))
+          })
 
-          // Save the conversation to the database after streaming completes
+          await stream.finalMessage()
+
           await prisma.partConversation.create({
             data: {
               partId: part.id,

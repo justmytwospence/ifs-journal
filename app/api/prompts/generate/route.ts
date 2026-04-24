@@ -1,18 +1,17 @@
-import { readFile } from 'fs/promises'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { NextResponse } from 'next/server'
-import { join } from 'path'
+import { anthropic, CONTENT_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
-import { openai } from '@/lib/openai'
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get last 3 entries for context
     const recentEntries = await prisma.journalEntry.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: 'desc' },
@@ -24,11 +23,9 @@ export async function POST(request: Request) {
       },
     })
 
-    // Load prompt template
     const templatePath = join(process.cwd(), 'lib/prompts/journal-prompt-generation.md')
     const template = await readFile(templatePath, 'utf-8')
 
-    // Build context with full entries
     const recentEntriesText =
       recentEntries.length > 0
         ? recentEntries
@@ -44,21 +41,17 @@ export async function POST(request: Request) {
 
     const systemPrompt = template.replace('{{RECENT_ENTRIES}}', recentEntriesText)
 
-    // Call OpenAI
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Generate a journal prompt for me.' },
-      ],
-      temperature: 0.8,
-      max_tokens: 150,
+    const response = await anthropic.messages.create({
+      model: CONTENT_MODEL,
+      max_tokens: 200,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: 'Generate a journal prompt for me.' }],
     })
 
+    const textBlock = response.content.find((b) => b.type === 'text')
     let prompt =
-      completion.choices[0]?.message?.content?.trim() || 'What are you feeling right now?'
+      textBlock?.type === 'text' ? textBlock.text.trim() : 'What are you feeling right now?'
 
-    // Remove surrounding quotes if present
     if (
       (prompt.startsWith('"') && prompt.endsWith('"')) ||
       (prompt.startsWith("'") && prompt.endsWith("'"))
