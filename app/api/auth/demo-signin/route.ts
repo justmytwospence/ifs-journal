@@ -3,20 +3,17 @@ import { signIn } from '@/lib/auth'
 import { captureException } from '@/lib/logger'
 import { enforceRateLimit, getClientIp, HOUR_MS } from '@/lib/rate-limit'
 
-// Server-side demo sign-in. Credentials are read from env so they never ship
-// in the client bundle or responses. See DEMO_USER_EMAIL / DEMO_USER_PASSWORD.
+// Server-initiated demo sign-in. The demo user's password is random bytes
+// nothing else knows — sign-in is authorized by matching DEMO_USER_EMAIL
+// inside the passwordless `demo` NextAuth provider, not by a shared secret.
 export async function POST(request: Request) {
-  const email = process.env.DEMO_USER_EMAIL
-  const password = process.env.DEMO_USER_PASSWORD
-
-  if (!email || !password) {
+  if (!process.env.DEMO_USER_EMAIL) {
     return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
   }
 
-  // CSRF: only accept requests from our own origin. A cross-site POST could
-  // otherwise trigger a demo-account sign-in on a visiting user's browser
-  // (session fixation). NEXTAUTH_URL is the canonical origin; requests with a
-  // missing or mismatched Origin header are rejected.
+  // CSRF: only accept requests from our own origin. NextAuth has its own CSRF
+  // protection on the callback endpoint, but we re-check here so this entry
+  // point can't be triggered cross-site to sign a visiting user into demo.
   const expected = process.env.NEXTAUTH_URL
   if (!expected) {
     return NextResponse.json({ error: 'Demo is not configured.' }, { status: 503 })
@@ -30,8 +27,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid origin.' }, { status: 403 })
   }
 
-  // Rate-limit so an attacker (or a misbehaving client) can't burn the bcrypt
-  // budget by hammering this endpoint.
   const ip = getClientIp(request.headers)
   const limited = await enforceRateLimit({
     subjectKey: `ip:${ip}`,
@@ -42,9 +37,7 @@ export async function POST(request: Request) {
   if (limited) return limited
 
   try {
-    // signIn with redirect: false returns without throwing on success; any
-    // session cookie it sets propagates in the response headers.
-    await signIn('credentials', { email, password, redirect: false })
+    await signIn('demo', { redirect: false })
     return NextResponse.json({ success: true })
   } catch (error) {
     captureException(error, { route: 'POST /api/auth/demo-signin' })

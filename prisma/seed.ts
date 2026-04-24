@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { runBatchAnalysis } from '../lib/batch-analysis'
@@ -57,21 +57,19 @@ async function main() {
   // BCRYPT_ROUNDS matches lib/password-policy.ts — kept inline so seed has no
   // dependency on the app runtime (prisma db seed runs before the Next build).
   //
-  // In production, refuse to fall back to the well-known dev defaults: without
-  // this guard, an accidentally un-configured prod deploy would ship a demo
-  // account whose password is `password123` AND whose `isDemo` session flag
-  // would be false (because the email didn't match the env), letting an
-  // attacker log in AND bypass the demo write-guard.
+  // The demo user has no usable password: we hash 32 random bytes that
+  // nothing else knows, then throw them away. Demo sign-in is routed through
+  // the passwordless `demo` NextAuth provider (see lib/auth.ts), so the
+  // random hash only exists to satisfy the NOT NULL column and to make the
+  // normal credentials flow structurally unable to authenticate the demo
+  // account (no one knows the password, no brute force gets anywhere).
   const isProd = process.env.NODE_ENV === 'production'
   const demoEmail = process.env.DEMO_USER_EMAIL || (isProd ? '' : 'demo@ifsjournal.me')
-  const demoPassword = process.env.DEMO_USER_PASSWORD || (isProd ? '' : 'password123')
-  if (!demoEmail || !demoPassword) {
-    throw new Error(
-      'DEMO_USER_EMAIL and DEMO_USER_PASSWORD must be set in production. Refusing to seed with defaults.'
-    )
+  if (!demoEmail) {
+    throw new Error('DEMO_USER_EMAIL must be set in production.')
   }
   const normalizedDemoEmail = demoEmail.trim().toLowerCase()
-  const passwordHash = await bcrypt.hash(demoPassword, 14)
+  const passwordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 14)
 
   console.log('Creating test users...')
 
@@ -401,12 +399,9 @@ Thirty days of writing this down has done one thing reliably: it has slowed the 
   console.log(`✅ Analyzed ${entriesAnalyzed} entries, identified ${partsCreated} parts`)
 
   console.log('\n🎉 Database seeding completed successfully!')
-  console.log('\nTest account:')
-  // Don't log the password in production even if this path somehow runs there.
-  const passwordDisplay = isProd ? '[redacted]' : demoPassword
-  console.log(
-    `  📧 ${normalizedDemoEmail} / ${passwordDisplay} (with ${entries.length} journal entries and ${partsCreated} parts)`
-  )
+  console.log('\nDemo account:')
+  console.log(`  📧 ${normalizedDemoEmail} — sign in via the demo button, not the login form`)
+  console.log(`  (${entries.length} journal entries and ${partsCreated} parts)`)
 }
 
 main()

@@ -19,6 +19,44 @@ const DEMO_USER_EMAIL = process.env.DEMO_USER_EMAIL
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   providers: [
+    // Passwordless demo provider. The demo user's stored passwordHash is
+    // random bytes that nothing else knows, so no one can sign into the demo
+    // account via the normal credentials flow — but a server-initiated
+    // signIn('demo') always succeeds (subject to rate limiting). NextAuth's
+    // built-in CSRF guards the callback endpoint against cross-origin abuse.
+    Credentials({
+      id: 'demo',
+      credentials: {},
+      authorize: async (_credentials, request) => {
+        try {
+          if (!DEMO_USER_EMAIL) return null
+
+          const ip = getClientIp(request?.headers ?? new Headers())
+          const limit = await checkRateLimit({
+            subjectKey: `ip:${ip}`,
+            bucket: 'auth:demo',
+            limit: 30,
+            windowMs: HOUR_MS,
+          })
+          if (!limit.allowed) return null
+
+          const user = await prisma.user.findUnique({
+            where: { email: DEMO_USER_EMAIL },
+          })
+          if (!user) return null
+
+          return {
+            id: user.id,
+            email: user.email,
+            emailVerified: user.emailVerified,
+            isDemo: true,
+          }
+        } catch (error) {
+          captureException(error, { route: 'authorize:demo' })
+          return null
+        }
+      },
+    }),
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
