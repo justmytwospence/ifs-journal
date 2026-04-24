@@ -1,9 +1,18 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { PrismaNeon } from '@prisma/adapter-neon'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { runBatchAnalysis } from '../lib/batch-analysis'
 
-const prisma = new PrismaClient()
+// Matches lib/db.ts — Neon's pooler endpoint only speaks PostgreSQL via
+// their serverless driver, so the classic Prisma engine can't reach it.
+const connectionString = process.env.DATABASE_URL
+if (!connectionString) {
+  throw new Error('DATABASE_URL is required')
+}
+const prisma = new PrismaClient({
+  adapter: new PrismaNeon({ connectionString }),
+})
 
 // Helper function to create dates going back in time
 const daysAgo = (days: number) => {
