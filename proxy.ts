@@ -7,7 +7,10 @@ export default auth((req) => {
     req.nextUrl.pathname.startsWith('/login') ||
     req.nextUrl.pathname.startsWith('/register') ||
     req.nextUrl.pathname.startsWith('/reset-password')
-  const isPublicPage = req.nextUrl.pathname === '/' || req.nextUrl.pathname === '/demo'
+  const isPublicPage =
+    req.nextUrl.pathname === '/' ||
+    req.nextUrl.pathname === '/demo' ||
+    req.nextUrl.pathname === '/verify-email'
 
   // Redirect logged-in users away from auth pages
   if (isLoggedIn && isAuthPage) {
