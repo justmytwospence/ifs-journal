@@ -42,17 +42,19 @@ User
 ## Getting Started
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (--legacy-peer-deps matches Vercel; keeps next-auth@beta happy with React 19)
+npm install --legacy-peer-deps
 
-# Set up environment variables
-cp .env.local.example .env.local
-# Edit .env.local with your DATABASE_URL and ANTHROPIC_API_KEY
+# Pull env vars from Vercel (preferred — gets the Neon connection strings the
+# integration manages plus all other secrets), or copy the example and fill
+# in by hand:
+npx vercel env pull .env.local
+# OR: cp .env.local.example .env.local && $EDITOR .env.local
 
 # Apply migrations to your local database
 npm run db:migrate
 
-# Seed demo data
+# Seed demo data (creates the demo user + 19 canned journal entries + parts)
 npm run db:seed
 
 # Run development server
@@ -61,14 +63,59 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser.
 
+The `db:migrate` / `db:seed` / `db:reset` / `db:push` scripts are gated by
+`scripts/check-not-prod.ts` — they refuse to run if `DATABASE_URL` (or
+`DATABASE_URL_UNPOOLED`) resolves to the production Neon endpoint. Override
+with `ALLOW_PROD_DB_WRITE=1` for the rare deliberate prod seed.
+
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16 (App Router, Turbopack)
 - **Database**: PostgreSQL via Neon (serverless)
-- **ORM**: Prisma with `@prisma/adapter-neon`
-- **AI**: OpenAI GPT-4o
-- **Auth**: NextAuth.js
-- **Styling**: Tailwind CSS
+- **ORM**: Prisma 6 with `@prisma/adapter-neon` (WebSocket runtime, classic engine for migrations)
+- **AI**: Anthropic Claude (Opus 4.7 for analysis & conversations, Sonnet 4.6 for prompts)
+- **Auth**: NextAuth v5 beta (credentials provider + passwordless demo provider)
+- **Email**: Resend (transactional verification + password reset)
+- **Observability**: Sentry
+- **Styling**: Tailwind CSS 4
+- **Lint/format**: Biome (not ESLint/Prettier)
+
+## Database & deployment
+
+Vercel is connected to Neon via Neon's native Vercel integration:
+
+- **Production deploys** run against the `production` Neon branch. The
+  integration sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`
+  (direct) on Vercel's Production scope.
+- **Preview deploys** get an ephemeral Neon branch each, cloned from
+  `production` and deleted automatically when the PR closes. The integration
+  injects per-deployment env vars; no static `DATABASE_URL` for Preview.
+- **`vercel dev`** uses a long-lived `vercel-dev` Neon branch the integration
+  auto-created.
+
+The Prisma datasource uses both env vars: `url = env("DATABASE_URL")` for
+runtime queries through the serverless adapter, `directUrl =
+env("DATABASE_URL_UNPOOLED")` for `prisma migrate deploy` (pgBouncer in
+transaction mode breaks DDL). `scripts/build.mjs`, `lib/db.ts`, and
+`prisma/seed.ts` fall back to `DATABASE_URL_UNPOOLED` if `DATABASE_URL`
+isn't set, so a Vercel scope with only the unpooled variant doesn't break.
+
+**Build flow** (every Vercel deploy):
+
+```
+node scripts/build.mjs
+  → DATABASE_URL ||= DATABASE_URL_UNPOOLED   (graceful fallback)
+  → npx prisma generate
+  → npx prisma migrate deploy                (forward-only)
+  → npx next build
+```
+
+**Important caveat:** preview branches contain a copy of production data
+(Neon's free-tier integration always parents off the Default branch).
+Vercel preview URLs are gated behind team auth — don't share preview
+links externally. Full topology, recovery story, schema-change patterns,
+and PITR window are in [`docs/database.md`](docs/database.md). Per-project
+agent conventions live in [`CLAUDE.md`](CLAUDE.md).
 
 ## Text Anchoring Library
 
