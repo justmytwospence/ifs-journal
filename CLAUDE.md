@@ -19,7 +19,7 @@ must be backed by actual cited passages, never free-form inferences.
 
 - `app/` — App Router. `(auth)/` for login/register, `api/` for route handlers
 - `lib/` — shared utilities
-  - `lib/anthropic.ts` — SDK client + model constants (`ANALYSIS_MODEL`, `CONVERSATION_MODEL`, `CONTENT_MODEL`)
+  - `lib/anthropic.ts` — SDK client + model constants (`ANALYSIS_MODEL`, `CONVERSATION_MODEL`, `PROMPT_MODEL`, `CONTENT_MODEL`)
   - `lib/auth.ts` — NextAuth v5-beta config (credentials provider)
   - `lib/batch-analysis.ts` — holistic reanalysis of all entries (streamed)
   - `lib/citation-parser.ts` — parses `<part>` XML + Anthropic citations (being replaced in P1.1)
@@ -35,7 +35,8 @@ must be backed by actual cited passages, never free-form inferences.
 - `POST /api/parts/batch-reanalysis` — Opus 4.7, streams, 300s vercel timeout
 - `POST /api/journal/entries/[id]/incremental-analysis` — Opus 4.7, single entry
 - `POST /api/conversations` — Opus 4.7, streaming SSE (`data: {"content":"…"}\n\n` + `[DONE]`)
-- `POST /api/prompts/generate` + `POST /api/prompts/writing-tips` — Sonnet 4.6
+- `POST /api/prompts/generate` — Opus 4.7 (short-circuits to a curated welcome prompt for users with no entries; LLM only runs once history exists)
+- `POST /api/prompts/writing-tips` — Sonnet 4.6 (fires every 3s during typing; latency-sensitive)
 
 ## Conventions
 
