@@ -9,11 +9,12 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      # prisma.config.ts reads DATABASE_URL at config-load time via env(),
-      # and that's evaluated even during `prisma generate` in postinstall
-      # (not just during queries). Set a dummy value so install succeeds —
-      # the value is never dialed in CI.
+      # The Prisma datasource references both DATABASE_URL (url) and
+      # DATABASE_URL_UNPOOLED (directUrl), so both must be set when
+      # `prisma generate` runs in postinstall. Dummy values are fine — they
+      # are never dialed in CI.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DATABASE_URL_UNPOOLED: postgresql://ci:ci@localhost:5432/ci
     steps:
       - uses: actions/checkout@v5
 

@@ -6,8 +6,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Direct (unpooled) connection used by `prisma migrate deploy`. Required
+  // because the pooled URL goes through PgBouncer in transaction mode, which
+  // breaks DDL. The Neon-Vercel integration sets DATABASE_URL_UNPOOLED for
+  // every scope; if the build runs in an environment where only that var is
+  // set, scripts/build.mjs copies it into DATABASE_URL too.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // User Management
@@ -20,11 +26,11 @@ model User {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  journalEntries         JournalEntry[]
-  parts                  Part[]
-  partConversations      PartConversation[]
-  partsOperations        PartsOperation[]
-  passwordResetTokens    PasswordResetToken[]
+  journalEntries          JournalEntry[]
+  parts                   Part[]
+  partConversations       PartConversation[]
+  partsOperations         PartsOperation[]
+  passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
@@ -78,10 +84,10 @@ model RateLimit {
 model JournalEntry {
   id             String   @id @default(cuid())
   userId         String
-  slug           String   // Pre-computed date-based slug for O(1) lookup
+  slug           String // Pre-computed date-based slug for O(1) lookup
   prompt         String   @db.Text
   content        String   @db.Text
-  contentHash    String   // SHA-256 hash for change detection
+  contentHash    String // SHA-256 hash for change detection
   wordCount      Int      @default(0)
   analysisStatus String   @default("pending") // pending, processing, completed, failed
   createdAt      DateTime @default(now())
@@ -99,28 +105,28 @@ model JournalEntry {
 
 // Parts System
 model Part {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   userId      String
   name        String
-  slug        String   // Pre-computed slugified name for O(1) lookup
-  description String   @db.Text
-  role        String   // Protector, Manager, Firefighter, Exile
-  color       String   // Hex color for UI consistency
-  icon        String   @default("●") // Simple unicode symbol for visual identification
+  slug        String // Pre-computed slugified name for O(1) lookup
+  description String @db.Text
+  role        String // Protector, Manager, Firefighter, Exile
+  color       String // Hex color for UI consistency
+  icon        String @default("●") // Simple unicode symbol for visual identification
 
   // User-curated IFS fields. All optional; surfaced on the part page so the
   // user can record bespoke detail that the LLM cannot infer from citations
   // alone — age impression, feared outcome, what it protects, etc. See
   // plans/take-a-step-back-modular-lovelace.md P1.
-  customName      String?  // User override of name; display layer prefers this when set
-  ageImpression   String?
-  positiveIntent  String?  @db.Text
-  fearedOutcome   String?  @db.Text
-  whatItProtects  String?  @db.Text
-  userNotes       String?  @db.Text
+  customName     String? // User override of name; display layer prefers this when set
+  ageImpression  String?
+  positiveIntent String? @db.Text
+  fearedOutcome  String? @db.Text
+  whatItProtects String? @db.Text
+  userNotes      String? @db.Text
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -138,7 +144,7 @@ model PartAnalysis {
   id         String   @id @default(cuid())
   entryId    String
   partId     String
-  confidence Float    // AI confidence score for this part appearing in this entry
+  confidence Float // AI confidence score for this part appearing in this entry
   createdAt  DateTime @default(now())
 
   // Relations
@@ -163,11 +169,11 @@ model Highlight {
   endOffset   Int
 
   // TextQuoteSelector (W3C) - fuzzy fallback when content changes
-  exact  String @db.Text          // The highlighted text itself
-  prefix String @db.VarChar(32)   // Up to 32 chars before for disambiguation
-  suffix String @db.VarChar(32)   // Up to 32 chars after for disambiguation
+  exact  String @db.Text // The highlighted text itself
+  prefix String @db.VarChar(32) // Up to 32 chars before for disambiguation
+  suffix String @db.VarChar(32) // Up to 32 chars after for disambiguation
 
-  reasoning String?  @db.Text     // Why this text belongs to this part
+  reasoning String?  @db.Text // Why this text belongs to this part
   isStale   Boolean  @default(false) // True if contentHash changed since creation
   createdAt DateTime @default(now())
 
@@ -200,8 +206,8 @@ model PartConversation {
 model PartsOperation {
   id             String   @id @default(cuid())
   userId         String
-  operationType  String   // delete
-  snapshotBefore Json     // Deleted part with all data
+  operationType  String // delete
+  snapshotBefore Json // Deleted part with all data
   createdAt      DateTime @default(now())
   expiresAt      DateTime // Undo expires after 24 hours
   undone         Boolean  @default(false)

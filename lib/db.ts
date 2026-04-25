@@ -13,9 +13,13 @@ if (typeof WebSocket !== 'undefined') {
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 
 function createPrisma(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL
+  // The Neon-Vercel integration provides DATABASE_URL (pooled) when it can
+  // and always provides DATABASE_URL_UNPOOLED (direct). Fall back to the
+  // unpooled variant when the pooled one isn't set so a misaligned env scope
+  // never silently breaks runtime queries.
+  const connectionString = process.env.DATABASE_URL ?? process.env.DATABASE_URL_UNPOOLED
   if (!connectionString) {
-    throw new Error('DATABASE_URL is required')
+    throw new Error('DATABASE_URL or DATABASE_URL_UNPOOLED is required')
   }
   // Driver adapter keeps a pool alive across hot serverless invocations so
   // cold starts don't open a fresh TCP connection every time — the previous

@@ -6,9 +6,10 @@ import { runBatchAnalysis } from '../lib/batch-analysis'
 
 // Matches lib/db.ts — Neon's pooler endpoint only speaks PostgreSQL via
 // their serverless driver, so the classic Prisma engine can't reach it.
-const connectionString = process.env.DATABASE_URL
+// Falls back to the unpooled variant for the same reason as lib/db.ts.
+const connectionString = process.env.DATABASE_URL ?? process.env.DATABASE_URL_UNPOOLED
 if (!connectionString) {
-  throw new Error('DATABASE_URL is required')
+  throw new Error('DATABASE_URL or DATABASE_URL_UNPOOLED is required')
 }
 const prisma = new PrismaClient({
   adapter: new PrismaNeon({ connectionString }),
