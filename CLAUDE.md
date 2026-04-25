@@ -28,6 +28,7 @@ must be backed by actual cited passages, never free-form inferences.
   - `lib/prompts/*.md` — prompt templates, bundled via `next.config.ts` `outputFileTracingIncludes`
 - `prisma/schema.prisma` — User, JournalEntry, Part, PartAnalysis, Highlight, PartConversation, PartsOperation
 - `proxy.ts` — edge middleware (Next 16 convention; was called `middleware.ts` pre-16)
+- `infra/dns/` — DNS records for domains we control, committed as JSON for reproducibility (Resend domain config for `ifsjournal.me`)
 
 ## LLM surfaces
 

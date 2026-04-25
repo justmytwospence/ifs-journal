@@ -1,0 +1,35 @@
+{
+  "domain": "ifsjournal.me",
+  "purpose": "Resend transactional email (signup verification + password reset)",
+  "dns_host": "Cloudflare",
+  "resend_domain_id": "5e4cb7c3-20f9-4eaf-a88b-6a83905758a7",
+  "resend_region": "us-east-1",
+  "verified_at_resend": "2026-04-25",
+  "records": [
+    {
+      "type": "TXT",
+      "name": "resend._domainkey",
+      "value": "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHIe1IFM8ZSRG26Vxcsj8BUaqTbFjfpT+qUP3eT9NtxKQxY5JjJRTQKuZbkOm7jGsTR54Kz8OdKzvvTbce0AdnrYs0XDlSXBD5NFZN1YGDvibkGlt2P2QG+Td/yfBitkIW15gxkJ5GNWQonv8IT369FQQfbyN7zIUqko+NvdRePQIDAQAB",
+      "ttl": "Auto",
+      "proxy": false,
+      "purpose": "DKIM signing key — Resend signs outgoing mail; receivers verify the signature against this key"
+    },
+    {
+      "type": "MX",
+      "name": "send",
+      "value": "feedback-smtp.us-east-1.amazonses.com",
+      "priority": 10,
+      "ttl": "Auto",
+      "proxy": false,
+      "purpose": "Bounce/complaint feedback loop for Amazon SES (Resend's underlying relay in us-east-1)"
+    },
+    {
+      "type": "TXT",
+      "name": "send",
+      "value": "v=spf1 include:amazonses.com ~all",
+      "ttl": "Auto",
+      "proxy": false,
+      "purpose": "SPF — authorizes Amazon SES to send mail on behalf of send.ifsjournal.me"
+    }
+  ]
+}
