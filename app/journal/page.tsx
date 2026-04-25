@@ -63,7 +63,10 @@ export default function JournalPage() {
   // in a ref so pushing doesn't retrigger the debounced fetch effect.
   const recentTipsRef = useRef<string[]>([])
   const wordCount = (content + interimTranscript).trim().split(/\s+/).filter(Boolean).length
+  const userId = session?.user?.id
   const isDemo = session?.user?.isDemo
+  const draftKey = userId ? `journal-draft:${userId}` : null
+  const promptKey = userId ? `journal-prompt:${userId}` : null
 
   // Initialize speech recognition
   useEffect(() => {
@@ -206,27 +209,31 @@ export default function JournalPage() {
 
   // Auto-save draft to localStorage
   useEffect(() => {
+    if (!draftKey) return
     const timer = setTimeout(() => {
       if (content) {
-        localStorage.setItem('journal-draft', content)
+        localStorage.setItem(draftKey, content)
       }
     }, 1000)
     return () => clearTimeout(timer)
-  }, [content])
+  }, [content, draftKey])
 
-  // Load draft and prompt on mount
+  // Load draft and prompt for the signed-in user. Keyed by user id so
+  // switching accounts on the same browser never shows one user's draft or
+  // prompt to another. Re-runs if the user changes mid-session.
   useEffect(() => {
-    const draft = localStorage.getItem('journal-draft')
-    if (draft) {
-      setContent(draft)
-    }
+    if (!draftKey || !promptKey) return
 
-    const savedPrompt = localStorage.getItem('journal-prompt')
-    if (savedPrompt) {
-      setPrompt(savedPrompt)
-    } else {
-      setPrompt(prompts[0])
-    }
+    // One-time cleanup of pre-namespacing keys, which were shared across
+    // every account that signed in on this browser.
+    localStorage.removeItem('journal-draft')
+    localStorage.removeItem('journal-prompt')
+
+    const draft = localStorage.getItem(draftKey)
+    setContent(draft ?? '')
+
+    const savedPrompt = localStorage.getItem(promptKey)
+    setPrompt(savedPrompt ?? prompts[0])
 
     const tipsEnabled = localStorage.getItem('writing-tips-enabled')
     if (tipsEnabled === 'true') {
@@ -234,14 +241,14 @@ export default function JournalPage() {
     }
 
     setIsInitialized(true)
-  }, [])
+  }, [draftKey, promptKey])
 
   // Auto-save prompt to localStorage (only after initialization)
   useEffect(() => {
-    if (isInitialized && prompt) {
-      localStorage.setItem('journal-prompt', prompt)
+    if (isInitialized && prompt && promptKey) {
+      localStorage.setItem(promptKey, prompt)
     }
-  }, [prompt, isInitialized])
+  }, [prompt, isInitialized, promptKey])
 
   // Generate writing tips when content changes
   useEffect(() => {
@@ -313,13 +320,13 @@ export default function JournalPage() {
       if (data.prompt) {
         setPrompt(data.prompt)
         setContent('')
-        localStorage.removeItem('journal-draft')
-        localStorage.setItem('journal-prompt', data.prompt)
+        if (draftKey) localStorage.removeItem(draftKey)
+        if (promptKey) localStorage.setItem(promptKey, data.prompt)
       } else if (data.fallback) {
         setPrompt(data.fallback)
         setContent('')
-        localStorage.removeItem('journal-draft')
-        localStorage.setItem('journal-prompt', data.fallback)
+        if (draftKey) localStorage.removeItem(draftKey)
+        if (promptKey) localStorage.setItem(promptKey, data.fallback)
       }
     } catch {
       const currentIndex = prompts.indexOf(prompt)
@@ -327,8 +334,8 @@ export default function JournalPage() {
       const newPrompt = prompts[nextIndex]
       setPrompt(newPrompt)
       setContent('')
-      localStorage.removeItem('journal-draft')
-      localStorage.setItem('journal-prompt', newPrompt)
+      if (draftKey) localStorage.removeItem(draftKey)
+      if (promptKey) localStorage.setItem(promptKey, newPrompt)
     } finally {
       setLoadingPrompt(false)
     }
@@ -374,7 +381,7 @@ export default function JournalPage() {
 
       toast.success('Entry saved successfully!')
       setContent('')
-      localStorage.removeItem('journal-draft')
+      if (draftKey) localStorage.removeItem(draftKey)
 
       // Analysis is triggered automatically in the background by the API
       setAnalyzing(true, 'incremental')
