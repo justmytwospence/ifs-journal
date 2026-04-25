@@ -47,7 +47,7 @@ must be backed by actual cited passages, never free-form inferences.
 
 ## Gotchas
 
-- `prisma db seed` **wipes and recreates the demo user's journal entries + parts** on every deploy (so demo data looks current). Runs batch analysis at the end
+- `npm run db:seed` **wipes and recreates the demo user's journal entries + parts** (only that user — non-demo users are untouched), then runs batch analysis. Manual only — not invoked by the Vercel build, which runs `prisma migrate deploy` only. See `docs/database.md` for the full migration runbook
 - Prompt markdown files are bundled into serverless function output via `outputFileTracingIncludes` in `next.config.ts` — add new prompt call sites there
 - Node locked to `>=22.21.0 <23.0.0` in `engines`
 - Vercel functions default to 60s; `/api/parts/batch-reanalysis` gets 300s via `vercel.json`

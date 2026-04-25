@@ -46,14 +46,14 @@ User
 npm install
 
 # Set up environment variables
-cp .env.example .env
-# Edit .env with your DATABASE_URL and OPENAI_API_KEY
+cp .env.local.example .env.local
+# Edit .env.local with your DATABASE_URL and ANTHROPIC_API_KEY
 
-# Push schema to database
-npx prisma db push
+# Apply migrations to your local database
+npm run db:migrate
 
 # Seed demo data
-npx prisma db seed
+npm run db:seed
 
 # Run development server
 npm run dev
