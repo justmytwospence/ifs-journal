@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Lora } from 'next/font/google'
+import { QueryCacheAuthSync } from '@/components/auth/QueryCacheAuthSync'
 import { SessionProvider } from '@/components/auth/SessionProvider'
 import { DemoBanner } from '@/components/DemoBanner'
 import { Footer } from '@/components/Footer'
@@ -49,6 +50,7 @@ export default async function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SessionProvider session={session}>
+              <QueryCacheAuthSync />
               <div className="min-h-screen flex flex-col">
                 <DemoBanner />
                 <div className="flex-1">{children}</div>
