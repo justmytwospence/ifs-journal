@@ -30,6 +30,19 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Prisma migration safety check
+        # --no-lock-timeout / --no-statement-timeout: these are pgfence policy
+        # checks for SET statements at the top of every migration. Prisma
+        # doesn't generate them, and editing already-applied migrations to
+        # add them would break migrate deploy's history check, so these are
+        # disabled. The real risk analysis (destructive drops, NOT NULL on
+        # populated tables, unsafe renames) still runs.
+        run: |
+          shopt -s globstar
+          npx -y @flvmnt/pgfence analyze --ci --max-risk medium \
+            --no-lock-timeout --no-statement-timeout \
+            prisma/migrations/**/migration.sql
+
       - name: Lint
         run: npm run lint
 
