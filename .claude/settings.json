@@ -51,6 +51,13 @@
             "asyncRewake": true,
             "timeout": 120,
             "rewakeSummary": "Lint or typecheck failed after turn"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-pr-ci.sh",
+            "asyncRewake": true,
+            "timeout": 60,
+            "rewakeSummary": "PR CI is failing or still pending"
           }
         ]
       }
