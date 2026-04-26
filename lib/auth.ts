@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { compare } from 'bcryptjs'
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
@@ -12,9 +14,59 @@ const loginSchema = z.object({
   password: z.string().min(8).max(200),
 })
 
-const DEMO_USER_EMAIL = process.env.DEMO_USER_EMAIL
-  ? normalizeEmail(process.env.DEMO_USER_EMAIL)
-  : undefined
+// Demo accounts are derived from the filesystem: every persona under
+// evals/personas/ that has a corresponding evals/snapshots/<slug>/latest.json
+// becomes one demo account, plus the legacy DEMO_USER_EMAIL for backwards
+// compatibility during rollout. Cached after first call so the directory
+// scan happens at most once per process.
+//
+// The fs reads are inside a function (not at module init) because lib/auth.ts
+// is also imported by middleware (proxy.ts), which runs in a context where
+// dragging in fs at load time would be inappropriate. authorize() runs in
+// Node API routes only, so the lazy load is safe there.
+let cachedDemoEmails: Set<string> | null = null
+
+function loadDemoEmails(): Set<string> {
+  if (cachedDemoEmails) return cachedDemoEmails
+  const out = new Set<string>()
+  if (process.env.DEMO_USER_EMAIL) {
+    out.add(normalizeEmail(process.env.DEMO_USER_EMAIL))
+  }
+  try {
+    const files = readdirSync('evals/personas')
+    for (const f of files) {
+      if (!f.endsWith('.md')) continue
+      const slug = f.replace(/\.md$/, '')
+      if (existsSync(join('evals/snapshots', slug, 'latest.json'))) {
+        out.add(normalizeEmail(`demo-${slug}@ifsjournal.me`))
+      }
+    }
+  } catch {
+    // evals/personas doesn't exist (fresh checkout, tests) — fall back to env-only.
+  }
+  cachedDemoEmails = out
+  return out
+}
+
+export function getDemoEmails(): Set<string> {
+  return loadDemoEmails()
+}
+
+/**
+ * Resolves a `profile` argument from the demo picker into an actual demo
+ * email, or null if the slug isn't on the allow-list. Validates against the
+ * derived set so a hostile `profile` can't become an arbitrary user lookup.
+ */
+function emailFromProfile(profile: unknown): string | null {
+  if (typeof profile !== 'string') return null
+  const slug = profile
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+  if (!slug) return null
+  const email = normalizeEmail(`demo-${slug}@ifsjournal.me`)
+  return loadDemoEmails().has(email) ? email : null
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
@@ -26,10 +78,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // built-in CSRF guards the callback endpoint against cross-origin abuse.
     Credentials({
       id: 'demo',
-      credentials: {},
-      authorize: async (_credentials, request) => {
+      credentials: {
+        // `profile` is the persona slug from the demo picker. When omitted,
+        // the legacy single-account demo (DEMO_USER_EMAIL) is used.
+        profile: { label: 'Persona', type: 'text' },
+      },
+      authorize: async (credentials, request) => {
         try {
-          if (!DEMO_USER_EMAIL) return null
+          // Resolve the demo email: prefer an allow-listed `profile`, fall
+          // back to the legacy DEMO_USER_EMAIL for backwards compatibility
+          // during rollout. Either way the result must be on the demo
+          // allow-list — `loadDemoEmails()` is the single source of truth.
+          const profileEmail = emailFromProfile(credentials?.profile)
+          const legacyEmail = process.env.DEMO_USER_EMAIL
+            ? normalizeEmail(process.env.DEMO_USER_EMAIL)
+            : null
+          const email = profileEmail ?? legacyEmail
+          if (!email || !loadDemoEmails().has(email)) return null
 
           const ip = getClientIp(request?.headers ?? new Headers())
           const limit = await checkRateLimit({
@@ -40,9 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
           if (!limit.allowed) return null
 
-          const user = await prisma.user.findUnique({
-            where: { email: DEMO_USER_EMAIL },
-          })
+          const user = await prisma.user.findUnique({ where: { email } })
           if (!user) return null
 
           return {
@@ -101,10 +164,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null
           }
 
-          const isDemoAccount =
-            DEMO_USER_EMAIL !== undefined && user.email.toLowerCase() === DEMO_USER_EMAIL
+          const isDemoAccount = loadDemoEmails().has(user.email.toLowerCase())
 
-          // Block sign-in for unverified accounts. Demo user is seeded with
+          // Block sign-in for unverified accounts. Demo users are seeded with
           // emailVerified=false but allowed as a read-only account.
           if (!user.emailVerified && !isDemoAccount) {
             return null
