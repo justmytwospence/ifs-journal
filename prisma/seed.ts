@@ -5,13 +5,20 @@ import { PrismaNeon } from '@prisma/adapter-neon'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-// Matches lib/db.ts — Neon's pooler endpoint only speaks PostgreSQL via
-// their serverless driver, so the classic Prisma engine can't reach it.
-// Falls back to the unpooled variant for the same reason as lib/db.ts.
-const connectionString = process.env.DATABASE_URL ?? process.env.DATABASE_URL_UNPOOLED
+// Prefer the direct (unpooled) connection. The seed is a short-lived
+// single-process workload — pooling adds nothing, and Prisma 6 flags pooled
+// Neon URLs as Accelerate-incompatible at PrismaClient construction time
+// when paired with the @prisma/adapter-neon driver. Mirror what
+// scripts/eval-run.ts does.
+const connectionString = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL
 if (!connectionString) {
-  throw new Error('DATABASE_URL or DATABASE_URL_UNPOOLED is required')
+  throw new Error('DATABASE_URL_UNPOOLED or DATABASE_URL is required')
 }
+// Override DATABASE_URL too — Prisma reads the schema's `url = env(...)` at
+// runtime even when an adapter is provided, and the schema-side URL still
+// triggers the Accelerate-detection check.
+process.env.DATABASE_URL = connectionString
+
 const prisma = new PrismaClient({
   adapter: new PrismaNeon({ connectionString }),
 })
