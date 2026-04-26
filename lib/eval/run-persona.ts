@@ -191,18 +191,27 @@ export async function runPersona({
     const daysAgo = schedule[i]
     const idx = `${String(i + 1).padStart(2, ' ')}/${schedule.length}`
 
-    const prompt = await generatePromptForUser({ userId, rejectedPrompts: [] })
-    const content = await respondAsPersona({ client, persona, prompt, prior: respondentHistory })
-    const wc = wordCountOf(content)
-
     log('')
     log(`========== [${idx}] daysAgo=${daysAgo} ==========`)
-    log(`PROMPT (${prompt.length} chars):`)
+
+    log(`[${idx}] generating prompt...`)
+    const promptStart = Date.now()
+    const prompt = await generatePromptForUser({ userId, rejectedPrompts: [] })
+    const promptMs = Date.now() - promptStart
+    log(`[${idx}] PROMPT (${prompt.length} chars, ${promptMs}ms):`)
     log(prompt)
+
     log('')
-    log(`RESPONSE (${content.length} chars, ${wc} words):`)
+    log(`[${idx}] generating response...`)
+    const respStart = Date.now()
+    const content = await respondAsPersona({ client, persona, prompt, prior: respondentHistory })
+    const respMs = Date.now() - respStart
+    const wc = wordCountOf(content)
+    log(`[${idx}] RESPONSE (${content.length} chars, ${wc} words, ${respMs}ms):`)
     log(content)
 
+    log('')
+    log(`[${idx}] saving entry...`)
     const entry = await saveEntry({
       userId,
       prompt,
@@ -212,6 +221,7 @@ export async function runPersona({
     })
     entryDaysAgoByEntryId.set(entry.id, daysAgo)
     respondentHistory.push({ prompt, content })
+    log(`[${idx}] saved (entry id ${entry.id})`)
   }
 
   log('')
