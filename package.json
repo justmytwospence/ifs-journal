@@ -16,6 +16,8 @@
     "db:studio": "prisma studio",
     "db:push": "tsx scripts/check-not-prod.ts && prisma db push",
     "db:reset": "tsx scripts/check-not-prod.ts && prisma migrate reset",
+    "eval": "tsx scripts/check-not-prod.ts && tsx scripts/eval-run.ts",
+    "eval:promote": "tsx scripts/eval-promote.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui"
