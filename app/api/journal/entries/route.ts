@@ -1,13 +1,12 @@
 import { after, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { computeContentHash } from '@/lib/anchoring'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
 import { demoGuard } from '@/lib/demo-guard'
 import { reapStuckAnalyses, runIncrementalAnalysis } from '@/lib/incremental-analysis'
+import { saveEntry } from '@/lib/journal/save-entry'
 import { captureException } from '@/lib/logger'
 import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
-import { createEntrySlug } from '@/lib/slug-utils'
 
 const createEntrySchema = z.object({
   prompt: z.string().max(500),
@@ -37,19 +36,11 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { prompt, content, wordCount } = createEntrySchema.parse(body)
 
-    // Create entry with pre-computed slug for O(1) lookup
-    const createdAt = new Date()
-    const entry = await prisma.journalEntry.create({
-      data: {
-        userId: session.user.id,
-        slug: createEntrySlug(createdAt),
-        prompt,
-        content,
-        contentHash: computeContentHash(content),
-        wordCount,
-        analysisStatus: 'pending',
-        createdAt,
-      },
+    const entry = await saveEntry({
+      userId: session.user.id,
+      prompt,
+      content,
+      wordCount,
     })
 
     // Kick off analysis after the response has been sent. `after()` keeps the
