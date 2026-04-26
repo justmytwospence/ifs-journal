@@ -18,6 +18,7 @@
     "db:reset": "tsx scripts/check-not-prod.ts && prisma migrate reset",
     "eval": "tsx scripts/check-not-prod.ts && tsx scripts/eval-run.ts",
     "eval:promote": "tsx scripts/eval-promote.ts",
+    "eval:report": "tsx scripts/eval-report.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui"
