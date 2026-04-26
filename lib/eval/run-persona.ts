@@ -146,6 +146,12 @@ export interface RunPersonaInput {
   client: Anthropic
   persona: Persona
   schedule: number[]
+  /**
+   * Receives free-form lines about the run (prompts, responses, batch
+   * progress). When personas run in parallel, each gets its own logger so
+   * the output streams stay separable. Defaults to no-op.
+   */
+  log?: (line: string) => void
 }
 
 export interface RunPersonaResult {
@@ -170,27 +176,32 @@ export async function runPersona({
   client,
   persona,
   schedule,
+  log = () => {},
 }: RunPersonaInput): Promise<RunPersonaResult> {
   const startedAt = new Date()
   const userId = await ensurePersonaUser(prisma, persona.slug)
   const respondentHistory: PriorResponse[] = []
   const entryDaysAgoByEntryId = new Map<string, number>()
 
+  log(
+    `[${persona.slug}] start at ${startedAt.toISOString()} — ${schedule.length} entries scheduled`
+  )
+
   for (let i = 0; i < schedule.length; i++) {
     const daysAgo = schedule[i]
-    process.stderr.write(
-      `[${String(i + 1).padStart(2, ' ')}/${schedule.length}] daysAgo=${String(daysAgo).padStart(
-        2,
-        ' '
-      )}  `
-    )
+    const idx = `${String(i + 1).padStart(2, ' ')}/${schedule.length}`
 
     const prompt = await generatePromptForUser({ userId, rejectedPrompts: [] })
-    process.stderr.write(`prompt(${prompt.length}c)  `)
-
     const content = await respondAsPersona({ client, persona, prompt, prior: respondentHistory })
     const wc = wordCountOf(content)
-    process.stderr.write(`content(${content.length}c, ${wc}w)\n`)
+
+    log('')
+    log(`========== [${idx}] daysAgo=${daysAgo} ==========`)
+    log(`PROMPT (${prompt.length} chars):`)
+    log(prompt)
+    log('')
+    log(`RESPONSE (${content.length} chars, ${wc} words):`)
+    log(content)
 
     const entry = await saveEntry({
       userId,
@@ -203,15 +214,16 @@ export async function runPersona({
     respondentHistory.push({ prompt, content })
   }
 
-  process.stderr.write('\n→ Running batch analysis...\n')
+  log('')
+  log(`[${persona.slug}] running batch analysis...`)
   const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, userId)
-  process.stderr.write(`  ${partsCreated} parts, ${entriesAnalyzed} entries analyzed\n`)
+  log(`[${persona.slug}] batch analysis: ${partsCreated} parts, ${entriesAnalyzed} entries`)
 
-  process.stderr.write('→ Applying curated fields...\n')
+  log(`[${persona.slug}] applying curated fields...`)
   const curated = await applyCuratedFields(prisma, userId)
-  process.stderr.write(`  ${curated} parts curated\n`)
+  log(`[${persona.slug}] curated ${curated} parts`)
 
-  process.stderr.write('→ Capturing snapshot...\n')
+  log(`[${persona.slug}] capturing snapshot...`)
   const snapshot: Snapshot = await captureSnapshot({
     prisma,
     userId,
@@ -230,7 +242,7 @@ export async function runPersona({
   snapshot.complete = true
 
   const snapshotPath = await writeSnapshot(snapshot)
-  process.stderr.write(`→ Wrote snapshot: ${snapshotPath}\n`)
+  log(`[${persona.slug}] wrote snapshot: ${snapshotPath}`)
 
   return { snapshotPath, userId, partsCreated, entriesAnalyzed, curated }
 }

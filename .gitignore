@@ -43,5 +43,8 @@ next-env.d.ts
 .claude/worktrees/
 .playwright-mcp/
 
+# eval run logs (per-persona, regenerated each run)
+/evals/logs/
+
 # screenshots at repo root
 /*.png

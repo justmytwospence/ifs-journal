@@ -1,13 +1,20 @@
 // npm run eval entry point.
 //
-// Defaults to running every persona under evals/personas/ sequentially against
+// Defaults to running every persona under evals/personas/ in parallel against
 // whatever DB DATABASE_URL[_UNPOOLED] points at. Refuses to run if that's the
 // production endpoint (scripts/check-not-prod.ts gates the npm script).
 //
-// Sequential is intentional — parallel would race on Anthropic rate limits
-// and on the shared sandbox DB's demo-user rows.
+// Each persona writes a detailed run log (every prompt, every response,
+// every batch step) to evals/logs/<slug>.log — gitignored, regenerated each
+// run. Tail any of those files to follow along with one persona.
+//
+// Personas are independent: each owns its own DB user and its own snapshot
+// dir, so parallel runs don't conflict. The Anthropic side handles three
+// concurrent streams comfortably under the standard tier.
 
-import { readdir } from 'node:fs/promises'
+import { createWriteStream, type WriteStream } from 'node:fs'
+import { mkdir, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import Anthropic from '@anthropic-ai/sdk'
 import { config as loadEnv } from 'dotenv'
@@ -33,6 +40,19 @@ const FULL_SCHEDULE = [
 ]
 
 const PERSONAS_DIR = 'evals/personas'
+const LOGS_DIR = 'evals/logs'
+
+function makeLogger(slug: string): { log: (line: string) => void; close: () => Promise<void> } {
+  const path = join(LOGS_DIR, `${slug}.log`)
+  const stream: WriteStream = createWriteStream(path, { flags: 'w' })
+  return {
+    log: (line: string) => stream.write(`${line}\n`),
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        stream.end((err: unknown) => (err ? reject(err) : resolve()))
+      }),
+  }
+}
 
 async function main() {
   const { values } = parseArgs({
@@ -92,19 +112,49 @@ async function main() {
 
   const personas = await Promise.all(slugs.map((slug) => loadPersona(PERSONAS_DIR, slug)))
 
+  await mkdir(LOGS_DIR, { recursive: true })
+
   console.log(
-    `eval: ${personas.length} persona(s), ${schedule.length} entry/persona, schedule daysAgo=[${schedule[0]}..${schedule.at(-1)}]`
+    `eval: ${personas.length} persona(s) in parallel, ${schedule.length} entry/persona, schedule daysAgo=[${schedule[0]}..${schedule.at(-1)}]`
+  )
+  console.log(`logs: tail evals/logs/<persona>.log to follow each run\n`)
+
+  const loggers = personas.map((p) => ({ persona: p, ...makeLogger(p.slug) }))
+
+  // Run all personas in parallel. Each owns its own demo user, its own
+  // snapshot directory, and its own log file — there's nothing to race on.
+  const results = await Promise.allSettled(
+    loggers.map(({ persona, log }) =>
+      runPersona({ prisma, client, persona, schedule, log }).then((result) => ({
+        persona,
+        result,
+      }))
+    )
   )
 
-  for (const persona of personas) {
-    console.log(`\n=== ${persona.name} (${persona.slug}) ===`)
-    const result = await runPersona({ prisma, client, persona, schedule })
-    console.log(
-      `✓ ${persona.slug}: ${result.entriesAnalyzed} entries, ${result.partsCreated} parts, ${result.curated} curated → ${result.snapshotPath}`
-    )
+  // Tear down log streams before reporting so the final lines flush to disk.
+  await Promise.all(loggers.map(({ close }) => close()))
+
+  console.log('')
+  let failed = 0
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]
+    const slug = loggers[i].persona.slug
+    if (r.status === 'fulfilled') {
+      const { result } = r.value
+      console.log(
+        `✓ ${slug}: ${result.entriesAnalyzed} entries, ${result.partsCreated} parts, ${result.curated} curated → ${result.snapshotPath}`
+      )
+    } else {
+      failed++
+      console.error(`✗ ${slug}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`)
+      console.error(`  see evals/logs/${slug}.log for context`)
+    }
   }
 
   await prisma.$disconnect()
+
+  if (failed > 0) process.exit(1)
 }
 
 main().catch((err) => {
