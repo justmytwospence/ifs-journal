@@ -11,10 +11,17 @@ import { readdir } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 import Anthropic from '@anthropic-ai/sdk'
 import { config as loadEnv } from 'dotenv'
-import { loadPersona } from '../lib/eval/persona-loader'
-import { runPersona } from '../lib/eval/run-persona'
 
 loadEnv({ path: '.env.local' })
+
+// The eval is a single long-running process. Prefer the direct (unpooled)
+// connection — the pooled DATABASE_URL goes through PgBouncer in transaction
+// mode, which the @prisma/adapter-neon driver flags as Accelerate-like and
+// refuses. Set DATABASE_URL to the unpooled value before importing anything
+// that touches Prisma.
+if (process.env.DATABASE_URL_UNPOOLED) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED
+}
 
 // 40 entries across 60 days, oldest first. Cadence is uneven on purpose —
 // clusters of journaling followed by quieter stretches mirror how people
@@ -39,6 +46,12 @@ async function main() {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY is required (set in .env.local).')
   }
+
+  // Lazy-require app modules AFTER the env munging at the top of this file —
+  // lib/db.ts grabs DATABASE_URL at module-init time, so any earlier static
+  // import would freeze the wrong value.
+  const { loadPersona } = await import('../lib/eval/persona-loader')
+  const { runPersona } = await import('../lib/eval/run-persona')
 
   const allFiles = await readdir(PERSONAS_DIR)
   const allSlugs = allFiles.filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, ''))
