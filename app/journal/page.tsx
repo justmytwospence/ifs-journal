@@ -62,6 +62,13 @@ export default function JournalPage() {
   // Ring buffer of the last couple of tips shown for this draft session. Kept
   // in a ref so pushing doesn't retrigger the debounced fetch effect.
   const recentTipsRef = useRef<string[]>([])
+  // Ring buffer of the last few prompts the user has refreshed past in this
+  // browser session. Sent to /api/prompts/generate so the model can avoid
+  // producing near-paraphrases. Cleared once a draft is saved (a saved entry
+  // implicitly accepted its prompt, so the rejection history is no longer
+  // relevant).
+  const rejectedPromptsRef = useRef<string[]>([])
+  const REJECTED_PROMPTS_LIMIT = 5
   const wordCount = (content + interimTranscript).trim().split(/\s+/).filter(Boolean).length
   const isDemo = session?.user?.isDemo
 
@@ -304,9 +311,17 @@ export default function JournalPage() {
     // again on the next tip.
     recentTipsRef.current = []
     setWritingTip(null)
+    // Record the prompt we're refreshing past so the server can avoid producing
+    // a near-paraphrase. Skip empty strings and the first-load case.
+    if (prompt?.trim()) {
+      const next = [prompt, ...rejectedPromptsRef.current.filter((p) => p !== prompt)]
+      rejectedPromptsRef.current = next.slice(0, REJECTED_PROMPTS_LIMIT)
+    }
     try {
       const response = await fetch('/api/prompts/generate', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectedPrompts: rejectedPromptsRef.current }),
       })
       const data = await response.json()
 
@@ -375,6 +390,9 @@ export default function JournalPage() {
       toast.success('Entry saved successfully!')
       setContent('')
       localStorage.removeItem('journal-draft')
+      // Saving implicitly accepts the current prompt. Clear the rejection
+      // history so the next refresh starts fresh.
+      rejectedPromptsRef.current = []
 
       // Analysis is triggered automatically in the background by the API
       setAnalyzing(true, 'incremental')
