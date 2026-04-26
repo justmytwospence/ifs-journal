@@ -5,6 +5,13 @@
 // Bypass: ALLOW_PROD_DB_WRITE=1 npm run db:seed (or db:reset). Reserved for
 // the rare deliberate case (e.g. refreshing demo data on prod).
 
+import { config as loadEnv } from 'dotenv'
+
+// Load .env.local so the check works standalone — it's invoked via tsx
+// from npm scripts, and tsx doesn't auto-load .env files. Mirror what
+// prisma.config.ts and scripts/eval-run.ts already do.
+loadEnv({ path: '.env.local' })
+
 const PROD_ENDPOINT_HOST_FRAGMENT = 'ep-holy-brook-ad2l0eke'
 
 // Check both env vars the app uses. If either points at the production
