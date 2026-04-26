@@ -66,6 +66,10 @@ function renderTemplate(template, vars) {
 async function generatePrompt(history) {
   const systemPrompt = renderTemplate(PROMPT_TEMPLATE, {
     RECENT_ENTRIES: renderHistory(history),
+    // Authoring has no notion of "the user just refreshed past this prompt" —
+    // each tuple is a first-time generation. Mirror what the live API renders
+    // when its body has no rejectedPrompts.
+    REJECTED_PROMPTS: '(none — this is a fresh prompt request, no recent rejections to avoid.)',
   })
   const response = await client.messages.create({
     model: MODEL,
