@@ -171,9 +171,16 @@ recoverable: re-deploy from `main` once the root cause is fixed.
 
 1. Reads `DEMO_USER_EMAIL` (required in production).
 2. Upserts the demo user.
-3. **Deletes that user's journal entries**, then recreates the canned set.
-4. Runs `runBatchAnalysis` against the new entries (consumes Anthropic API
-   tokens).
+3. **Wipes that user's parts and journal entries** (parts cascade through
+   `PartAnalysis`, `Highlight`, `PartConversation`, and `PartsOperation`).
+4. Inserts the 40 baked entries from `prisma/seed-entries.ts`.
+5. Runs `runBatchAnalysis` against the new entries (consumes Anthropic API
+   tokens — Opus 4.7).
+6. Picks the 3 most-cited parts (by highlight count summed across each
+   part's analyses) and writes user-curated fields onto them via
+   `CURATED_BY_ROLE` so `/parts/[id]` shows non-empty `customName`,
+   `ageImpression`, `positiveIntent`, `fearedOutcome`, `whatItProtects`,
+   `userNotes` for those three.
 
 Scope: it only touches the demo user. Non-demo users are never read or
 written. It is **not** invoked as part of a Vercel deploy — only when run
@@ -185,6 +192,44 @@ matches the production Neon endpoint. To deliberately re-seed the production
 demo user, run with `ALLOW_PROD_DB_WRITE=1 npm run db:seed`. The same guard
 is what protects the prod branch from accidentally taking a `migrate dev`
 or `migrate reset` from a misconfigured shell.
+
+### Authoring the seed entries
+
+The 40 (prompt, content) tuples in `prisma/seed-entries.ts` are
+machine-generated. Don't hand-edit. Re-author with:
+
+```sh
+npm run db:seed:author
+```
+
+That runs `scripts/generate-seed-content.mjs`, which iterates 40 times in
+chronological order (oldest first) and for each entry calls Claude Sonnet
+4.6 twice:
+
+1. Once with the **live prompt-generation template**
+   (`lib/prompts/journal-prompt-generation.md`) plus the growing history
+   rendered into `{{RECENT_ENTRIES}}` — produces the prompt the system
+   would actually surface to a real user with that history.
+2. Once with the **content-generation template**
+   (`scripts/seed-content-generation.md`), which encodes the persona and
+   asks Claude to write the journal entry that responds to that prompt.
+
+The output is written to `prisma/seed-entries.ts` after every entry, so a
+crash mid-run leaves usable partial output. Total runtime: ~15–20 minutes;
+total Anthropic spend: ~$1–3 of Sonnet 4.6.
+
+Re-run when the persona (`scripts/seed-content-generation.md`) or the
+prompt-gen template (`lib/prompts/journal-prompt-generation.md`) changes
+meaningfully. Day-to-day, `npm run db:seed` reads the baked file and is
+deterministic — same demo every time.
+
+The persona is a generally-applicable late-20s/early-30s knowledge worker
+(no name, gender-ambiguous) with a partner Sam, friend Riley, parents at a
+distance, and coworkers Devon and Mei. Themes intentionally cover the
+common shape of adult inner life — saying yes too quickly, an inner critic
+that's harsher than the persona would be with anyone else, late-night
+scrolling, calm-exterior-graded-interior, automatic "no" to weekend plans —
+so batch analysis surfaces 7–9 distinct parts with strong citations.
 
 ## Local development
 
