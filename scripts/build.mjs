@@ -9,9 +9,14 @@
 // empty. We fall back here so the build is robust to either variant being
 // the source of truth.
 //
-// Order of operations matches the previous package.json `build` script:
-//   prisma generate → prisma migrate deploy → next build
+// Order of operations:
+//   prisma generate → prisma migrate deploy → prisma db seed → next build
 // Any failure exits non-zero so Vercel marks the deploy failed.
+//
+// `prisma db seed` runs against demo accounts only — it loads from
+// evals/snapshots/<persona>/latest.json files committed to the repo. If
+// no snapshots exist, the seed is a no-op. Real users (non-demo) are
+// never touched. See prisma/seed.ts.
 
 import { spawnSync } from 'node:child_process'
 
@@ -22,6 +27,7 @@ if (!process.env.DATABASE_URL && process.env.DATABASE_URL_UNPOOLED) {
 const steps = [
   ['npx', ['prisma', 'generate']],
   ['npx', ['prisma', 'migrate', 'deploy']],
+  ['npx', ['prisma', 'db', 'seed']],
   ['npx', ['next', 'build']],
 ]
 

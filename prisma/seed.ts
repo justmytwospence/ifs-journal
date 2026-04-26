@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { readdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { PrismaNeon } from '@prisma/adapter-neon'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { runBatchAnalysis } from '../lib/batch-analysis'
-import { SEED_ENTRIES } from './seed-entries'
 
 // Matches lib/db.ts — Neon's pooler endpoint only speaks PostgreSQL via
 // their serverless driver, so the classic Prisma engine can't reach it.
@@ -16,228 +16,262 @@ const prisma = new PrismaClient({
   adapter: new PrismaNeon({ connectionString }),
 })
 
-// Helper function to create dates going back in time
-const daysAgo = (days: number) => {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date
+// Snapshot format mirrors lib/eval/capture.ts. Kept as a structural type here
+// so seed has no compile-time dependency on lib/eval (the seed should be the
+// one consumer that doesn't pull in the harness).
+interface SnapshotEntry {
+  daysAgo: number
+  prompt: string
+  content: string
+  wordCount: number
+}
+interface SnapshotPart {
+  name: string
+  role: string
+  color: string
+  icon: string
+  description: string
+}
+interface SnapshotPartAnalysis {
+  entryDaysAgo: number
+  partName: string
+  confidence: number
+}
+interface SnapshotHighlight {
+  entryDaysAgo: number
+  partName: string
+  exact: string
+  prefix: string
+  suffix: string
+  startOffset: number
+  endOffset: number
+  reasoning: string | null
+}
+interface SnapshotCuratedFields {
+  customName?: string
+  ageImpression?: string
+  positiveIntent?: string
+  fearedOutcome?: string
+  whatItProtects?: string
+  userNotes?: string
+}
+interface Snapshot {
+  personaSlug: string
+  complete: boolean
+  ranAt: string
+  schedule: number[]
+  entries: SnapshotEntry[]
+  parts: SnapshotPart[]
+  partAnalyses: SnapshotPartAnalysis[]
+  highlights: SnapshotHighlight[]
+  curatedFields: Record<string, SnapshotCuratedFields>
 }
 
-// Compute SHA-256 hash of content
-const computeContentHash = (content: string): string => {
-  return createHash('sha256').update(content, 'utf8').digest('hex')
-}
+const SNAPSHOTS_ROOT = 'evals/snapshots'
 
-// Simple slugify function
-const _slugify = (name: string): string => {
+const sha256 = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex')
+
+function slugifyPartName(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
 }
 
-// Curated user-fields applied to the top 3 parts (by highlight count) after
-// batch analysis. Keyed by role so we don't depend on whichever names the
-// LLM happened to assign — Manager / Protector / Firefighter / Exile are the
-// four roles the schema allows. The text matches the persona's voice.
-const CURATED_BY_ROLE: Record<
-  string,
-  {
-    customName: string
-    ageImpression: string
-    positiveIntent: string
-    fearedOutcome: string
-    whatItProtects: string
-    userNotes: string
-  }
-> = {
-  manager: {
-    customName: 'The Planner',
-    ageImpression: '34',
-    positiveIntent:
-      'Keep the day from going off the rails so I can be reliable for the people counting on me.',
-    fearedOutcome:
-      'Letting something slip and watching someone notice — the small flicker of "oh, you didn\'t" that I can\'t un-see.',
-    whatItProtects:
-      'A quieter part of me that goes blank when too many things are happening at once.',
-    userNotes:
-      'Loudest on Sunday evenings reviewing the week ahead, and on Monday mornings when the inbox loads. Quieter on Friday afternoons, almost absent on long walks.',
-  },
-  protector: {
-    customName: 'The Caretaker',
-    ageImpression: '29',
-    positiveIntent: 'Make sure no one I care about feels let down or under-prioritized.',
-    fearedOutcome:
-      'Saying the wrong thing — or saying nothing — and losing the warmth of a relationship I depend on.',
-    whatItProtects:
-      'A part of me that just wants to be liked, that has a hard time when someone is even mildly disappointed.',
-    userNotes:
-      'Says yes before the rest of me has caught up. The resentment that arrives a day or two later is the tell.',
-  },
-  firefighter: {
-    customName: 'The Off-Switch',
-    ageImpression: '17',
-    positiveIntent:
-      'Stop the buildup. Make the heaviness pause for an hour even if nothing actually gets done.',
-    fearedOutcome:
-      "Sitting with a feeling that doesn't have anywhere to go — being trapped inside it without an exit.",
-    whatItProtects:
-      "An exhausted part that doesn't believe rest is permitted unless everything is finished, which it never is.",
-    userNotes:
-      "Shows up around 9pm with my phone in my hand. The scrolling isn't fun by 10:30 but it's easier than going to bed and admitting the day is over.",
-  },
-  exile: {
-    customName: 'The Younger One',
-    ageImpression: '8',
-    positiveIntent: "Be safe. Not be the one who didn't do the thing they were supposed to do.",
-    fearedOutcome:
-      'Being seen having forgotten — the specific sinking of being called on without the answer.',
-    whatItProtects:
-      '(itself — the youngest of the parts, the one the others are organized around keeping out of the room)',
-    userNotes:
-      'Surfaces when Sam asks something completely benign about whether I did a thing. The grown-up voice answers in a second; this part has already been there for a few seconds.',
-  },
-}
-
-// Create entry slug from date (same logic as lib/slug-utils.ts)
-const createEntrySlug = (createdAt: Date): string => {
+function createEntrySlug(createdAt: Date): string {
   const year = createdAt.getUTCFullYear()
   const month = String(createdAt.getUTCMonth() + 1).padStart(2, '0')
   const day = String(createdAt.getUTCDate()).padStart(2, '0')
   const weekday = createdAt
     .toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
     .toLowerCase()
-
   let hours = createdAt.getUTCHours()
   const minutes = String(createdAt.getUTCMinutes()).padStart(2, '0')
   const seconds = String(createdAt.getUTCSeconds()).padStart(2, '0')
   const ampm = hours >= 12 ? 'pm' : 'am'
   hours = hours % 12 || 12
-
   return `${year}-${month}-${day}-${weekday}-${hours}-${minutes}-${seconds}${ampm}`
 }
 
-async function main() {
-  console.log('🌱 Starting database seed...')
+const daysAgoToDate = (days: number): Date => {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d
+}
 
+async function listPersonaSlugs(): Promise<string[]> {
   try {
-    await prisma.$connect()
-    console.log('✅ Database connected')
-  } catch (error) {
-    console.error('❌ Failed to connect to database:', error)
-    throw error
+    const entries = await readdir(SNAPSHOTS_ROOT, { withFileTypes: true })
+    return entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort()
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw err
   }
+}
 
-  // BCRYPT_ROUNDS matches lib/password-policy.ts — kept inline so seed has no
-  // dependency on the app runtime (prisma db seed runs before the Next build).
-  //
-  // The demo user has no usable password: we hash 32 random bytes that
-  // nothing else knows, then throw them away. Demo sign-in is routed through
-  // the passwordless `demo` NextAuth provider (see lib/auth.ts), so the
-  // random hash only exists to satisfy the NOT NULL column and to make the
-  // normal credentials flow structurally unable to authenticate the demo
-  // account (no one knows the password, no brute force gets anywhere).
-  const isProd = process.env.NODE_ENV === 'production'
-  const demoEmail = process.env.DEMO_USER_EMAIL || (isProd ? '' : 'demo@ifsjournal.me')
-  if (!demoEmail) {
-    throw new Error('DEMO_USER_EMAIL must be set in production.')
+async function readLatestSnapshot(slug: string): Promise<Snapshot | null> {
+  const path = join(SNAPSHOTS_ROOT, slug, 'latest.json')
+  let raw: string
+  try {
+    raw = await readFile(path, 'utf-8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
   }
-  const normalizedDemoEmail = demoEmail.trim().toLowerCase()
+  return JSON.parse(raw) as Snapshot
+}
+
+async function ensureDemoUser(email: string): Promise<{ id: string; isNew: boolean }> {
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) return { id: existing.id, isNew: false }
+  // Demo accounts have no usable password — the demo provider in lib/auth.ts
+  // signs them in passwordless. We hash random bytes nothing else knows just
+  // to satisfy NOT NULL and to make the credentials flow structurally unable
+  // to authenticate the account.
   const passwordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 14)
-
-  console.log('Creating test users...')
-
-  // Try to find existing user first
-  let testUser = await prisma.user.findUnique({
-    where: { email: normalizedDemoEmail },
+  const created = await prisma.user.create({
+    data: { email, passwordHash, emailVerified: true },
   })
+  return { id: created.id, isNew: true }
+}
 
-  // If user doesn't exist, create it
-  if (!testUser) {
-    testUser = await prisma.user.create({
+/**
+ * Wipes everything for one demo user before reload. Cascades on Part delete
+ * cover PartAnalysis / Highlight / PartConversation / PartsOperation; we
+ * delete entries explicitly afterwards. Only touches rows with the given
+ * userId — any non-demo user data is untouched.
+ */
+async function wipeDemoUserData(userId: string): Promise<void> {
+  await prisma.part.deleteMany({ where: { userId } })
+  await prisma.journalEntry.deleteMany({ where: { userId } })
+}
+
+async function loadSnapshot(userId: string, snapshot: Snapshot): Promise<void> {
+  // 1. Entries — keep a daysAgo → entryId map for cross-references.
+  const entryIdByDaysAgo = new Map<number, string>()
+  for (const e of snapshot.entries) {
+    const createdAt = daysAgoToDate(e.daysAgo)
+    const created = await prisma.journalEntry.create({
       data: {
-        email: normalizedDemoEmail,
-        passwordHash,
-        emailVerified: true,
-      },
-    })
-    console.log(`✅ Created user: ${testUser.email}`)
-  } else {
-    console.log(`✅ User already exists: ${testUser.email}`)
-    // Wipe everything we're about to recreate. Delete parts first — that
-    // cascades to PartAnalysis, Highlight, PartConversation, and PartsOperation
-    // via the schema's onDelete: Cascade. Then delete journal entries.
-    await prisma.part.deleteMany({ where: { userId: testUser.id } })
-    await prisma.journalEntry.deleteMany({ where: { userId: testUser.id } })
-    console.log(`✅ Wiped existing journal entries and parts`)
-  }
-
-  console.log(`Creating ${SEED_ENTRIES.length} journal entries...`)
-
-  // Inline entries used to live here. They're now generated by
-  // scripts/generate-seed-content.mjs (which calls the live prompt-gen
-  // template + a persona content template) and baked into ./seed-entries.ts.
-  // Re-run `npm run db:seed:author` to regenerate when the persona or the
-  // prompt-gen template changes meaningfully.
-  const entries = SEED_ENTRIES
-
-  for (const entry of entries) {
-    const createdAt = daysAgo(entry.daysAgo)
-    const wordCount = entry.content.trim().split(/\s+/).length
-    await prisma.journalEntry.create({
-      data: {
-        userId: testUser.id,
+        userId,
         slug: createEntrySlug(createdAt),
-        prompt: entry.prompt,
-        content: entry.content,
-        contentHash: computeContentHash(entry.content),
-        wordCount,
-        analysisStatus: 'pending',
+        prompt: e.prompt,
+        content: e.content,
+        contentHash: sha256(e.content),
+        wordCount: e.wordCount,
+        analysisStatus: 'completed',
         createdAt,
-        updatedAt: createdAt,
+      },
+    })
+    entryIdByDaysAgo.set(e.daysAgo, created.id)
+  }
+
+  // 2. Parts — keep a name → partId map. Apply curated fields inline if
+  //    present. The schema's @@unique([userId, slug]) means slug collisions
+  //    fail loudly, which is what we want.
+  const partIdByName = new Map<string, string>()
+  for (const p of snapshot.parts) {
+    const curated = snapshot.curatedFields[p.name] ?? {}
+    const created = await prisma.part.create({
+      data: {
+        userId,
+        name: p.name,
+        slug: slugifyPartName(p.name),
+        description: p.description,
+        role: p.role,
+        color: p.color,
+        icon: p.icon,
+        customName: curated.customName ?? null,
+        ageImpression: curated.ageImpression ?? null,
+        positiveIntent: curated.positiveIntent ?? null,
+        fearedOutcome: curated.fearedOutcome ?? null,
+        whatItProtects: curated.whatItProtects ?? null,
+        userNotes: curated.userNotes ?? null,
+      },
+    })
+    partIdByName.set(p.name, created.id)
+  }
+
+  // 3. PartAnalyses — link (entry, part). Keep (entryDaysAgo, partName) →
+  //    analysisId so highlights can attach.
+  const analysisIdByEntryAndPart = new Map<string, string>()
+  for (const pa of snapshot.partAnalyses) {
+    const entryId = entryIdByDaysAgo.get(pa.entryDaysAgo)
+    const partId = partIdByName.get(pa.partName)
+    if (!entryId || !partId) {
+      throw new Error(
+        `seed: snapshot references missing entry/part — daysAgo=${pa.entryDaysAgo} partName="${pa.partName}"`
+      )
+    }
+    const created = await prisma.partAnalysis.create({
+      data: { entryId, partId, confidence: pa.confidence },
+    })
+    analysisIdByEntryAndPart.set(`${pa.entryDaysAgo}:${pa.partName}`, created.id)
+  }
+
+  // 4. Highlights — attach to the matching partAnalysis.
+  for (const h of snapshot.highlights) {
+    const analysisId = analysisIdByEntryAndPart.get(`${h.entryDaysAgo}:${h.partName}`)
+    if (!analysisId) {
+      throw new Error(
+        `seed: highlight references missing analysis — daysAgo=${h.entryDaysAgo} partName="${h.partName}"`
+      )
+    }
+    await prisma.highlight.create({
+      data: {
+        partAnalysisId: analysisId,
+        startOffset: h.startOffset,
+        endOffset: h.endOffset,
+        exact: h.exact,
+        prefix: h.prefix,
+        suffix: h.suffix,
+        reasoning: h.reasoning,
       },
     })
   }
+}
 
-  console.log(`✅ Created ${entries.length} journal entries`)
+async function main() {
+  console.log('🌱 Starting database seed (snapshot loader)...')
+  await prisma.$connect()
 
-  console.log('\n🧠 Running batch parts analysis...')
-  const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, testUser.id)
-  console.log(`✅ Analyzed ${entriesAnalyzed} entries, identified ${partsCreated} parts`)
-
-  // Pick the 3 most-cited parts and populate their user-curated fields so
-  // /parts/[id] doesn't look half-empty in the demo. Use highlight count
-  // (summed across that part's analyses) as the "most cited" signal — that's
-  // the strongest evidence the LLM had high confidence in this part.
-  const partsForCuration = await prisma.part.findMany({
-    where: { userId: testUser.id },
-    include: {
-      partAnalyses: { include: { _count: { select: { highlights: true } } } },
-    },
-  })
-  const ranked = partsForCuration
-    .map((p) => ({
-      id: p.id,
-      role: p.role,
-      highlights: p.partAnalyses.reduce((sum, pa) => sum + pa._count.highlights, 0),
-    }))
-    .sort((a, b) => b.highlights - a.highlights)
-    .slice(0, 3)
-
-  let curated = 0
-  for (const p of ranked) {
-    const template = CURATED_BY_ROLE[p.role.toLowerCase()] ?? CURATED_BY_ROLE.manager
-    await prisma.part.update({ where: { id: p.id }, data: template })
-    curated++
+  const slugs = await listPersonaSlugs()
+  if (slugs.length === 0) {
+    console.log('No personas found in evals/snapshots/. Nothing to seed.')
+    return
   }
-  console.log(`✅ Curated ${curated} parts with user-fields`)
 
-  console.log('\n🎉 Database seeding completed successfully!')
-  console.log('\nDemo account:')
-  console.log(`  📧 ${normalizedDemoEmail} — sign in via the demo button, not the login form`)
-  console.log(
-    `  (${entries.length} journal entries, ${partsCreated} parts, ${curated} parts curated)`
-  )
+  let loaded = 0
+  let skipped = 0
+  for (const slug of slugs) {
+    const snapshot = await readLatestSnapshot(slug)
+    if (!snapshot) {
+      console.warn(`! ${slug}: no latest.json — skipping (run npm run eval:promote first)`)
+      skipped++
+      continue
+    }
+    if (!snapshot.complete) {
+      throw new Error(
+        `seed: refusing to load incomplete snapshot for "${slug}" — re-run eval and promote a complete one`
+      )
+    }
+
+    const email = `demo-${slug}@ifsjournal.me`
+    const { id: userId, isNew } = await ensureDemoUser(email)
+    await wipeDemoUserData(userId)
+    await loadSnapshot(userId, snapshot)
+    console.log(
+      `✓ ${slug}: ${isNew ? 'created' : 'updated'} ${email} — ${snapshot.entries.length} entries, ${snapshot.parts.length} parts`
+    )
+    loaded++
+  }
+
+  console.log(`\n🎉 Seed complete: ${loaded} persona(s) loaded, ${skipped} skipped`)
 }
 
 main()
