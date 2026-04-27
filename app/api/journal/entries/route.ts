@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     const weeksAgo = new Date()
     weeksAgo.setDate(weeksAgo.getDate() - weeks * 7)
 
-    const where = { userId: session.user.id }
+    const where = { userId: session.user.id, deletedAt: null }
 
     // Get total count
     const totalCount = await prisma.journalEntry.count({ where })

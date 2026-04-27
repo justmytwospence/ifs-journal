@@ -51,6 +51,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       where: {
         id: { in: entryIds },
         userId: session.user.id,
+        deletedAt: null,
       },
       select: {
         id: true,

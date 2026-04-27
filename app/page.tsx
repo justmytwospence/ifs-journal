@@ -34,6 +34,7 @@ export default async function Home() {
     const todayEntry = await prisma.journalEntry.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         createdAt: {
           gte: today,
         },

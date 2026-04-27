@@ -89,9 +89,10 @@ model JournalEntry {
   content        String   @db.Text
   contentHash    String // SHA-256 hash for change detection
   wordCount      Int      @default(0)
-  analysisStatus String   @default("pending") // pending, processing, completed, failed
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  analysisStatus String    @default("pending") // pending, processing, completed, failed
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime? // Soft delete; entry is hidden from queries but recoverable for 30 days
 
   // Relations
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -100,6 +101,7 @@ model JournalEntry {
 
   @@unique([userId, slug])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([deletedAt])
   @@map("journal_entries")
 }
 

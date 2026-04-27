@@ -30,6 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     const previousEntry = await prisma.journalEntry.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         createdAt: { lt: currentEntry.createdAt },
       },
       orderBy: { createdAt: 'desc' },
@@ -40,6 +41,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     const nextEntry = await prisma.journalEntry.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         createdAt: { gt: currentEntry.createdAt },
       },
       orderBy: { createdAt: 'asc' },

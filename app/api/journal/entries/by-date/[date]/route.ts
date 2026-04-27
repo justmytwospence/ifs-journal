@@ -24,6 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ dat
     const entry = await prisma.journalEntry.findFirst({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         createdAt: {
           gte: new Date(targetDate.getTime() - 1000), // 1 second before
           lte: new Date(targetDate.getTime() + 1000), // 1 second after
