@@ -148,10 +148,19 @@ The previous app version keeps running, but the database is in whatever state
 the partial migration left it. If that happens, branch the DB (see Recovery)
 before doing anything else.
 
-`scripts/build.mjs` runs the three steps in sequence and exits non-zero on
+`scripts/build.mjs` runs the four steps in sequence and exits non-zero on
 the first failure, so partial deploys (e.g. migrate succeeds, next build
 fails) leave the DB ahead of the running app. That's intentional and
 recoverable: re-deploy from `main` once the root cause is fixed.
+
+**Neon cold-start retry.** The DB-touching steps (`migrate deploy`, `db
+seed`) get one automatic retry with a 10-second wait. Neon's free-tier
+preview branches auto-suspend when idle, and a fresh deploy can land
+during the cold-start window — the connection times out before the
+compute is ready (`P1001: Can't reach database server`). The first
+attempt triggers the cold start; the retry connects to the warm compute.
+Both steps are idempotent: `migrate deploy` is no-op when up to date,
+the seed wipes-and-reloads each demo user from scratch.
 
 ## Recovery
 
