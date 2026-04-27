@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
+import { anthropicErrorResponse } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { runIncrementalAnalysis } from '@/lib/incremental-analysis'
 import { captureException } from '@/lib/logger'
-import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
+import { enforceLlmBudget, enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,6 +19,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       windowMs: HOUR_MS,
     })
     if (limited) return limited
+
+    const overBudget = await enforceLlmBudget(session.user.id)
+    if (overBudget) return overBudget
 
     const { id: entryId } = await params
 
@@ -37,6 +41,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ success: true, partsFound: result.partsFound })
   } catch (error) {
     captureException(error, { route: 'POST /api/journal/entries/[id]/incremental-analysis' })
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
+    return anthropicErrorResponse(error, 'Analysis failed')
   }
 }

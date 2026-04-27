@@ -9,6 +9,8 @@
  * 4. Role matching as a signal
  */
 
+import { debugLog } from './logger'
+
 // Common words to strip from part names for normalization.
 // Keep this list tight: distinctive descriptors (wounded, vulnerable, child, etc.)
 // stay so that getCanonicalSynonym can still match them against synonym groups.
@@ -266,7 +268,7 @@ export function findSimilarPart(
         id: existing.id,
         score: overallScore,
       }
-      console.log(
+      debugLog(
         `Similarity match: "${newPart.name}" → "${existing.name}" (score: ${overallScore.toFixed(2)}, ` +
           `name: ${nameScore.toFixed(2)}, role: ${roleMatch.toFixed(2)}, keywords: ${keywordScore.toFixed(2)})`
       )
@@ -293,7 +295,7 @@ export function deduplicateParts(
       const nameScore = calculateNameSimilarity(part.name, canonical.name)
       if (nameScore > 0.7) {
         matchId = canonical.tempId
-        console.log(
+        debugLog(
           `Dedup: "${part.name}" merged into "${canonical.name}" (score: ${nameScore.toFixed(2)})`
         )
         break

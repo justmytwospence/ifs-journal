@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type { PrismaClient } from '@prisma/client'
 import { ANALYSIS_MODEL, anthropic } from './anthropic'
 import { type ParsedPart, parseCitationsResponse } from './citation-parser'
+import { debugLog } from './logger'
 import { deduplicateParts, normalizeName } from './part-similarity'
 import { slugify } from './slug-utils'
 
@@ -28,10 +29,11 @@ export interface BatchAnalysisResult {
  */
 export async function runBatchAnalysis(
   prisma: PrismaClient,
-  userId: string
+  userId: string,
+  options: { signal?: AbortSignal } = {}
 ): Promise<BatchAnalysisResult> {
   const entries = await prisma.journalEntry.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     orderBy: { createdAt: 'asc' },
   })
 
@@ -51,38 +53,41 @@ export async function runBatchAnalysis(
 
   // Streaming is required for long-running calls (max_tokens this large
   // would otherwise trip the SDK's >10 min HTTP-timeout guard).
-  const stream = anthropic.messages.stream({
-    model: ANALYSIS_MODEL,
-    max_tokens: 32000,
-    thinking: { type: 'adaptive' },
-    // Cache the full system prompt — batch reanalysis is rerun on
-    // demand and during seed; identical prefix across calls.
-    system: [
-      {
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text:
-              `Below are ${entries.length} journal entries by this user, in chronological order. Each has a prompt shown to the writer:\n\n` +
-              entries.map((e, i) => `Entry ${i + 1} prompt: ${e.prompt}`).join('\n'),
-          },
-          ...documentBlocks,
-          {
-            type: 'text',
-            text: 'Analyze all entries holistically and identify up to 9 distinct parts. Cite passages from across the entries that evidence each part.',
-          },
-        ],
-      },
-    ],
-  })
+  const stream = anthropic.messages.stream(
+    {
+      model: ANALYSIS_MODEL,
+      max_tokens: 32000,
+      thinking: { type: 'adaptive' },
+      // Cache the full system prompt — batch reanalysis is rerun on
+      // demand and during seed; identical prefix across calls.
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text:
+                `Below are ${entries.length} journal entries by this user, in chronological order. Each has a prompt shown to the writer:\n\n` +
+                entries.map((e, i) => `Entry ${i + 1} prompt: ${e.prompt}`).join('\n'),
+            },
+            ...documentBlocks,
+            {
+              type: 'text',
+              text: 'Analyze all entries holistically and identify up to 9 distinct parts. Cite passages from across the entries that evidence each part.',
+            },
+          ],
+        },
+      ],
+    },
+    options.signal ? { signal: options.signal } : undefined
+  )
   const response = await stream.finalMessage()
 
   const usage = response.usage
@@ -107,12 +112,12 @@ export async function runBatchAnalysis(
   const seenNormalizedNames = new Set<string>()
   const deduplicatedParts = partsWithTempId.filter((p) => {
     if (tempIdToCanonical.get(p.tempId) !== p.tempId) {
-      console.log(`Skipping "${p.name}" — merged via similarity`)
+      debugLog(`Skipping "${p.name}" — merged via similarity`)
       return false
     }
     const normalized = normalizeName(p.name)
     if (seenNormalizedNames.has(normalized)) {
-      console.log(`Skipping duplicate normalized name: ${p.name} → ${normalized}`)
+      debugLog(`Skipping duplicate normalized name: ${p.name} → ${normalized}`)
       return false
     }
     seenNormalizedNames.add(normalized)

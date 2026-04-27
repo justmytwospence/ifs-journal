@@ -56,7 +56,7 @@ export async function loadPriorEntriesContext(
   const charLimit = opts.verbatimCharLimit ?? DEFAULTS.verbatimCharLimit
 
   const entries = await prisma.journalEntry.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     orderBy: { createdAt: 'desc' },
     take: maxTotal,
     select: { prompt: true, content: true, createdAt: true },

@@ -57,7 +57,7 @@ export async function runIncrementalAnalysis({
       where: { id: entryId, userId },
     })
 
-    if (!entry) {
+    if (!entry || entry.deletedAt) {
       return { ok: false, reason: 'not-found' }
     }
 

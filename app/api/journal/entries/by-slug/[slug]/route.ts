@@ -29,7 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       },
     })
 
-    if (!entry) {
+    if (!entry || entry.deletedAt) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 

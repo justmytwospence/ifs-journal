@@ -1,0 +1,34 @@
+{
+  "manager": {
+    "customName": "The Spreadsheet Voice",
+    "ageImpression": "52",
+    "positiveIntent": "Make sure the runway math actually works — that the choice to step off the career was a real choice, not a slow mistake.",
+    "fearedOutcome": "Looking up in eighteen months and finding the number is half what we said we needed, and Jamie hasn't said anything yet but the kitchen has changed.",
+    "whatItProtects": "The version of me that said \"you have permission to do this\" out loud, and meant it.",
+    "userNotes": "Loudest at 11pm with the spreadsheet open. Goes quiet on long walks. Triggered hard by Mom's questions, even when she's not asking about money."
+  },
+  "protector": {
+    "customName": "The Composure",
+    "ageImpression": "44",
+    "positiveIntent": "Hold the steady face — for the kids, for Mom on the phone, for old colleagues from the previous career — while the inside is figuring itself out.",
+    "fearedOutcome": "Nina asking \"what is your job now\" and not having a clean answer that doesn't feel like a confession.",
+    "whatItProtects": "The part of me that doesn't yet know what to call the new shape of the days, and isn't ready to say it out loud.",
+    "userNotes": "Comes online before family calls and before any conversation with Chris. The over-rehearsing of small things — coffee with Pat, school pickup chat — is the tell."
+  },
+  "firefighter": {
+    "customName": "The Refresh",
+    "ageImpression": "19",
+    "positiveIntent": "Make the blank doc go away for a minute. Make the \"is this working\" question wait.",
+    "fearedOutcome": "An afternoon spent with the cursor blinking and nothing actually being decided — the proof, in real time, that the choice was wrong.",
+    "whatItProtects": "An exhausted part that doesn't believe rest is permitted on a non-employed day, even when nothing more would have come from sitting with it.",
+    "userNotes": "Shows up mid-afternoon, almost always after a Pat call or a Mom call. LinkedIn, the news, refreshing the same email. Quietly aware it isn't doing anything."
+  },
+  "exile": {
+    "customName": "The Falling-Off Boy",
+    "ageImpression": "12",
+    "positiveIntent": "Stay on the path that the people who matter approved of, so they don't have to be disappointed.",
+    "fearedOutcome": "Mom on the phone deciding, without saying so, that this whole thing was a mistake. Dani realizing it before I do.",
+    "whatItProtects": "(itself — the one the spreadsheet and the composure and the refresh are all built around keeping out of view)",
+    "userNotes": "Surfaces hardest after seeing an old colleague's promotion announcement, or after a Mom call where she didn't ask about the new thing at all. The flush of \"falling off\" lasts a few hours."
+  }
+}

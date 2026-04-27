@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
+import { anthropicErrorResponse } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { runBatchAnalysis } from '@/lib/batch-analysis'
 import prisma from '@/lib/db'
 import { demoGuard } from '@/lib/demo-guard'
 import { captureException } from '@/lib/logger'
-import { DAY_MS, enforceRateLimit } from '@/lib/rate-limit'
+import { DAY_MS, enforceLlmBudget, enforceRateLimit } from '@/lib/rate-limit'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -24,7 +25,12 @@ export async function POST() {
     })
     if (limited) return limited
 
-    const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, session.user.id)
+    const overBudget = await enforceLlmBudget(session.user.id)
+    if (overBudget) return overBudget
+
+    const { partsCreated, entriesAnalyzed } = await runBatchAnalysis(prisma, session.user.id, {
+      signal: request.signal,
+    })
 
     if (entriesAnalyzed === 0) {
       return NextResponse.json({
@@ -41,6 +47,6 @@ export async function POST() {
     })
   } catch (error) {
     captureException(error, { route: 'POST /api/parts/batch-reanalysis' })
-    return NextResponse.json({ error: 'Failed to reanalyze entries' }, { status: 500 })
+    return anthropicErrorResponse(error, 'Failed to reanalyze entries')
   }
 }

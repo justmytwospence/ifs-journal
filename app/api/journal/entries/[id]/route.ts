@@ -43,7 +43,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       },
     })
 
-    if (!entry) {
+    if (!entry || entry.deletedAt) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
@@ -78,7 +78,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       },
     })
 
-    if (!entry) {
+    if (!entry || entry.deletedAt) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
@@ -176,11 +176,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
     const { id } = await params
 
-    // Verify the entry belongs to the user before deleting
-    const entry = await prisma.journalEntry.findUnique({
+    // Soft delete: mark deletedAt instead of dropping the row. Recoverable
+    // from the DB for 30 days; a future reaper purges older. Filter by
+    // deletedAt: null so a re-delete on an already-deleted entry 404s.
+    const entry = await prisma.journalEntry.findFirst({
       where: {
         id,
         userId: session.user.id,
+        deletedAt: null,
       },
     })
 
@@ -188,9 +191,12 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    // Delete the entry (cascade will handle partAnalyses)
-    await prisma.journalEntry.delete({
+    // Mangle slug so the (userId, slug) unique constraint doesn't block the
+    // user from creating a fresh entry on the same day. The original slug is
+    // still recoverable from the row id if we ever build a restore UI.
+    await prisma.journalEntry.update({
       where: { id },
+      data: { deletedAt: new Date(), slug: `__deleted_${id}` },
     })
 
     return NextResponse.json({ success: true })

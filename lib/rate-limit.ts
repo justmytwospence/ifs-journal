@@ -67,3 +67,22 @@ export async function enforceRateLimit(opts: CheckOpts): Promise<NextResponse | 
 // Bucket window presets.
 export const HOUR_MS = 60 * 60 * 1000
 export const DAY_MS = 24 * HOUR_MS
+
+// Global per-user daily kill switch across every LLM-calling endpoint.
+// Each route has its own bucket already (5 batch/day, 30 conversations/h, etc.)
+// — this bucket sits on top to cap aggregate burn so a single user can't run
+// every endpoint to the limit and rack up an unbounded Anthropic bill.
+//
+// Limit chosen to be generous for legitimate use (a power user writing 5
+// entries with full reanalysis each plus conversations is well below) but
+// firm enough that any spike-triggered abuse stops within a day.
+export const DAILY_LLM_CALL_LIMIT = 300
+
+export async function enforceLlmBudget(userId: string): Promise<NextResponse | null> {
+  return enforceRateLimit({
+    subjectKey: `user:${userId}`,
+    bucket: 'llm:daily-total',
+    limit: DAILY_LLM_CALL_LIMIT,
+    windowMs: DAY_MS,
+  })
+}

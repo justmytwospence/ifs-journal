@@ -6,7 +6,7 @@ import { anthropic, CONTENT_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { captureException } from '@/lib/logger'
 import { loadPriorEntriesContext } from '@/lib/prior-entries-context'
-import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
+import { enforceLlmBudget, enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
 const writingTipsSchema = z.object({
   prompt: z.string().max(500),
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
       windowMs: HOUR_MS,
     })
     if (limited) return limited
+
+    const overBudget = await enforceLlmBudget(session.user.id)
+    if (overBudget) return overBudget
 
     let prompt: string
     let content: string
