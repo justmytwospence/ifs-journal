@@ -1,0 +1,34 @@
+{
+  "manager": {
+    "customName": "The Planner",
+    "ageImpression": "34",
+    "positiveIntent": "Keep the day from going off the rails so I can be reliable for the people counting on me — Sam, Mei, the team.",
+    "fearedOutcome": "Letting something slip and watching Mei notice — the small flicker of \"oh, you didn't\" that I can't un-see.",
+    "whatItProtects": "A quieter part of me that goes blank when too many things are happening at once.",
+    "userNotes": "Loudest on Sunday evenings reviewing the week ahead, and on Monday mornings when the inbox loads. Quieter on Friday afternoons, almost absent on long walks."
+  },
+  "protector": {
+    "customName": "The Caretaker",
+    "ageImpression": "29",
+    "positiveIntent": "Make sure no one I care about — Sam, Riley, Mom on the phone — feels let down or under-prioritized.",
+    "fearedOutcome": "Saying the wrong thing, or saying nothing, and losing the warmth of a friendship I depend on. Riley's text sitting unread for the third week.",
+    "whatItProtects": "A part of me that just wants to be liked, that has a hard time when someone is even mildly disappointed.",
+    "userNotes": "Says yes before the rest of me has caught up, especially to weekend invites. The resentment that arrives a day or two later is the tell."
+  },
+  "firefighter": {
+    "customName": "The Off-Switch",
+    "ageImpression": "17",
+    "positiveIntent": "Stop the buildup. Make the heaviness pause for an hour even if nothing actually gets done.",
+    "fearedOutcome": "Sitting with a feeling that doesn't have anywhere to go — being trapped inside it without an exit.",
+    "whatItProtects": "An exhausted part that doesn't believe rest is permitted unless everything is finished, which it never is.",
+    "userNotes": "Shows up around 9pm with my phone in my hand. The scrolling isn't fun by 10:30 but it's easier than going to bed and admitting the day is over."
+  },
+  "exile": {
+    "customName": "The Found-Out Kid",
+    "ageImpression": "8",
+    "positiveIntent": "Be safe. Not be the one called on without the answer.",
+    "fearedOutcome": "Being seen having forgotten — the specific sinking of being graded by someone whose opinion matters.",
+    "whatItProtects": "(itself — the youngest of the parts, the one the others are organized around keeping out of the room)",
+    "userNotes": "Surfaces when someone asks something completely benign about whether I did a thing. The grown-up voice answers in a second; this part has already been there for a few seconds."
+  }
+}

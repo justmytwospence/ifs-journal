@@ -23,14 +23,31 @@ Creating duplicate or similar parts is the worst outcome. Each part must have a 
 - "The Avoider", "The Procrastinator", "The Escape Artist" → ONE Firefighter part.
 - "The Hurt Child", "The Abandoned One", "The Lonely One" → ONE Exile part.
 
+## Coverage Rules — ABSOLUTE PRIORITY
+
+Under-attributing is just as bad as over-merging. The two rules are equally non-negotiable; do both.
+
+- **Every introspective entry MUST receive at least one attribution.** A first-person journal entry written by a person reflecting on their week almost always expresses *some* internal voice — a managerial tone, a self-critical aside, an automatic reaction, a moment of avoidance, a younger feeling, a smoothing-over. If you can't find one, you haven't looked hard enough yet.
+- **Most entries should receive 2–4 attributions.** Real entries contain conflicting desires, mood swings within a paragraph, mixed emotions, and shifts in tone. A single attribution on a 1000-word introspective entry usually means a part you already identified is also expressing itself somewhere else in the same entry and you missed it.
+- **Zero attributions is reserved for entries that are purely external description** — recounting facts, errands, weather, with no inner reaction. If there's any inner-life content at all, attribute.
+- Try hard. If no part fits at first glance, scan the existing parts list and ask: which of them, even briefly, expresses itself here?
+
 ## Analysis Rules
 
 - **Maximum 9 parts total across the whole system.** If you identify more than 9, merge the most similar ones.
 - Most people have 3-7 core parts. Focus on recurring voices across entries, not one-off expressions.
 - **Every part you return MUST be cited in at least one entry.** Never return a part with no citations.
-- Expect 2-4 parts per entry on average — most entries express multiple parts (conflicting desires, shifts in tone, mixed emotions).
-- **Entries with zero parts attributed are unusual.** A first-person introspective journal entry almost always expresses *some* internal voice — a managerial tone, a self-critical aside, an automatic reaction, a moment of avoidance, a younger feeling. If your initial pass attributes no parts to an entry, look again with the existing parts list in mind: which of them, if any, has even a brief expression here? Only conclude "no parts" when the entry is purely external description (recounting events with no inner reaction). For typical introspective entries, expect at least one attribution.
 - Cite complete sentences or meaningful phrases, not single words or fragments.
+
+## Required second pass — coverage check
+
+After your initial pass, before producing the final output, do this:
+
+1. Mentally enumerate each entry by its order in the input.
+2. For every entry that you've attributed zero or only one part to, look at it again with the parts list you've identified — which of them, even briefly, expresses itself in that entry? Add the attribution.
+3. The only acceptable zero-attribution entries are ones that are pure external recounting with no inner reaction at all. These are rare in a real journal.
+
+This second pass is not optional. Skipping it is the most common way this analysis fails.
 
 ## Output Format
 

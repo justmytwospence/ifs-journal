@@ -46,6 +46,13 @@ export interface SnapshotCuratedFields {
   userNotes?: string
 }
 
+/** Parts/analyses/highlights as observed at one point in the run. */
+export interface SnapshotPartsState {
+  parts: SnapshotPart[]
+  partAnalyses: SnapshotPartAnalysis[]
+  highlights: SnapshotHighlight[]
+}
+
 export interface Snapshot {
   personaSlug: string
   /** Set true after batch analysis succeeds. Seed refuses to load when false. */
@@ -61,9 +68,15 @@ export interface Snapshot {
   model: { promptGen: string; respondent: string; analysis: string }
   schedule: number[]
   entries: SnapshotEntry[]
+  /** Top-level fields hold the BATCH-stage state — what the seed loader and
+   *  the demo experience consume. Unchanged contract. */
   parts: SnapshotPart[]
   partAnalyses: SnapshotPartAnalysis[]
   highlights: SnapshotHighlight[]
+  /** State after the per-entry incremental analyses ran, captured BEFORE
+   *  batch reanalysis wiped it. Optional for backward compat with snapshots
+   *  written before this field existed. */
+  incremental?: SnapshotPartsState
   /** Keyed by part name. Only present for parts that were curated. */
   curatedFields: Record<string, SnapshotCuratedFields>
 }
@@ -82,22 +95,26 @@ export interface CaptureSnapshotInput {
   entryDaysAgoByEntryId: Map<string, number>
   /** Models used during the run, for lineage. */
   models: Snapshot['model']
+  /** Parts state from the per-entry incremental analyses, captured before
+   *  batch reanalysis wiped it. Caller is responsible for calling
+   *  `readPartsState` at the right moment (after the entry loop, before
+   *  `runBatchAnalysis`). Optional — omit for runs that don't exercise
+   *  incremental analysis. */
+  incremental?: SnapshotPartsState
 }
 
-export async function captureSnapshot({
-  prisma,
-  userId,
-  persona,
-  scheduleDaysAgo,
-  startedAt,
-  entryDaysAgoByEntryId,
-  models,
-}: CaptureSnapshotInput): Promise<Snapshot> {
-  const entries = await prisma.journalEntry.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'asc' },
-  })
-
+/**
+ * Read the current parts/partAnalyses/highlights for a user from Prisma
+ * and shape them into snapshot-ready records. Used twice during an eval
+ * run: once after incremental analyses (pre-batch), once after batch
+ * (the final state). The daysAgo map is used to translate entry rowids
+ * into stable cross-DB references.
+ */
+export async function readPartsState(
+  prisma: PrismaClient,
+  userId: string,
+  entryDaysAgoByEntryId: Map<string, number>
+): Promise<SnapshotPartsState> {
   const parts = await prisma.part.findMany({
     where: { userId },
     include: {
@@ -110,18 +127,11 @@ export async function captureSnapshot({
     const v = entryDaysAgoByEntryId.get(entryId)
     if (v === undefined) {
       throw new Error(
-        `captureSnapshot: no daysAgo recorded for entry ${entryId} — run-persona must populate the map`
+        `readPartsState: no daysAgo recorded for entry ${entryId} — run-persona must populate the map`
       )
     }
     return v
   }
-
-  const snapshotEntries: SnapshotEntry[] = entries.map((e) => ({
-    daysAgo: daysAgoFor(e.id),
-    prompt: e.prompt,
-    content: e.content,
-    wordCount: e.wordCount,
-  }))
 
   const snapshotParts: SnapshotPart[] = parts.map((p) => ({
     name: p.name,
@@ -154,8 +164,56 @@ export async function captureSnapshot({
     )
   )
 
+  return {
+    parts: snapshotParts,
+    partAnalyses: snapshotPartAnalyses,
+    highlights: snapshotHighlights,
+  }
+}
+
+export async function captureSnapshot({
+  prisma,
+  userId,
+  persona,
+  scheduleDaysAgo,
+  startedAt,
+  entryDaysAgoByEntryId,
+  models,
+  incremental,
+}: CaptureSnapshotInput): Promise<Snapshot> {
+  const entries = await prisma.journalEntry.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  const daysAgoFor = (entryId: string): number => {
+    const v = entryDaysAgoByEntryId.get(entryId)
+    if (v === undefined) {
+      throw new Error(
+        `captureSnapshot: no daysAgo recorded for entry ${entryId} — run-persona must populate the map`
+      )
+    }
+    return v
+  }
+
+  const snapshotEntries: SnapshotEntry[] = entries.map((e) => ({
+    daysAgo: daysAgoFor(e.id),
+    prompt: e.prompt,
+    content: e.content,
+    wordCount: e.wordCount,
+  }))
+
+  const batchState = await readPartsState(prisma, userId, entryDaysAgoByEntryId)
+
+  // Curated fields are read from the post-batch state — they were applied
+  // by `applyCuratedFields` after batch ran. Only populated for parts that
+  // had at least one curated value set.
+  const partsForCuration = await prisma.part.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  })
   const curatedFields: Record<string, SnapshotCuratedFields> = {}
-  for (const p of parts) {
+  for (const p of partsForCuration) {
     if (
       p.customName ||
       p.ageImpression ||
@@ -188,9 +246,10 @@ export async function captureSnapshot({
     model: models,
     schedule: scheduleDaysAgo,
     entries: snapshotEntries,
-    parts: snapshotParts,
-    partAnalyses: snapshotPartAnalyses,
-    highlights: snapshotHighlights,
+    parts: batchState.parts,
+    partAnalyses: batchState.partAnalyses,
+    highlights: batchState.highlights,
+    incremental,
     curatedFields,
   }
 }

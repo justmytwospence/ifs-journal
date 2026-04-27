@@ -1,4 +1,11 @@
-import type { Snapshot, SnapshotEntry, SnapshotHighlight } from './capture'
+import type {
+  Snapshot,
+  SnapshotEntry,
+  SnapshotHighlight,
+  SnapshotPart,
+  SnapshotPartAnalysis,
+  SnapshotPartsState,
+} from './capture'
 
 export interface PromptForbiddenCounts {
   yesNoOpeners: number
@@ -79,7 +86,15 @@ export interface ScorecardSection {
   diversity: PromptDiversity
   promptStats: PromptStats
   wordCount: WordCountDistribution
+  /** Parts metrics for the post-batch state — what the demo experience and
+   *  the seed loader consume. Always present. */
   parts: PartsScore
+  /** Parts metrics for the pre-batch (per-entry incremental) state. Only
+   *  present on snapshots written after the eval harness started running
+   *  incremental analysis per entry. The delta vs `parts` reveals whether
+   *  the batch reanalysis is over-merging or under-attributing relative to
+   *  what the production per-entry path actually shipped. */
+  incrementalParts?: PartsScore
 }
 
 // Patterns mirror lib/prompts/journal-prompt-generation.md "Forbidden prompt
@@ -248,6 +263,82 @@ function citationOverlap(highlights: SnapshotHighlight[]): number {
   return overlaps
 }
 
+/**
+ * Score one parts-stage (parts + analyses + highlights) against the entry
+ * corpus. Entry-level metrics live outside this — only stuff that depends
+ * on parts/highlights gets recomputed per stage.
+ *
+ * `curatedCount` is reported as 0 when scoring the incremental stage
+ * (curation is applied only after batch).
+ */
+function scorePartsState(
+  state: {
+    parts: SnapshotPart[]
+    partAnalyses: SnapshotPartAnalysis[]
+    highlights: SnapshotHighlight[]
+  },
+  entries: SnapshotEntry[],
+  curatedCount: number
+): PartsScore {
+  // Per-entry parts distribution. Includes zeros — that's the point.
+  const attributionsByEntry = new Map<number, number>()
+  for (const e of entries) attributionsByEntry.set(e.daysAgo, 0)
+  for (const pa of state.partAnalyses) {
+    attributionsByEntry.set(pa.entryDaysAgo, (attributionsByEntry.get(pa.entryDaysAgo) ?? 0) + 1)
+  }
+  const perEntryCounts = [...attributionsByEntry.values()]
+  const entriesWithAttribution = perEntryCounts.filter((c) => c > 0).length
+
+  const roleCounts: Record<(typeof IFS_ROLES)[number], number> = {
+    Manager: 0,
+    Protector: 0,
+    Firefighter: 0,
+    Exile: 0,
+  }
+  for (const p of state.parts) {
+    if (p.role in roleCounts) {
+      roleCounts[p.role as (typeof IFS_ROLES)[number]]++
+    }
+  }
+  const allRolesPresent = IFS_ROLES.every((r) => roleCounts[r] > 0)
+
+  const wordCountByDaysAgo = new Map<number, number>(entries.map((e) => [e.daysAgo, e.wordCount]))
+  const highlightsPerEntry = new Map<number, number>()
+  for (const e of entries) highlightsPerEntry.set(e.daysAgo, 0)
+  for (const h of state.highlights) {
+    highlightsPerEntry.set(h.entryDaysAgo, (highlightsPerEntry.get(h.entryDaysAgo) ?? 0) + 1)
+  }
+  const densities: number[] = []
+  for (const [daysAgo, count] of highlightsPerEntry) {
+    const wc = wordCountByDaysAgo.get(daysAgo) ?? 0
+    if (wc > 0) densities.push((count / wc) * 1000)
+  }
+
+  return {
+    extracted: state.parts.length,
+    entriesTotal: entries.length,
+    entriesWithAttribution,
+    citationValidity: citationsValid(state.highlights, entries),
+    curatedCount,
+    partsPerEntry: {
+      min: perEntryCounts.length === 0 ? 0 : Math.min(...perEntryCounts),
+      median: Math.round(median(perEntryCounts)),
+      max: perEntryCounts.length === 0 ? 0 : Math.max(...perEntryCounts),
+      avg:
+        perEntryCounts.length === 0
+          ? 0
+          : perEntryCounts.reduce((s, n) => s + n, 0) / perEntryCounts.length,
+    },
+    roles: { ...roleCounts, allRolesPresent },
+    highlightDensity: {
+      min: densities.length === 0 ? 0 : Math.min(...densities),
+      median: Math.round(median(densities) * 100) / 100,
+      max: densities.length === 0 ? 0 : Math.max(...densities),
+    },
+    citationOverlapCount: citationOverlap(state.highlights),
+  }
+}
+
 export function scoreSnapshot(snapshot: Snapshot): ScorecardSection {
   const prompts = snapshot.entries.map((e) => e.prompt)
   const wordCounts = snapshot.entries.map((e) => e.wordCount)
@@ -268,7 +359,6 @@ export function scoreSnapshot(snapshot: Snapshot): ScorecardSection {
   const verbs = new Set(prompts.map((p) => openingVerb(p)).filter(Boolean))
   const properTotal = prompts.reduce((sum, p) => sum + properNounCount(p), 0)
 
-  // Trigram concentration — catches monoculture even when first verbs vary.
   const trigramCounts = new Map<string, number>()
   for (const p of prompts) {
     const tg = openingTrigram(p)
@@ -283,43 +373,16 @@ export function scoreSnapshot(snapshot: Snapshot): ScorecardSection {
     }
   }
 
-  // Per-entry parts distribution. Includes zeros — that's the point.
-  const attributionsByEntry = new Map<number, number>()
-  for (const e of snapshot.entries) attributionsByEntry.set(e.daysAgo, 0)
-  for (const pa of snapshot.partAnalyses) {
-    attributionsByEntry.set(pa.entryDaysAgo, (attributionsByEntry.get(pa.entryDaysAgo) ?? 0) + 1)
+  const batchState: SnapshotPartsState = {
+    parts: snapshot.parts,
+    partAnalyses: snapshot.partAnalyses,
+    highlights: snapshot.highlights,
   }
-  const perEntryCounts = [...attributionsByEntry.values()]
-  const entriesWithAttribution = perEntryCounts.filter((c) => c > 0).length
-
-  // Role distribution.
-  const roleCounts: Record<(typeof IFS_ROLES)[number], number> = {
-    Manager: 0,
-    Protector: 0,
-    Firefighter: 0,
-    Exile: 0,
-  }
-  for (const p of snapshot.parts) {
-    if (p.role in roleCounts) {
-      roleCounts[p.role as (typeof IFS_ROLES)[number]]++
-    }
-  }
-  const allRolesPresent = IFS_ROLES.every((r) => roleCounts[r] > 0)
-
-  // Highlight density per entry.
-  const wordCountByDaysAgo = new Map<number, number>(
-    snapshot.entries.map((e) => [e.daysAgo, e.wordCount])
-  )
-  const highlightsPerEntry = new Map<number, number>()
-  for (const e of snapshot.entries) highlightsPerEntry.set(e.daysAgo, 0)
-  for (const h of snapshot.highlights) {
-    highlightsPerEntry.set(h.entryDaysAgo, (highlightsPerEntry.get(h.entryDaysAgo) ?? 0) + 1)
-  }
-  const densities: number[] = []
-  for (const [daysAgo, count] of highlightsPerEntry) {
-    const wc = wordCountByDaysAgo.get(daysAgo) ?? 0
-    if (wc > 0) densities.push((count / wc) * 1000) // highlights per 1k words
-  }
+  const curatedCount = Object.keys(snapshot.curatedFields).length
+  const parts = scorePartsState(batchState, snapshot.entries, curatedCount)
+  const incrementalParts = snapshot.incremental
+    ? scorePartsState(snapshot.incremental, snapshot.entries, 0)
+    : undefined
 
   return {
     personaSlug: snapshot.personaSlug,
@@ -346,41 +409,44 @@ export function scoreSnapshot(snapshot: Snapshot): ScorecardSection {
       p75: Math.round(quantile(wordCounts, 0.75)),
       max: wordCounts.length === 0 ? 0 : Math.max(...wordCounts),
     },
-    parts: {
-      extracted: snapshot.parts.length,
-      entriesTotal: snapshot.entries.length,
-      entriesWithAttribution,
-      citationValidity: citationsValid(snapshot.highlights, snapshot.entries),
-      curatedCount: Object.keys(snapshot.curatedFields).length,
-      partsPerEntry: {
-        min: perEntryCounts.length === 0 ? 0 : Math.min(...perEntryCounts),
-        median: Math.round(median(perEntryCounts)),
-        max: perEntryCounts.length === 0 ? 0 : Math.max(...perEntryCounts),
-        avg:
-          perEntryCounts.length === 0
-            ? 0
-            : perEntryCounts.reduce((s, n) => s + n, 0) / perEntryCounts.length,
-      },
-      roles: { ...roleCounts, allRolesPresent },
-      highlightDensity: {
-        min: densities.length === 0 ? 0 : Math.min(...densities),
-        median: Math.round(median(densities) * 100) / 100,
-        max: densities.length === 0 ? 0 : Math.max(...densities),
-      },
-      citationOverlapCount: citationOverlap(snapshot.highlights),
-    },
+    parts,
+    incrementalParts,
   }
+}
+
+function formatPartsSection(label: string, p: PartsScore, deltaVs?: PartsScore): string {
+  const ok = (n: number, threshold = 0) => (n <= threshold ? '✓' : '✗')
+  const pct = (x: number) => `${(x * 100).toFixed(0)}%`
+  const coverageOk = p.entriesWithAttribution / Math.max(p.entriesTotal, 1) >= 0.8
+  const r = p.roles
+  const lines = [
+    `  ${label}:`,
+    `    extracted:               ${p.extracted}`,
+    `    coverage (≥1 attribution): ${p.entriesWithAttribution} / ${p.entriesTotal}  ${coverageOk ? '✓' : '✗'}`,
+    `    parts per entry:         min=${p.partsPerEntry.min}  median=${p.partsPerEntry.median}  max=${p.partsPerEntry.max}  avg=${p.partsPerEntry.avg.toFixed(2)}`,
+    `    role coverage:           Manager=${r.Manager}  Protector=${r.Protector}  Firefighter=${r.Firefighter}  Exile=${r.Exile}  ${r.allRolesPresent ? '✓ all four' : '✗ missing role(s)'}`,
+    `    highlight density (per 1k words): min=${p.highlightDensity.min.toFixed(2)}  median=${p.highlightDensity.median.toFixed(2)}  max=${p.highlightDensity.max.toFixed(2)}`,
+    `    citation overlap pairs:  ${p.citationOverlapCount}`,
+    `    citation validity:       ${pct(p.citationValidity)}  ${ok(1 - p.citationValidity, 0.001)}`,
+    `    curated parts:           ${p.curatedCount}`,
+  ]
+  if (deltaVs) {
+    const coverageDelta = p.entriesWithAttribution - deltaVs.entriesWithAttribution
+    const ppDelta = p.partsPerEntry.avg - deltaVs.partsPerEntry.avg
+    const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
+    const regression = coverageDelta < 0 || ppDelta < -0.2
+    lines.push(
+      `    delta vs incremental:    coverage ${sign(coverageDelta)} entries, parts/entry ${sign(Number(ppDelta.toFixed(2)))}  ${regression ? '✗' : '✓'}`
+    )
+  }
+  return lines.join('\n')
 }
 
 export function formatScorecard(s: ScorecardSection): string {
   const ok = (n: number, threshold = 0) => (n <= threshold ? '✓' : '✗')
-  const pct = (x: number) => `${(x * 100).toFixed(0)}%`
-  const r = s.parts.roles
-  // Coverage threshold: anything below 80% gets ✗.
-  const coverageOk = s.parts.entriesWithAttribution / Math.max(s.parts.entriesTotal, 1) >= 0.8
   // Trigram concentration threshold: 5 of N (12.5% on a 40-entry corpus) is OK.
   const trigramOk = s.diversity.maxRepeatedTrigramOpener <= 5
-  return [
+  const head = [
     `${s.personaSlug}/${s.ranAt}${s.complete ? '' : '  [INCOMPLETE]'}`,
     `  Entries:                ${s.entryCount}`,
     `  Word count distribution: min=${s.wordCount.min}  p25=${s.wordCount.p25}  median=${s.wordCount.median}  p75=${s.wordCount.p75}  max=${s.wordCount.max}`,
@@ -394,14 +460,14 @@ export function formatScorecard(s: ScorecardSection): string {
     `    unique opening verbs:    ${s.diversity.uniqueOpeningVerbs} / ${s.diversity.totalPrompts}`,
     `    proper-noun count avg:   ${s.diversity.avgProperNounCount.toFixed(2)} per prompt`,
     `    max repeated 3-word opener: ${s.diversity.maxRepeatedTrigramOpener}${s.diversity.mostRepeatedTrigram ? ` ("${s.diversity.mostRepeatedTrigram}")` : ''}  ${trigramOk ? '✓' : '✗'}`,
-    `  Parts:`,
-    `    extracted:               ${s.parts.extracted}`,
-    `    coverage (≥1 attribution): ${s.parts.entriesWithAttribution} / ${s.parts.entriesTotal}  ${coverageOk ? '✓' : '✗'}`,
-    `    parts per entry:         min=${s.parts.partsPerEntry.min}  median=${s.parts.partsPerEntry.median}  max=${s.parts.partsPerEntry.max}  avg=${s.parts.partsPerEntry.avg.toFixed(2)}`,
-    `    role coverage:           Manager=${r.Manager}  Protector=${r.Protector}  Firefighter=${r.Firefighter}  Exile=${r.Exile}  ${r.allRolesPresent ? '✓ all four' : '✗ missing role(s)'}`,
-    `    highlight density (per 1k words): min=${s.parts.highlightDensity.min.toFixed(2)}  median=${s.parts.highlightDensity.median.toFixed(2)}  max=${s.parts.highlightDensity.max.toFixed(2)}`,
-    `    citation overlap pairs:  ${s.parts.citationOverlapCount}`,
-    `    citation validity:       ${pct(s.parts.citationValidity)}  ${ok(1 - s.parts.citationValidity, 0.001)}`,
-    `    curated parts:           ${s.parts.curatedCount}`,
   ].join('\n')
+
+  const sections = [head]
+  if (s.incrementalParts) {
+    sections.push(formatPartsSection('Parts (incremental, per-entry)', s.incrementalParts))
+    sections.push(formatPartsSection('Parts (batch, post-hoc)', s.parts, s.incrementalParts))
+  } else {
+    sections.push(formatPartsSection('Parts', s.parts))
+  }
+  return sections.join('\n')
 }

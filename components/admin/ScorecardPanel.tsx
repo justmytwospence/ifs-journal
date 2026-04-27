@@ -1,4 +1,4 @@
-import type { ScorecardSection } from '@/lib/eval/score'
+import type { PartsScore, ScorecardSection } from '@/lib/eval/score'
 
 function Indicator({ ok }: { ok: boolean }) {
   return (
@@ -33,9 +33,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function ScorecardPanel({ score }: { score: ScorecardSection }) {
-  const r = score.parts.roles
-  const coverageOk =
-    score.parts.entriesWithAttribution / Math.max(score.parts.entriesTotal, 1) >= 0.8
   const trigramOk = score.diversity.maxRepeatedTrigramOpener <= 5
   const wc = score.wordCount
 
@@ -105,34 +102,75 @@ export function ScorecardPanel({ score }: { score: ScorecardSection }) {
         />
       </Section>
 
-      <Section title="Parts">
-        <Row label="extracted" value={score.parts.extracted} />
-        <Row
-          label="coverage"
-          value={`${score.parts.entriesWithAttribution} / ${score.parts.entriesTotal}`}
-          ok={coverageOk}
+      {score.incrementalParts && (
+        <PartsSection
+          title="Parts (incremental, per-entry)"
+          parts={score.incrementalParts}
+          showCurated={false}
         />
-        <Row
-          label="parts per entry"
-          value={`min=${score.parts.partsPerEntry.min} median=${score.parts.partsPerEntry.median} max=${score.parts.partsPerEntry.max} avg=${score.parts.partsPerEntry.avg.toFixed(2)}`}
-        />
-        <Row
-          label="role coverage"
-          value={`M=${r.Manager} P=${r.Protector} F=${r.Firefighter} E=${r.Exile}`}
-          ok={r.allRolesPresent}
-        />
-        <Row
-          label="highlight density / 1k words"
-          value={`min=${score.parts.highlightDensity.min.toFixed(2)} med=${score.parts.highlightDensity.median.toFixed(2)} max=${score.parts.highlightDensity.max.toFixed(2)}`}
-        />
-        <Row label="citation overlap pairs" value={score.parts.citationOverlapCount} />
-        <Row
-          label="citation validity"
-          value={`${(score.parts.citationValidity * 100).toFixed(0)}%`}
-          ok={score.parts.citationValidity >= 0.999}
-        />
-        <Row label="curated parts" value={score.parts.curatedCount} />
-      </Section>
+      )}
+
+      <PartsSection
+        title={score.incrementalParts ? 'Parts (batch, post-hoc)' : 'Parts'}
+        parts={score.parts}
+        deltaVs={score.incrementalParts}
+      />
     </div>
+  )
+}
+
+function PartsSection({
+  title,
+  parts,
+  deltaVs,
+  showCurated = true,
+}: {
+  title: string
+  parts: PartsScore
+  deltaVs?: PartsScore
+  showCurated?: boolean
+}) {
+  const r = parts.roles
+  const coverageOk = parts.entriesWithAttribution / Math.max(parts.entriesTotal, 1) >= 0.8
+  const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`)
+  const coverageDelta = deltaVs ? parts.entriesWithAttribution - deltaVs.entriesWithAttribution : 0
+  const ppDelta = deltaVs ? parts.partsPerEntry.avg - deltaVs.partsPerEntry.avg : 0
+  const deltaOk = !deltaVs || (coverageDelta >= 0 && ppDelta >= -0.2)
+  return (
+    <Section title={title}>
+      <Row label="extracted" value={parts.extracted} />
+      <Row
+        label="coverage"
+        value={`${parts.entriesWithAttribution} / ${parts.entriesTotal}`}
+        ok={coverageOk}
+      />
+      <Row
+        label="parts per entry"
+        value={`min=${parts.partsPerEntry.min} median=${parts.partsPerEntry.median} max=${parts.partsPerEntry.max} avg=${parts.partsPerEntry.avg.toFixed(2)}`}
+      />
+      <Row
+        label="role coverage"
+        value={`M=${r.Manager} P=${r.Protector} F=${r.Firefighter} E=${r.Exile}`}
+        ok={r.allRolesPresent}
+      />
+      <Row
+        label="highlight density / 1k words"
+        value={`min=${parts.highlightDensity.min.toFixed(2)} med=${parts.highlightDensity.median.toFixed(2)} max=${parts.highlightDensity.max.toFixed(2)}`}
+      />
+      <Row label="citation overlap pairs" value={parts.citationOverlapCount} />
+      <Row
+        label="citation validity"
+        value={`${(parts.citationValidity * 100).toFixed(0)}%`}
+        ok={parts.citationValidity >= 0.999}
+      />
+      {showCurated && <Row label="curated parts" value={parts.curatedCount} />}
+      {deltaVs && (
+        <Row
+          label="delta vs incremental"
+          value={`coverage ${sign(coverageDelta)} entries · parts/entry ${sign(Number(ppDelta.toFixed(2)))}`}
+          ok={deltaOk}
+        />
+      )}
+    </Section>
   )
 }

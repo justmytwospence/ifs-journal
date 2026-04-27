@@ -55,19 +55,46 @@ export default async function PersonaDetailPage({ params, searchParams }: PagePr
   // Time-series data: one ScorecardSection per snapshot, then project the
   // load-bearing metrics out of each.
   const scoredHistory = allSnapshots.map((s) => ({ ranAt: s.ranAt, score: scoreSnapshot(s) }))
+  const coveragePct = (entriesWithAttribution: number, entriesTotal: number) =>
+    Math.round((entriesWithAttribution / Math.max(entriesTotal, 1)) * 100)
+  // Skip incremental points entirely on snapshots that pre-date the
+  // incremental field — they'd otherwise plot as 0% and look like a
+  // regression that never happened.
+  const incrementalCoveragePoints = scoredHistory.flatMap(({ ranAt, score }) =>
+    score.incrementalParts
+      ? [
+          {
+            ranAt,
+            value: coveragePct(
+              score.incrementalParts.entriesWithAttribution,
+              score.incrementalParts.entriesTotal
+            ),
+          },
+        ]
+      : []
+  )
   const series: MetricSeries[] = [
     {
-      label: 'Coverage %',
+      label: 'Coverage % (batch)',
       hint: 'entries with ≥1 attribution',
       suffix: '%',
       domain: [0, 100],
       points: scoredHistory.map(({ ranAt, score }) => ({
         ranAt,
-        value: Math.round(
-          (score.parts.entriesWithAttribution / Math.max(score.parts.entriesTotal, 1)) * 100
-        ),
+        value: coveragePct(score.parts.entriesWithAttribution, score.parts.entriesTotal),
       })),
     },
+    ...(incrementalCoveragePoints.length > 0
+      ? [
+          {
+            label: 'Coverage % (incremental)',
+            hint: 'pre-batch, per-entry pipeline',
+            suffix: '%',
+            domain: [0, 100] as [number, number],
+            points: incrementalCoveragePoints,
+          },
+        ]
+      : []),
     {
       label: 'Max repeated trigram',
       hint: 'lower = more varied openers',

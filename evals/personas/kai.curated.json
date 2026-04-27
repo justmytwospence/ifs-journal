@@ -1,0 +1,34 @@
+{
+  "manager": {
+    "customName": "The Rehearser",
+    "ageImpression": "16",
+    "positiveIntent": "Get through any moment where someone might be evaluating me without visibly fumbling — meetings with Drew, Sunday calls home, the elevator on the way up.",
+    "fearedOutcome": "The two-second pause where it becomes obvious I don't actually belong. Drew's face doing the small flicker of \"oh.\"",
+    "whatItProtects": "The version of me that had been thinking about the project carefully all week — the one who knew the dependency thing and never got the chance to say it.",
+    "userNotes": "Loudest on the bus to work, before any one-on-one with Drew. Rehearses opening sentences. Quietest making coffee with Avery in silence — that's the tell."
+  },
+  "protector": {
+    "customName": "The Buffer",
+    "ageImpression": "20",
+    "positiveIntent": "Absorb the small awkward thing — the dinner I didn't get asked about, the kindness from Reese — before it can land hard.",
+    "fearedOutcome": "Letting a real reaction show in front of someone whose opinion I haven't earned yet, and watching them adjust.",
+    "whatItProtects": "The thinner-skinned person underneath, who would, if I let it, ruin a moment by being honest about how much it's getting to me.",
+    "userNotes": "Says \"yeah totally chill is good\" before the rest of me has caught up. The tightness in my chest thirty minutes later is the tell."
+  },
+  "firefighter": {
+    "customName": "The Late-Night Fuck-It",
+    "ageImpression": "19",
+    "positiveIntent": "Stop the loop. Get through the next forty minutes without the meeting playing back in my head one more time.",
+    "fearedOutcome": "Lying in bed at 1am rehearsing the answer I should have given. Going to work tomorrow with the same thing still alive in my chest.",
+    "whatItProtects": "Me at the end of a long scanning day, when the audition muscle has run the whole system tired.",
+    "userNotes": "Shows up around 10pm with the phone in my hand. Thai takeout, sandwich videos, \"one more episode\" that becomes three. The pile of wrappers the next morning is the tell."
+  },
+  "exile": {
+    "customName": "The Costume Kid",
+    "ageImpression": "8",
+    "positiveIntent": "Be safe. Not be the one in the room who didn't know the thing, who got asked and froze.",
+    "fearedOutcome": "Being seen as a kid in a costume — not a real adult, not yet. Drew or Reese realizing it before I do.",
+    "whatItProtects": "(itself — the one the rehearsing and the scanning and the smoothing are all built around keeping out of view)",
+    "userNotes": "Surfaces when someone is unexpectedly kind. Reese saying \"good call on the timeline thing\" and wanting to crawl out of my skin. The kindness is what gets in past the others."
+  }
+}
