@@ -63,15 +63,19 @@ export default function ProfilePage() {
     setDeleting(true)
 
     try {
+      if (!profile?.email) {
+        throw new Error('Profile not loaded')
+      }
       const response = await fetch('/api/user/account', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: `DELETE ${profile.email}` }),
       })
 
       if (!response.ok) {
         throw new Error('Delete failed')
       }
 
-      // Sign out and redirect to home
       await signOut({ callbackUrl: '/' })
     } catch (error) {
       console.error('Delete account error:', error)
