@@ -12,10 +12,12 @@
     "check": "biome check --write .",
     "db:migrate": "tsx scripts/check-not-prod.ts && prisma migrate dev",
     "db:seed": "tsx scripts/check-not-prod.ts && prisma db seed",
-    "db:seed:author": "node scripts/generate-seed-content.mjs",
     "db:studio": "prisma studio",
     "db:push": "tsx scripts/check-not-prod.ts && prisma db push",
     "db:reset": "tsx scripts/check-not-prod.ts && prisma migrate reset",
+    "eval": "tsx scripts/check-not-prod.ts && tsx scripts/eval-run.ts",
+    "eval:promote": "tsx scripts/eval-promote.ts",
+    "eval:report": "tsx scripts/eval-report.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui"

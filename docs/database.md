@@ -132,19 +132,38 @@ git push origin main
       prisma generate
       prisma migrate deploy   ← applies any new migrations to prod DB
                                 via DATABASE_URL_UNPOOLED (directUrl)
+      prisma db seed          ← reloads demo accounts from committed
+                                evals/snapshots/<persona>/latest.json
       next build
   → on success, the new app version goes live
 ```
+
+`prisma db seed` is a pure DB-insert loader (no LLM calls); it only touches
+`demo-<slug>@ifsjournal.me` users. Real (non-demo) user data is never read
+or written. Each prod deploy refreshes the demo accounts to the snapshot
+state checked into the repo.
 
 If `prisma migrate deploy` fails, the build fails and the deploy doesn't ship.
 The previous app version keeps running, but the database is in whatever state
 the partial migration left it. If that happens, branch the DB (see Recovery)
 before doing anything else.
 
-`scripts/build.mjs` runs the three steps in sequence and exits non-zero on
+`scripts/build.mjs` runs the four steps in sequence and exits non-zero on
 the first failure, so partial deploys (e.g. migrate succeeds, next build
 fails) leave the DB ahead of the running app. That's intentional and
 recoverable: re-deploy from `main` once the root cause is fixed.
+
+**Neon cold-start pre-warm.** Before the DB-touching steps,
+`scripts/build.mjs` runs a `SELECT 1` via `@neondatabase/serverless`'s
+HTTP driver. That driver is explicitly designed for cold-start handling
+— it waits for the compute to become ready instead of failing fast.
+Once the compute is warm, Prisma's classic engine (used by `migrate
+deploy` and `db seed`) connects over TCP without racing. Without this
+step, deploys onto a freshly-suspended Neon preview compute fail with
+`P1001: Can't reach database server` because the classic engine has no
+cold-start retry of its own. Real failures still fail fast, since
+`SELECT 1` resolves quickly on a healthy compute and is no-op on
+already-warm ones.
 
 ## Recovery
 
@@ -167,69 +186,76 @@ recoverable: re-deploy from `main` once the root cause is fixed.
 
 ## Seed script
 
-`npm run db:seed` runs `prisma/seed.ts`, which:
+`npm run db:seed` runs `prisma/seed.ts`, which is a **pure DB-insert
+loader**. No LLM calls; runs in seconds.
 
-1. Reads `DEMO_USER_EMAIL` (required in production).
-2. Upserts the demo user.
-3. **Wipes that user's parts and journal entries** (parts cascade through
+1. Lists `evals/snapshots/<slug>/` directories.
+2. For each, reads `latest.json` (skips with a warning if missing; throws
+   if `complete: false`).
+3. Upserts `demo-<slug>@ifsjournal.me`.
+4. **Wipes that user's parts and journal entries** (parts cascade through
    `PartAnalysis`, `Highlight`, `PartConversation`, and `PartsOperation`).
-4. Inserts the 40 baked entries from `prisma/seed-entries.ts`.
-5. Runs `runBatchAnalysis` against the new entries (consumes Anthropic API
-   tokens — Opus 4.7).
-6. Picks the 3 most-cited parts (by highlight count summed across each
-   part's analyses) and writes user-curated fields onto them via
-   `CURATED_BY_ROLE` so `/parts/[id]` shows non-empty `customName`,
-   `ageImpression`, `positiveIntent`, `fearedOutcome`, `whatItProtects`,
-   `userNotes` for those three.
+5. Inserts entries → parts → partAnalyses → highlights from the snapshot,
+   with curated fields (`customName`, `ageImpression`, `positiveIntent`,
+   `fearedOutcome`, `whatItProtects`, `userNotes`) applied inline on the
+   top 3 most-cited parts.
 
-Scope: it only touches the demo user. Non-demo users are never read or
-written. It is **not** invoked as part of a Vercel deploy — only when run
-manually.
+Scope: only touches `demo-<slug>@ifsjournal.me` users. Non-demo users
+(including the legacy `demo@ifsjournal.me` account, kept as a hidden
+fallback during rollout) are never read or written.
 
-`npm run db:seed` (and `db:migrate`, `db:reset`, `db:push`) is gated by
-`scripts/check-not-prod.ts`, which inspects `DATABASE_URL` and exits if it
-matches the production Neon endpoint. To deliberately re-seed the production
-demo user, run with `ALLOW_PROD_DB_WRITE=1 npm run db:seed`. The same guard
-is what protects the prod branch from accidentally taking a `migrate dev`
-or `migrate reset` from a misconfigured shell.
+**Now invoked by every Vercel deploy** as part of `scripts/build.mjs`
+between `prisma migrate deploy` and `next build`. Each prod deploy
+refreshes the demo accounts to the snapshot state checked into the repo.
 
-### Authoring the seed entries
+`npm run db:seed` (and `db:migrate`, `db:reset`, `db:push`, `eval`) are
+gated by `scripts/check-not-prod.ts`, which inspects `DATABASE_URL` and
+exits if it matches the production Neon endpoint. To deliberately re-seed
+the production demo accounts from a local shell, run with
+`ALLOW_PROD_DB_WRITE=1 npm run db:seed`. The same guard is what protects
+the prod branch from accidentally taking a `migrate dev` or `migrate reset`
+from a misconfigured shell.
 
-The 40 (prompt, content) tuples in `prisma/seed-entries.ts` are
-machine-generated. Don't hand-edit. Re-author with:
+### Generating snapshots (the eval harness)
+
+Snapshots are produced by `npm run eval`, which drives the **live app
+pipeline** against persona "respondents":
+
+1. For each scheduled `daysAgo`, calls
+   `lib/prompts/generate-for-user.ts` (the same code the live API route
+   uses) to produce a prompt, given the entries the persona has
+   accumulated so far in the DB.
+2. Asks the respondent — an isolated Anthropic call whose entire context
+   is the persona markdown body plus the persona's own prior responses —
+   to write the entry. The respondent **never sees** the prompt template,
+   the parts the app extracted, or any internal app state. That isolation
+   is what makes the eval a real test of the production pipeline.
+3. Persists via `lib/journal/save-entry.ts` (also shared with the route).
+4. After all entries are in, runs `runBatchAnalysis` once and applies
+   curated fields to the top-3 parts.
+5. Captures everything to `evals/snapshots/<slug>/<iso-timestamp>.json`,
+   marked `complete: true` only on a clean run.
 
 ```sh
-npm run db:seed:author
+npm run eval                     # all personas sequentially (~$6, ~45min)
+npm run eval -- --persona maya   # one
+npm run eval -- --days 14        # entries within last 14 days only
+npm run eval:promote             # cp <timestamp>.json → latest.json (all)
+npm run eval:promote -- --persona maya
+npm run eval:report              # scorecard for the latest of each persona
 ```
 
-That runs `scripts/generate-seed-content.mjs`, which iterates 40 times in
-chronological order (oldest first) and for each entry calls Claude Sonnet
-4.6 twice:
+Snapshots are committed to git. The git commit changing `latest.json`
+**is** the promotion event; per-run `<timestamp>.json` files are
+append-only history (the diff is a real diff, the log is the audit trail).
+Re-run the eval when the persona files, the prompt-gen template, or the
+LLM stack changes meaningfully — those changes invalidate the existing
+snapshots in spirit, even if the schema is unchanged.
 
-1. Once with the **live prompt-generation template**
-   (`lib/prompts/journal-prompt-generation.md`) plus the growing history
-   rendered into `{{RECENT_ENTRIES}}` — produces the prompt the system
-   would actually surface to a real user with that history.
-2. Once with the **content-generation template**
-   (`scripts/seed-content-generation.md`), which encodes the persona and
-   asks Claude to write the journal entry that responds to that prompt.
-
-The output is written to `prisma/seed-entries.ts` after every entry, so a
-crash mid-run leaves usable partial output. Total runtime: ~15–20 minutes;
-total Anthropic spend: ~$1–3 of Sonnet 4.6.
-
-Re-run when the persona (`scripts/seed-content-generation.md`) or the
-prompt-gen template (`lib/prompts/journal-prompt-generation.md`) changes
-meaningfully. Day-to-day, `npm run db:seed` reads the baked file and is
-deterministic — same demo every time.
-
-The persona is a generally-applicable late-20s/early-30s knowledge worker
-(no name, gender-ambiguous) with a partner Sam, friend Riley, parents at a
-distance, and coworkers Devon and Mei. Themes intentionally cover the
-common shape of adult inner life — saying yes too quickly, an inner critic
-that's harsher than the persona would be with anyone else, late-night
-scrolling, calm-exterior-graded-interior, automatic "no" to weekend plans —
-so batch analysis surfaces 7–9 distinct parts with strong citations.
+Personas live at `evals/personas/<slug>.md`. The body is the respondent's
+system prompt verbatim — voice, world, recurring inner threads, forbidden
+vocabulary. YAML frontmatter holds display metadata (`name`,
+`oneLineDescription`, `emoji`) used by the `/demo` picker page.
 
 ## Local development
 

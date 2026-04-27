@@ -9,9 +9,22 @@
 // empty. We fall back here so the build is robust to either variant being
 // the source of truth.
 //
-// Order of operations matches the previous package.json `build` script:
-//   prisma generate → prisma migrate deploy → next build
+// Order of operations:
+//   prisma generate → prisma migrate deploy → prisma db seed → next build
 // Any failure exits non-zero so Vercel marks the deploy failed.
+//
+// `prisma db seed` runs against demo accounts only — it loads from
+// evals/snapshots/<persona>/latest.json files committed to the repo. If
+// no snapshots exist, the seed is a no-op. Real users (non-demo) are
+// never touched. See prisma/seed.ts.
+//
+// Cold-start handling: Neon free-tier preview computes auto-suspend when
+// idle. Prisma's classic engine (used by migrate deploy + db seed) opens a
+// raw TCP connection and fails fast with P1001 if the compute is still
+// warming up. We pre-warm via @neondatabase/serverless first — that's an
+// HTTP driver explicitly designed for cold-start handling; it waits for
+// the compute to become ready before resolving. Once warm, the classic
+// engine connects without racing.
 
 import { spawnSync } from 'node:child_process'
 
@@ -19,9 +32,23 @@ if (!process.env.DATABASE_URL && process.env.DATABASE_URL_UNPOOLED) {
   process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED
 }
 
+async function prewarmDatabase() {
+  const url = process.env.DATABASE_URL
+  if (!url) return
+  console.log('\n→ pre-warming Neon compute via HTTP driver')
+  const start = Date.now()
+  const { neon } = await import('@neondatabase/serverless')
+  const sql = neon(url)
+  await sql`SELECT 1`
+  console.log(`  warm in ${Date.now() - start}ms`)
+}
+
+await prewarmDatabase()
+
 const steps = [
   ['npx', ['prisma', 'generate']],
   ['npx', ['prisma', 'migrate', 'deploy']],
+  ['npx', ['prisma', 'db', 'seed']],
   ['npx', ['next', 'build']],
 ]
 

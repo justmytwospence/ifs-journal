@@ -3,14 +3,18 @@ import { auth } from '@/lib/auth'
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth
+  const isAdmin = req.auth?.user?.isAdmin === true
+  const path = req.nextUrl.pathname
   const isAuthPage =
-    req.nextUrl.pathname.startsWith('/login') ||
-    req.nextUrl.pathname.startsWith('/register') ||
-    req.nextUrl.pathname.startsWith('/reset-password')
-  const isPublicPage =
-    req.nextUrl.pathname === '/' ||
-    req.nextUrl.pathname === '/demo' ||
-    req.nextUrl.pathname === '/verify-email'
+    path.startsWith('/login') || path.startsWith('/register') || path.startsWith('/reset-password')
+  const isPublicPage = path === '/' || path === '/demo' || path === '/verify-email'
+  const isAdminPath = path.startsWith('/admin')
+
+  // /admin/* is dev-only. Return a 404 for anyone else — same response shape
+  // as a non-existent route so we don't leak the existence of the surface.
+  if (isAdminPath && !isAdmin) {
+    return NextResponse.rewrite(new URL('/404', req.url))
+  }
 
   // Redirect logged-in users away from auth pages
   if (isLoggedIn && isAuthPage) {

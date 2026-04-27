@@ -6,6 +6,7 @@ declare module 'next-auth' {
       id: string
       email: string
       isDemo?: boolean
+      isAdmin?: boolean
     } & DefaultSession['user']
   }
 
@@ -14,6 +15,7 @@ declare module 'next-auth' {
     email: string
     emailVerified: boolean
     isDemo?: boolean
+    isAdmin?: boolean
   }
 }
 
@@ -22,5 +24,6 @@ declare module '@auth/core/jwt' {
     id?: string
     email?: string
     isDemo?: boolean
+    isAdmin?: boolean
   }
 }

@@ -29,6 +29,7 @@ Creating duplicate or similar parts is the worst outcome. Each part must have a 
 - Most people have 3-7 core parts. Focus on recurring voices across entries, not one-off expressions.
 - **Every part you return MUST be cited in at least one entry.** Never return a part with no citations.
 - Expect 2-4 parts per entry on average — most entries express multiple parts (conflicting desires, shifts in tone, mixed emotions).
+- **Entries with zero parts attributed are unusual.** A first-person introspective journal entry almost always expresses *some* internal voice — a managerial tone, a self-critical aside, an automatic reaction, a moment of avoidance, a younger feeling. If your initial pass attributes no parts to an entry, look again with the existing parts list in mind: which of them, if any, has even a brief expression here? Only conclude "no parts" when the entry is purely external description (recounting events with no inner reaction). For typical introspective entries, expect at least one attribution.
 - Cite complete sentences or meaningful phrases, not single words or fragments.
 
 ## Output Format

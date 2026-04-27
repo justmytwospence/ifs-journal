@@ -14,7 +14,8 @@
       "!**/build",
       "!**/.turbo",
       "!**/.claude",
-      "!**/*.css"
+      "!**/*.css",
+      "!evals/snapshots"
     ]
   },
   "formatter": {
