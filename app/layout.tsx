@@ -27,10 +27,32 @@ const lora = Lora({
   display: 'swap',
 })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ifsjournal.me'
+
 export const metadata: Metadata = {
-  title: 'IFS Journal - Discover Your Internal Parts',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'IFS Journal — Discover Your Internal Parts',
+    template: '%s · IFS Journal',
+  },
   description:
-    'A therapeutic journaling app based on Internal Family Systems (IFS) therapy principles',
+    'A therapeutic journaling app based on Internal Family Systems (IFS) therapy principles. Write entries; Claude identifies the parts speaking through your writing and grounds them in cited passages.',
+  applicationName: 'IFS Journal',
+  openGraph: {
+    type: 'website',
+    siteName: 'IFS Journal',
+    title: 'IFS Journal — Discover Your Internal Parts',
+    description:
+      'Citation-grounded IFS journaling. Write entries; Claude identifies the parts speaking through your writing.',
+    url: siteUrl,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'IFS Journal — Discover Your Internal Parts',
+    description:
+      'Citation-grounded IFS journaling. Write entries; Claude identifies the parts speaking through your writing.',
+  },
+  robots: { index: true, follow: true },
 }
 
 export default async function RootLayout({
