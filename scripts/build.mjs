@@ -18,13 +18,13 @@
 // no snapshots exist, the seed is a no-op. Real users (non-demo) are
 // never touched. See prisma/seed.ts.
 //
-// Retry policy: the DB-touching steps (migrate deploy, db seed) get one
-// retry with a 10s wait. Neon free-tier preview computes auto-suspend
-// when idle, and a fresh deploy can land DURING the cold-start window —
-// the connection times out before the compute is ready. The retry
-// triggers the cold start once, waits, and re-attempts. Both DB steps
-// are idempotent (migrate deploy is no-op when up to date; the seed
-// wipes-and-reloads each demo user from scratch), so retrying is safe.
+// Cold-start handling: Neon free-tier preview computes auto-suspend when
+// idle. Prisma's classic engine (used by migrate deploy + db seed) opens a
+// raw TCP connection and fails fast with P1001 if the compute is still
+// warming up. We pre-warm via @neondatabase/serverless first — that's an
+// HTTP driver explicitly designed for cold-start handling; it waits for
+// the compute to become ready before resolving. Once warm, the classic
+// engine connects without racing.
 
 import { spawnSync } from 'node:child_process'
 
@@ -32,26 +32,30 @@ if (!process.env.DATABASE_URL && process.env.DATABASE_URL_UNPOOLED) {
   process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+async function prewarmDatabase() {
+  const url = process.env.DATABASE_URL
+  if (!url) return
+  console.log('\n→ pre-warming Neon compute via HTTP driver')
+  const start = Date.now()
+  const { neon } = await import('@neondatabase/serverless')
+  const sql = neon(url)
+  await sql`SELECT 1`
+  console.log(`  warm in ${Date.now() - start}ms`)
+}
+
+await prewarmDatabase()
 
 const steps = [
-  { cmd: 'npx', args: ['prisma', 'generate'] },
-  { cmd: 'npx', args: ['prisma', 'migrate', 'deploy'], retry: true },
-  { cmd: 'npx', args: ['prisma', 'db', 'seed'], retry: true },
-  { cmd: 'npx', args: ['next', 'build'] },
+  ['npx', ['prisma', 'generate']],
+  ['npx', ['prisma', 'migrate', 'deploy']],
+  ['npx', ['prisma', 'db', 'seed']],
+  ['npx', ['next', 'build']],
 ]
 
-for (const step of steps) {
-  const label = [step.cmd, ...step.args].join(' ')
+for (const [cmd, args] of steps) {
+  const label = [cmd, ...args].join(' ')
   console.log(`\n→ ${label}`)
-  let result = spawnSync(step.cmd, step.args, { stdio: 'inherit', env: process.env })
-  if (result.status !== 0 && step.retry) {
-    console.warn(
-      `build.mjs: "${label}" failed (exit ${result.status}); waiting 10s and retrying once (likely Neon cold start)`
-    )
-    await sleep(10_000)
-    result = spawnSync(step.cmd, step.args, { stdio: 'inherit', env: process.env })
-  }
+  const result = spawnSync(cmd, args, { stdio: 'inherit', env: process.env })
   if (result.status !== 0) {
     console.error(`build.mjs: "${label}" failed with exit code ${result.status}`)
     process.exit(result.status ?? 1)

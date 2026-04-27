@@ -153,14 +153,17 @@ the first failure, so partial deploys (e.g. migrate succeeds, next build
 fails) leave the DB ahead of the running app. That's intentional and
 recoverable: re-deploy from `main` once the root cause is fixed.
 
-**Neon cold-start retry.** The DB-touching steps (`migrate deploy`, `db
-seed`) get one automatic retry with a 10-second wait. Neon's free-tier
-preview branches auto-suspend when idle, and a fresh deploy can land
-during the cold-start window — the connection times out before the
-compute is ready (`P1001: Can't reach database server`). The first
-attempt triggers the cold start; the retry connects to the warm compute.
-Both steps are idempotent: `migrate deploy` is no-op when up to date,
-the seed wipes-and-reloads each demo user from scratch.
+**Neon cold-start pre-warm.** Before the DB-touching steps,
+`scripts/build.mjs` runs a `SELECT 1` via `@neondatabase/serverless`'s
+HTTP driver. That driver is explicitly designed for cold-start handling
+— it waits for the compute to become ready instead of failing fast.
+Once the compute is warm, Prisma's classic engine (used by `migrate
+deploy` and `db seed`) connects over TCP without racing. Without this
+step, deploys onto a freshly-suspended Neon preview compute fail with
+`P1001: Can't reach database server` because the classic engine has no
+cold-start retry of its own. Real failures still fail fast, since
+`SELECT 1` resolves quickly on a healthy compute and is no-op on
+already-warm ones.
 
 ## Recovery
 
