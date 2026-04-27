@@ -7,7 +7,23 @@ export default auth((req) => {
   const path = req.nextUrl.pathname
   const isAuthPage =
     path.startsWith('/login') || path.startsWith('/register') || path.startsWith('/reset-password')
-  const isPublicPage = path === '/' || path === '/demo' || path === '/verify-email'
+  // Pages a logged-out visitor should be able to read directly. Includes the
+  // marketing/legal pages required to evaluate the product before signing up,
+  // and the metadata routes Next generates from app/icon, app/opengraph-image,
+  // etc., which middleware would otherwise redirect to /login.
+  const isPublicPage =
+    path === '/' ||
+    path === '/demo' ||
+    path === '/verify-email' ||
+    path === '/about' ||
+    path === '/privacy' ||
+    path === '/terms' ||
+    path.startsWith('/opengraph-image') ||
+    path.startsWith('/twitter-image') ||
+    path.startsWith('/icon') ||
+    path === '/sitemap.xml' ||
+    path === '/robots.txt' ||
+    path === '/manifest.webmanifest'
   const isAdminPath = path.startsWith('/admin')
 
   // /admin/* is dev-only. Return a 404 for anyone else — same response shape
