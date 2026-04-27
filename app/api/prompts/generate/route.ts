@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { captureException } from '@/lib/logger'
 import { generatePromptForUser } from '@/lib/prompts/generate-for-user'
-import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
+import { enforceLlmBudget, enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +14,13 @@ export async function POST(request: NextRequest) {
     const limited = await enforceRateLimit({
       subjectKey: `user:${session.user.id}`,
       bucket: 'prompts:generate',
-      limit: 60,
+      limit: 30,
       windowMs: HOUR_MS,
     })
     if (limited) return limited
+
+    const overBudget = await enforceLlmBudget(session.user.id)
+    if (overBudget) return overBudget
 
     // Body is optional; legacy callers send no body. New callers may include
     // `{ rejectedPrompts: string[] }` to signal "I just refreshed past these,

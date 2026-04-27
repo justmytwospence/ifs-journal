@@ -6,7 +6,7 @@ import { anthropic, CONVERSATION_MODEL } from '@/lib/anthropic'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { captureException } from '@/lib/logger'
-import { enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
+import { enforceLlmBudget, enforceRateLimit, HOUR_MS } from '@/lib/rate-limit'
 
 const conversationMessageSchema = z.object({
   role: z.enum(['user', 'part']),
@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
       windowMs: HOUR_MS,
     })
     if (limited) return limited
+
+    const overBudget = await enforceLlmBudget(session.user.id)
+    if (overBudget) return overBudget
 
     let partId: string
     let message: string
