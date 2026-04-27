@@ -89,6 +89,18 @@ export interface ScorecardSection {
 const YES_NO_OPENER =
   /^(did|have|has|are|is|was|were|do|does|will|would|could|should|can|may|might|am)\b/i
 
+// A prompt that opens with a yes/no auxiliary but then continues with a
+// narrative invitation ("describe the moment", "walk me through it", "tell
+// me what happened") isn't actually answerable in one word — it's using
+// the yes/no as a rhetorical hook. Only flag the truly closed prompts.
+const NARRATIVE_INVITE_RE =
+  /\b(describe|walk me through|tell me|take me|what was|what were|what happened|what stopped|where you|where were|how did|how were|paint|show me)\b/i
+
+function isYesNoClosed(prompt: string): boolean {
+  if (!YES_NO_OPENER.test(prompt.trim())) return false
+  return !NARRATIVE_INVITE_RE.test(prompt)
+}
+
 // Generic openers from the template's forbidden list. These are matched
 // against the WHOLE prompt because they're meant to feel like a small-talk
 // recap question.
@@ -241,7 +253,7 @@ export function scoreSnapshot(snapshot: Snapshot): ScorecardSection {
   const wordCounts = snapshot.entries.map((e) => e.wordCount)
   const promptLengths = prompts.map((p) => p.length)
 
-  const yesNoOpeners = prompts.filter((p) => YES_NO_OPENER.test(p.trim())).length
+  const yesNoOpeners = prompts.filter(isYesNoClosed).length
   const genericOpeners = prompts.filter((p) =>
     GENERIC_OPENER_PATTERNS.some((re) => re.test(p.trim()))
   ).length
