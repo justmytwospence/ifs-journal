@@ -20,3 +20,12 @@ export function captureMessage(message: string, context?: Record<string, unknown
     console.info('[logger]', message, context ?? '')
   }
 }
+
+// Use for diagnostic output that may contain PII (part names, prompt fragments,
+// excerpts of user content). Suppressed in production so it never lands in
+// Vercel's persistent log retention.
+export function debugLog(...args: unknown[]) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(...args)
+  }
+}
