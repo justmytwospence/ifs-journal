@@ -72,16 +72,6 @@ export default function LoginPage() {
           {error && (
             <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
               <p>{error}</p>
-              <p className="mt-2 text-xs">
-                Just signed up? You need to verify your email first.{' '}
-                <button
-                  type="button"
-                  onClick={handleResendVerification}
-                  className="underline font-medium"
-                >
-                  Resend verification email
-                </button>
-              </p>
             </div>
           )}
 
@@ -108,9 +98,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
-                Password
-              </label>
+              <div className="flex items-baseline justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                  Password
+                </label>
+                <Link
+                  href="/reset-password"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -150,6 +148,17 @@ export default function LoginPage() {
             <Link href="/register" className="text-primary hover:text-primary/80 font-semibold">
               Sign up
             </Link>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Just signed up and didn't get the verification email?{' '}
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              className="underline hover:text-foreground"
+            >
+              Resend it
+            </button>
           </p>
         </div>
       </div>
