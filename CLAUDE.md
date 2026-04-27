@@ -38,7 +38,11 @@ must be backed by actual cited passages, never free-form inferences.
   system prompt verbatim. YAML frontmatter holds picker metadata.
 - `evals/snapshots/<slug>/{<timestamp>,latest}.json` — committed eval output;
   `latest.json` is what `prisma db seed` loads.
-- `lib/eval/` — eval harness: `respondent`, `run-persona`, `capture`, `score`
+- `lib/eval/` — eval harness: `respondent`, `run-persona`, `capture`, `score`,
+  `load-snapshots` (filesystem reads for the dashboard)
+- `app/admin/evals/` — dev-only dashboard at `/admin/evals` (gated by
+  `ADMIN_EMAILS`). Persona summary cards on the index, time-series + scorecard
+  + entries accordion + parts table on the detail page.
 - `lib/prompts/generate-for-user.ts`, `lib/journal/save-entry.ts` — extracted
   cores of the corresponding API routes; both the routes and the eval harness
   share these so the eval runs the production code path.
@@ -65,6 +69,11 @@ must be backed by actual cited passages, never free-form inferences.
   `evals/snapshots/<slug>/latest.json` exists. The legacy `DEMO_USER_EMAIL`
   env var is included in the set as a fallback for backwards compat. Never
   trust client input for the demo flag.
+- Admin users: `isAdmin` is derived server-side from a comma-separated
+  `ADMIN_EMAILS` env var. Used to gate `/admin/*` (currently the eval
+  dashboard at `/admin/evals`). `proxy.ts` 404s non-admins on any
+  `/admin/*` path so the route doesn't leak its existence; the admin
+  layout double-checks server-side via `auth()`.
 
 ## Gotchas
 

@@ -52,6 +52,27 @@ export function getDemoEmails(): Set<string> {
   return loadDemoEmails()
 }
 
+// Admin emails come from a comma-separated env var. Same lazy-load + cache
+// pattern as the demo set so module init stays cheap and proxy.ts doesn't
+// pay the cost on every middleware invocation.
+let cachedAdminEmails: Set<string> | null = null
+
+function loadAdminEmails(): Set<string> {
+  if (cachedAdminEmails) return cachedAdminEmails
+  const out = new Set<string>()
+  const raw = process.env.ADMIN_EMAILS ?? ''
+  for (const part of raw.split(',')) {
+    const email = part.trim()
+    if (email) out.add(normalizeEmail(email))
+  }
+  cachedAdminEmails = out
+  return out
+}
+
+export function isAdminEmail(email: string): boolean {
+  return loadAdminEmails().has(normalizeEmail(email))
+}
+
 /**
  * Resolves a `profile` argument from the demo picker into an actual demo
  * email, or null if the slug isn't on the allow-list. Validates against the
@@ -113,6 +134,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: user.email,
             emailVerified: user.emailVerified,
             isDemo: true,
+            isAdmin: false,
           }
         } catch (error) {
           captureException(error, { route: 'authorize:demo' })
@@ -177,6 +199,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             email: user.email,
             emailVerified: user.emailVerified,
             isDemo: isDemoAccount,
+            isAdmin: loadAdminEmails().has(user.email.toLowerCase()),
           }
         } catch (error) {
           // Log unexpected errors (rate-limit DB hiccup, schema failure) so we
@@ -204,6 +227,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id
         token.email = user.email
         token.isDemo = user.isDemo || false
+        token.isAdmin = user.isAdmin || false
       }
       return token
     },
@@ -212,6 +236,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string
         session.user.email = token.email as string
         session.user.isDemo = token.isDemo || false
+        session.user.isAdmin = token.isAdmin || false
       }
       return session
     },
