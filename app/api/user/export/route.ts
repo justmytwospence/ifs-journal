@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import prisma from '@/lib/db'
+import { captureException } from '@/lib/logger'
 
 export async function GET(_request: Request) {
   try {
@@ -9,7 +10,6 @@ export async function GET(_request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all user data
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -31,24 +31,28 @@ export async function GET(_request: Request) {
         partAnalyses: {
           include: {
             entry: {
-              select: {
-                prompt: true,
-                createdAt: true,
-              },
+              select: { id: true, prompt: true, createdAt: true },
             },
+            highlights: true,
           },
         },
       },
+    })
+
+    const partConversations = await prisma.partConversation.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'asc' },
     })
 
     const exportData = {
       user,
       journalEntries,
       parts,
+      partConversations,
       exportedAt: new Date().toISOString(),
+      exportVersion: 2,
     }
 
-    // Return as downloadable JSON file
     return new NextResponse(JSON.stringify(exportData, null, 2), {
       headers: {
         'Content-Type': 'application/json',
@@ -56,7 +60,7 @@ export async function GET(_request: Request) {
       },
     })
   } catch (error) {
-    console.error('Export data error:', error)
+    captureException(error, { route: 'GET /api/user/export' })
     return NextResponse.json({ error: 'Failed to export data' }, { status: 500 })
   }
 }
