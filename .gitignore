@@ -48,3 +48,4 @@ next-env.d.ts
 
 # screenshots at repo root
 /*.png
+.claude/settings.local.json

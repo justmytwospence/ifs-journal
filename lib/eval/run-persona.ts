@@ -11,7 +11,7 @@ import { type PriorResponse, RESPONDENT_MODEL, respondAsPersona } from './respon
 
 // Hardcoded to mirror the live API surfaces — keep in sync with
 // CONTENT_MODEL / ANALYSIS_MODEL in lib/anthropic.ts.
-const PROMPT_GEN_MODEL = 'claude-sonnet-4-6'
+const PROMPT_GEN_MODEL = 'claude-opus-4-7'
 const ANALYSIS_MODEL = 'claude-opus-4-7'
 
 const wordCountOf = (s: string) => s.trim().split(/\s+/).filter(Boolean).length

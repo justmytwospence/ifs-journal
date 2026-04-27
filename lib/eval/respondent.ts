@@ -1,10 +1,10 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { Persona } from './persona-loader'
 
-// The respondent uses the same model as the live content surfaces —
-// CONTENT_MODEL in lib/anthropic.ts. Hardcoded here so eval code has no
-// runtime dependency on app modules that may pull in DB / auth.
-export const RESPONDENT_MODEL = 'claude-sonnet-4-6'
+// Hardcoded so eval code has no runtime dependency on app modules that
+// may pull in DB / auth. Opus produces sharper, more multi-voiced
+// journal entries — better quality test data for the analysis pipeline.
+export const RESPONDENT_MODEL = 'claude-opus-4-7'
 
 export interface PriorResponse {
   prompt: string

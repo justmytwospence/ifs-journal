@@ -49,7 +49,9 @@ must be backed by actual cited passages, never free-form inferences.
 - `POST /api/parts/batch-reanalysis` — Opus 4.7, streams, 300s vercel timeout
 - `POST /api/journal/entries/[id]/incremental-analysis` — Opus 4.7, single entry
 - `POST /api/conversations` — Opus 4.7, streaming SSE (`data: {"content":"…"}\n\n` + `[DONE]`)
-- `POST /api/prompts/generate` + `POST /api/prompts/writing-tips` — Sonnet 4.6
+- `POST /api/prompts/generate` + `POST /api/prompts/writing-tips` — Opus 4.7
+  (was Sonnet 4.6 until prompt monoculture surfaced in evals; bumped because
+   prompt quality is load-bearing for the whole entry-write loop)
 
 ## Conventions
 
